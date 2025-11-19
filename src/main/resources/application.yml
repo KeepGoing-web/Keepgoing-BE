@@ -4,5 +4,5 @@ spring:
 
 springdoc:
   swagger-ui:
-    url: /openapi.yml
+    url: /docs/api/openapi.yml
     disable-swagger-default-url: true

@@ -1,0 +1,1450 @@
+{
+  "$schema": "https://raw.githubusercontent.com/dineug/erd-editor/main/json-schema/schema.json",
+  "version": "3.0.0",
+  "settings": {
+    "width": 20000,
+    "height": 20000,
+    "scrollTop": -8911.4006,
+    "scrollLeft": -10437.6437,
+    "zoomLevel": 0.97,
+    "show": 495,
+    "database": 4,
+    "databaseName": "blog_system",
+    "canvasType": "ERD",
+    "language": 1,
+    "tableNameCase": 4,
+    "columnNameCase": 2,
+    "bracketType": 1,
+    "relationshipDataTypeSync": true,
+    "relationshipOptimization": false,
+    "columnOrder": [
+      1,
+      2,
+      4,
+      8,
+      16,
+      32,
+      64
+    ],
+    "maxWidthComment": -1,
+    "ignoreSaveSettings": 0
+  },
+  "doc": {
+    "tableIds": [
+      "users_table",
+      "blogs_table",
+      "blog_revisions_table",
+      "rag_queries_table",
+      "resume_jobs_table",
+      "user_oauth_accounts_table",
+      "user_password_credentials_table"
+    ],
+    "relationshipIds": [
+      "rel_users_blogs",
+      "rel_blogs_revisions",
+      "rel_users_rag_queries",
+      "rel_users_resume_jobs",
+      "rel_uoa_user",
+      "rel_upc_user"
+    ],
+    "indexIds": [],
+    "memoIds": []
+  },
+  "collections": {
+    "tableEntities": {
+      "users_table": {
+        "id": "users_table",
+        "name": "users",
+        "comment": "사용자 테이블 - 모든 엔티티의 중심",
+        "columnIds": [
+          "users_id",
+          "users_email",
+          "users_name",
+          "users_role",
+          "users_status",
+          "users_last_login_at",
+          "users_created_at",
+          "users_updated_at"
+        ],
+        "seqColumnIds": [
+          "users_id",
+          "users_email",
+          "users_name",
+          "users_role",
+          "users_status",
+          "users_last_login_at",
+          "users_created_at",
+          "users_updated_at"
+        ],
+        "ui": {
+          "x": 10587.1935,
+          "y": 9353.5367,
+          "zIndex": 1,
+          "widthName": 60,
+          "widthComment": 170,
+          "color": "#4A90E2"
+        },
+        "meta": {
+          "updateAt": 1763464598004,
+          "createAt": 1699999999999
+        }
+      },
+      "blogs_table": {
+        "id": "blogs_table",
+        "name": "blogs",
+        "comment": "블로그 포스트 - FULLTEXT 검색 지원",
+        "columnIds": [
+          "blogs_id",
+          "blogs_author_id",
+          "blogs_title",
+          "blogs_content",
+          "blogs_visibility",
+          "blogs_ai_collectable",
+          "blogs_created_at",
+          "blogs_updated_at",
+          "blogs_deleted_at"
+        ],
+        "seqColumnIds": [
+          "blogs_id",
+          "blogs_author_id",
+          "blogs_title",
+          "blogs_content",
+          "blogs_visibility",
+          "blogs_ai_collectable",
+          "blogs_created_at",
+          "blogs_updated_at",
+          "blogs_deleted_at"
+        ],
+        "ui": {
+          "x": 10202.5333,
+          "y": 8949.2694,
+          "zIndex": 3,
+          "widthName": 60,
+          "widthComment": 187,
+          "color": "#27AE60"
+        },
+        "meta": {
+          "updateAt": 1763464683917,
+          "createAt": 1699999999999
+        }
+      },
+      "blog_revisions_table": {
+        "id": "blog_revisions_table",
+        "name": "blog_revisions",
+        "comment": "블로그 수정 이력 - 버전 관리",
+        "columnIds": [
+          "blog_revisions_id",
+          "blog_revisions_blog_id",
+          "blog_revisions_title",
+          "blog_revisions_content",
+          "blog_revisions_created_at"
+        ],
+        "seqColumnIds": [
+          "blog_revisions_id",
+          "blog_revisions_blog_id",
+          "blog_revisions_title",
+          "blog_revisions_content",
+          "blog_revisions_created_at",
+          "uV0x_vb1mF-4bLjCtLiwQ"
+        ],
+        "ui": {
+          "x": 9609.5463,
+          "y": 8997.7936,
+          "zIndex": 4,
+          "widthName": 84,
+          "widthComment": 139,
+          "color": "#9B59B6"
+        },
+        "meta": {
+          "updateAt": 1763464696425,
+          "createAt": 1699999999999
+        }
+      },
+      "rag_queries_table": {
+        "id": "rag_queries_table",
+        "name": "rag_queries",
+        "comment": "RAG 질의 로그 - 성능 모니터링",
+        "columnIds": [
+          "rag_queries_id",
+          "rag_queries_user_id",
+          "rag_queries_question",
+          "rag_queries_answer",
+          "rag_queries_latency_ms",
+          "rag_queries_created_at"
+        ],
+        "seqColumnIds": [
+          "rag_queries_id",
+          "rag_queries_user_id",
+          "rag_queries_question",
+          "rag_queries_answer",
+          "rag_queries_latency_ms",
+          "rag_queries_created_at"
+        ],
+        "ui": {
+          "x": 9993.9573,
+          "y": 9439.6758,
+          "zIndex": 5,
+          "widthName": 69,
+          "widthComment": 153,
+          "color": "#F39C12"
+        },
+        "meta": {
+          "updateAt": 1763464589460,
+          "createAt": 1699999999999
+        }
+      },
+      "resume_jobs_table": {
+        "id": "resume_jobs_table",
+        "name": "resume_jobs",
+        "comment": "문서 생성 결과 - 이력서/자소서",
+        "columnIds": [
+          "resume_jobs_id",
+          "resume_jobs_user_id",
+          "resume_jobs_type",
+          "resume_jobs_additional_info",
+          "resume_jobs_content",
+          "resume_jobs_generated_at"
+        ],
+        "seqColumnIds": [
+          "resume_jobs_id",
+          "resume_jobs_user_id",
+          "resume_jobs_type",
+          "resume_jobs_additional_info",
+          "resume_jobs_content",
+          "resume_jobs_generated_at"
+        ],
+        "ui": {
+          "x": 10961.2452,
+          "y": 9676.4935,
+          "zIndex": 6,
+          "widthName": 75,
+          "widthComment": 149,
+          "color": "#3498DB"
+        },
+        "meta": {
+          "updateAt": 1763464772436,
+          "createAt": 1699999999999
+        }
+      },
+      "NM7Jgbcq5EED6yUsjBw8x": {
+        "id": "NM7Jgbcq5EED6yUsjBw8x",
+        "name": "",
+        "comment": "",
+        "columnIds": [],
+        "seqColumnIds": [],
+        "ui": {
+          "x": 10362.1019,
+          "y": 8726.5003,
+          "zIndex": 89,
+          "widthName": 60,
+          "widthComment": 60,
+          "color": ""
+        },
+        "meta": {
+          "updateAt": 1763457869993,
+          "createAt": 1763457868028
+        }
+      },
+      "fN-om-gxl9OH1Sop90m0S": {
+        "id": "fN-om-gxl9OH1Sop90m0S",
+        "name": "",
+        "comment": "",
+        "columnIds": [],
+        "seqColumnIds": [],
+        "ui": {
+          "x": 10360.1019,
+          "y": 8724.5003,
+          "zIndex": 96,
+          "widthName": 60,
+          "widthComment": 60,
+          "color": ""
+        },
+        "meta": {
+          "updateAt": 1763457911905,
+          "createAt": 1763457911905
+        }
+      },
+      "user_oauth_accounts_table": {
+        "id": "user_oauth_accounts_table",
+        "name": "user_oauth_accounts",
+        "comment": "OAuth 계정 연결 정보",
+        "columnIds": [
+          "uoa_id",
+          "uoa_user_id",
+          "uoa_provider",
+          "uoa_provider_user_id",
+          "uoa_email",
+          "uoa_avatar_url",
+          "uoa_created_at",
+          "uoa_updated_at"
+        ],
+        "seqColumnIds": [
+          "uoa_id",
+          "uoa_user_id",
+          "uoa_provider",
+          "uoa_provider_user_id",
+          "uoa_email",
+          "uoa_avatar_url",
+          "uoa_created_at",
+          "uoa_updated_at"
+        ],
+        "ui": {
+          "x": 11335,
+          "y": 9075,
+          "zIndex": 10,
+          "widthName": 124,
+          "widthComment": 109,
+          "color": ""
+        },
+        "meta": {
+          "updateAt": 1763464849913,
+          "createAt": 0
+        }
+      },
+      "user_password_credentials_table": {
+        "id": "user_password_credentials_table",
+        "name": "user_password_credentials",
+        "comment": "ID/비밀번호 로그인 정보",
+        "columnIds": [
+          "upc_user_id",
+          "upc_login_id",
+          "upc_password_hash",
+          "upc_password_changed_at"
+        ],
+        "seqColumnIds": [
+          "upc_user_id",
+          "upc_login_id",
+          "upc_password_hash",
+          "upc_password_changed_at"
+        ],
+        "ui": {
+          "x": 11319,
+          "y": 9464,
+          "zIndex": 10,
+          "widthName": 157,
+          "widthComment": 117,
+          "color": ""
+        },
+        "meta": {
+          "updateAt": 1763464645398,
+          "createAt": 0
+        }
+      }
+    },
+    "tableColumnEntities": {
+      "users_id": {
+        "id": "users_id",
+        "tableId": "users_table",
+        "name": "id",
+        "comment": "사용자 고유 ID",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 11,
+        "ui": {
+          "keys": 1,
+          "widthName": 60,
+          "widthComment": 73,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1763458508354,
+          "createAt": 1699999999999
+        }
+      },
+      "users_email": {
+        "id": "users_email",
+        "tableId": "users_table",
+        "name": "email",
+        "comment": "이메일 (로그인 ID)",
+        "dataType": "VARCHAR(320)",
+        "default": "",
+        "options": 14,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 92,
+          "widthDataType": 90,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1763458172636,
+          "createAt": 1699999999999
+        }
+      },
+      "users_name": {
+        "id": "users_name",
+        "tableId": "users_table",
+        "name": "name",
+        "comment": "사용자명",
+        "dataType": "VARCHAR(100)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 89,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1762949698689,
+          "createAt": 1699999999999
+        }
+      },
+      "users_role": {
+        "id": "users_role",
+        "tableId": "users_table",
+        "name": "role",
+        "comment": "권한 (USER/ADMIN)",
+        "dataType": "ENUM('USER','ADMIN')",
+        "default": "'USER'",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 109,
+          "widthDataType": 132,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1762949697784,
+          "createAt": 1699999999999
+        }
+      },
+      "users_status": {
+        "id": "users_status",
+        "tableId": "users_table",
+        "name": "status",
+        "comment": "계정 상태",
+        "dataType": "ENUM('ACTIVE','SUSPENDED')",
+        "default": "'ACTIVE'",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 176,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1699999999999,
+          "createAt": 1699999999999
+        }
+      },
+      "users_last_login_at": {
+        "id": "users_last_login_at",
+        "tableId": "users_table",
+        "name": "last_login_at",
+        "comment": "마지막 로그인",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 75,
+          "widthComment": 68,
+          "widthDataType": 61,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1699999999999,
+          "createAt": 1699999999999
+        }
+      },
+      "users_created_at": {
+        "id": "users_created_at",
+        "tableId": "users_table",
+        "name": "created_at",
+        "comment": "생성일시",
+        "dataType": "DATETIME",
+        "default": "CURRENT_TIMESTAMP",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 63,
+          "widthComment": 60,
+          "widthDataType": 61,
+          "widthDefault": 133
+        },
+        "meta": {
+          "updateAt": 1699999999999,
+          "createAt": 1699999999999
+        }
+      },
+      "users_updated_at": {
+        "id": "users_updated_at",
+        "tableId": "users_table",
+        "name": "updated_at",
+        "comment": "수정일시",
+        "dataType": "DATETIME",
+        "default": "CURRENT_TIMESTAMP",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 67,
+          "widthComment": 60,
+          "widthDataType": 61,
+          "widthDefault": 133
+        },
+        "meta": {
+          "updateAt": 1699999999999,
+          "createAt": 1699999999999
+        }
+      },
+      "blogs_id": {
+        "id": "blogs_id",
+        "tableId": "blogs_table",
+        "name": "id",
+        "comment": "블로그 고유 ID",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 11,
+        "ui": {
+          "keys": 1,
+          "widthName": 60,
+          "widthComment": 73,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1763457794354,
+          "createAt": 1699999999999
+        }
+      },
+      "blogs_author_id": {
+        "id": "blogs_author_id",
+        "tableId": "blogs_table",
+        "name": "author_id",
+        "comment": "작성자 ID (FK)",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 10,
+        "ui": {
+          "keys": 2,
+          "widthName": 60,
+          "widthComment": 76,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1763457783156,
+          "createAt": 1699999999999
+        }
+      },
+      "blogs_title": {
+        "id": "blogs_title",
+        "tableId": "blogs_table",
+        "name": "title",
+        "comment": "제목",
+        "dataType": "VARCHAR(200)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 90,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1699999999999,
+          "createAt": 1699999999999
+        }
+      },
+      "blogs_content": {
+        "id": "blogs_content",
+        "tableId": "blogs_table",
+        "name": "content",
+        "comment": "본문 (16MB)",
+        "dataType": "MEDIUMTEXT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 67,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1699999999999,
+          "createAt": 1699999999999
+        }
+      },
+      "blogs_visibility": {
+        "id": "blogs_visibility",
+        "tableId": "blogs_table",
+        "name": "visibility",
+        "comment": "공개 여부",
+        "dataType": "ENUM('PUBLIC','PRIVATE','UNLISTED')",
+        "default": "'PRIVATE'",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 220,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1699999999999,
+          "createAt": 1699999999999
+        }
+      },
+      "blogs_ai_collectable": {
+        "id": "blogs_ai_collectable",
+        "tableId": "blogs_table",
+        "name": "ai_collectable",
+        "comment": "AI 학습 허용",
+        "dataType": "BOOLEAN",
+        "default": "TRUE",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 80,
+          "widthComment": 62,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1699999999999,
+          "createAt": 1699999999999
+        }
+      },
+      "blogs_created_at": {
+        "id": "blogs_created_at",
+        "tableId": "blogs_table",
+        "name": "created_at",
+        "comment": "생성일시",
+        "dataType": "DATETIME",
+        "default": "CURRENT_TIMESTAMP",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 63,
+          "widthComment": 60,
+          "widthDataType": 61,
+          "widthDefault": 133
+        },
+        "meta": {
+          "updateAt": 1699999999999,
+          "createAt": 1699999999999
+        }
+      },
+      "blogs_updated_at": {
+        "id": "blogs_updated_at",
+        "tableId": "blogs_table",
+        "name": "updated_at",
+        "comment": "수정일시",
+        "dataType": "DATETIME",
+        "default": "CURRENT_TIMESTAMP",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 67,
+          "widthComment": 60,
+          "widthDataType": 61,
+          "widthDefault": 133
+        },
+        "meta": {
+          "updateAt": 1699999999999,
+          "createAt": 1699999999999
+        }
+      },
+      "blogs_deleted_at": {
+        "id": "blogs_deleted_at",
+        "tableId": "blogs_table",
+        "name": "deleted_at",
+        "comment": "삭제일시 (소프트 삭제)",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 62,
+          "widthComment": 111,
+          "widthDataType": 61,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1699999999999,
+          "createAt": 1699999999999
+        }
+      },
+      "blog_revisions_id": {
+        "id": "blog_revisions_id",
+        "tableId": "blog_revisions_table",
+        "name": "id",
+        "comment": "리비전 고유 ID",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 11,
+        "ui": {
+          "keys": 1,
+          "widthName": 60,
+          "widthComment": 73,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1763457800446,
+          "createAt": 1699999999999
+        }
+      },
+      "blog_revisions_blog_id": {
+        "id": "blog_revisions_blog_id",
+        "tableId": "blog_revisions_table",
+        "name": "blog_id",
+        "comment": "블로그 ID (FK)",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 10,
+        "ui": {
+          "keys": 2,
+          "widthName": 60,
+          "widthComment": 76,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1763457794354,
+          "createAt": 1699999999999
+        }
+      },
+      "blog_revisions_title": {
+        "id": "blog_revisions_title",
+        "tableId": "blog_revisions_table",
+        "name": "title",
+        "comment": "제목 스냅샷",
+        "dataType": "VARCHAR(200)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 90,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1699999999999,
+          "createAt": 1699999999999
+        }
+      },
+      "blog_revisions_content": {
+        "id": "blog_revisions_content",
+        "tableId": "blog_revisions_table",
+        "name": "content",
+        "comment": "본문 스냅샷",
+        "dataType": "MEDIUMTEXT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1699999999999,
+          "createAt": 1699999999999
+        }
+      },
+      "blog_revisions_created_at": {
+        "id": "blog_revisions_created_at",
+        "tableId": "blog_revisions_table",
+        "name": "created_at",
+        "comment": "리비전 생성일시",
+        "dataType": "DATETIME",
+        "default": "CURRENT_TIMESTAMP",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 63,
+          "widthComment": 78,
+          "widthDataType": 61,
+          "widthDefault": 133
+        },
+        "meta": {
+          "updateAt": 1699999999999,
+          "createAt": 1699999999999
+        }
+      },
+      "rag_queries_id": {
+        "id": "rag_queries_id",
+        "tableId": "rag_queries_table",
+        "name": "id",
+        "comment": "질의 고유 ID",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 11,
+        "ui": {
+          "keys": 1,
+          "widthName": 60,
+          "widthComment": 62,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1763457789554,
+          "createAt": 1699999999999
+        }
+      },
+      "rag_queries_user_id": {
+        "id": "rag_queries_user_id",
+        "tableId": "rag_queries_table",
+        "name": "user_id",
+        "comment": "사용자 ID (FK)",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 10,
+        "ui": {
+          "keys": 2,
+          "widthName": 60,
+          "widthComment": 76,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1763457783156,
+          "createAt": 1699999999999
+        }
+      },
+      "rag_queries_question": {
+        "id": "rag_queries_question",
+        "tableId": "rag_queries_table",
+        "name": "question",
+        "comment": "사용자 질문",
+        "dataType": "TEXT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1699999999999,
+          "createAt": 1699999999999
+        }
+      },
+      "rag_queries_answer": {
+        "id": "rag_queries_answer",
+        "tableId": "rag_queries_table",
+        "name": "answer",
+        "comment": "RAG 응답",
+        "dataType": "MEDIUMTEXT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1699999999999,
+          "createAt": 1699999999999
+        }
+      },
+      "rag_queries_latency_ms": {
+        "id": "rag_queries_latency_ms",
+        "tableId": "rag_queries_table",
+        "name": "latency_ms",
+        "comment": "응답시간 (ms)",
+        "dataType": "INT UNSIGNED",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 66,
+          "widthComment": 73,
+          "widthDataType": 87,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1699999999999,
+          "createAt": 1699999999999
+        }
+      },
+      "rag_queries_created_at": {
+        "id": "rag_queries_created_at",
+        "tableId": "rag_queries_table",
+        "name": "created_at",
+        "comment": "질의일시",
+        "dataType": "DATETIME",
+        "default": "CURRENT_TIMESTAMP",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 63,
+          "widthComment": 60,
+          "widthDataType": 61,
+          "widthDefault": 133
+        },
+        "meta": {
+          "updateAt": 1699999999999,
+          "createAt": 1699999999999
+        }
+      },
+      "resume_jobs_id": {
+        "id": "resume_jobs_id",
+        "tableId": "resume_jobs_table",
+        "name": "id",
+        "comment": "문서 고유 ID",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 11,
+        "ui": {
+          "keys": 1,
+          "widthName": 60,
+          "widthComment": 62,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1763457786210,
+          "createAt": 1699999999999
+        }
+      },
+      "resume_jobs_user_id": {
+        "id": "resume_jobs_user_id",
+        "tableId": "resume_jobs_table",
+        "name": "user_id",
+        "comment": "사용자 ID (FK)",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 10,
+        "ui": {
+          "keys": 2,
+          "widthName": 60,
+          "widthComment": 76,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1763457783156,
+          "createAt": 1699999999999
+        }
+      },
+      "resume_jobs_type": {
+        "id": "resume_jobs_type",
+        "tableId": "resume_jobs_table",
+        "name": "type",
+        "comment": "문서 타입",
+        "dataType": "ENUM('resume','cover-letter')",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 170,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1699999999999,
+          "createAt": 1699999999999
+        }
+      },
+      "resume_jobs_additional_info": {
+        "id": "resume_jobs_additional_info",
+        "tableId": "resume_jobs_table",
+        "name": "additional_info",
+        "comment": "추가 정보",
+        "dataType": "JSON",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 86,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1699999999999,
+          "createAt": 1699999999999
+        }
+      },
+      "resume_jobs_content": {
+        "id": "resume_jobs_content",
+        "tableId": "resume_jobs_table",
+        "name": "content",
+        "comment": "생성된 문서",
+        "dataType": "MEDIUMTEXT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1699999999999,
+          "createAt": 1699999999999
+        }
+      },
+      "resume_jobs_generated_at": {
+        "id": "resume_jobs_generated_at",
+        "tableId": "resume_jobs_table",
+        "name": "generated_at",
+        "comment": "생성일시",
+        "dataType": "DATETIME",
+        "default": "CURRENT_TIMESTAMP",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 78,
+          "widthComment": 60,
+          "widthDataType": 61,
+          "widthDefault": 133
+        },
+        "meta": {
+          "updateAt": 1699999999999,
+          "createAt": 1699999999999
+        }
+      },
+      "uV0x_vb1mF-4bLjCtLiwQ": {
+        "id": "uV0x_vb1mF-4bLjCtLiwQ",
+        "tableId": "blog_revisions_table",
+        "name": "updated_at",
+        "comment": "",
+        "dataType": "DATETIME",
+        "default": "CURRENT_TIMESTAMP",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 67,
+          "widthComment": 60,
+          "widthDataType": 61,
+          "widthDefault": 133
+        },
+        "meta": {
+          "updateAt": 1762949848833,
+          "createAt": 1762949821042
+        }
+      },
+      "uoa_id": {
+        "id": "uoa_id",
+        "tableId": "user_oauth_accounts_table",
+        "name": "id",
+        "comment": "PK",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 11,
+        "ui": {
+          "keys": 1,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 0,
+          "createAt": 0
+        }
+      },
+      "uoa_user_id": {
+        "id": "uoa_user_id",
+        "tableId": "user_oauth_accounts_table",
+        "name": "user_id",
+        "comment": "사용자 ID (FK)",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 10,
+        "ui": {
+          "keys": 2,
+          "widthName": 60,
+          "widthComment": 76,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 0,
+          "createAt": 0
+        }
+      },
+      "uoa_provider": {
+        "id": "uoa_provider",
+        "tableId": "user_oauth_accounts_table",
+        "name": "provider",
+        "comment": "OAuth 제공자",
+        "dataType": "VARCHAR(20)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 72,
+          "widthDataType": 83,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 0,
+          "createAt": 0
+        }
+      },
+      "uoa_provider_user_id": {
+        "id": "uoa_provider_user_id",
+        "tableId": "user_oauth_accounts_table",
+        "name": "provider_user_id",
+        "comment": "Provider 내 유저 ID",
+        "dataType": "VARCHAR(190)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 97,
+          "widthComment": 102,
+          "widthDataType": 89,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 0,
+          "createAt": 0
+        }
+      },
+      "uoa_email": {
+        "id": "uoa_email",
+        "tableId": "user_oauth_accounts_table",
+        "name": "email",
+        "comment": "제공 이메일",
+        "dataType": "VARCHAR(320)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 90,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 0,
+          "createAt": 0
+        }
+      },
+      "uoa_avatar_url": {
+        "id": "uoa_avatar_url",
+        "tableId": "user_oauth_accounts_table",
+        "name": "avatar_url",
+        "comment": "프로필 이미지 URL",
+        "dataType": "VARCHAR(500)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 95,
+          "widthDataType": 90,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 0,
+          "createAt": 0
+        }
+      },
+      "uoa_created_at": {
+        "id": "uoa_created_at",
+        "tableId": "user_oauth_accounts_table",
+        "name": "created_at",
+        "comment": "연결 생성일시",
+        "dataType": "DATETIME",
+        "default": "CURRENT_TIMESTAMP",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 63,
+          "widthComment": 68,
+          "widthDataType": 61,
+          "widthDefault": 133
+        },
+        "meta": {
+          "updateAt": 0,
+          "createAt": 0
+        }
+      },
+      "uoa_updated_at": {
+        "id": "uoa_updated_at",
+        "tableId": "user_oauth_accounts_table",
+        "name": "updated_at",
+        "comment": "연결 수정일시",
+        "dataType": "DATETIME",
+        "default": "CURRENT_TIMESTAMP",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 67,
+          "widthComment": 68,
+          "widthDataType": 61,
+          "widthDefault": 133
+        },
+        "meta": {
+          "updateAt": 0,
+          "createAt": 0
+        }
+      },
+      "upc_user_id": {
+        "id": "upc_user_id",
+        "tableId": "user_password_credentials_table",
+        "name": "user_id",
+        "comment": "사용자 ID (PK, FK)",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 11,
+        "ui": {
+          "keys": 3,
+          "widthName": 60,
+          "widthComment": 98,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 0,
+          "createAt": 0
+        }
+      },
+      "upc_login_id": {
+        "id": "upc_login_id",
+        "tableId": "user_password_credentials_table",
+        "name": "login_id",
+        "comment": "로그인 ID (이메일 또는 별도 ID)",
+        "dataType": "VARCHAR(320)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 156,
+          "widthDataType": 90,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 0,
+          "createAt": 0
+        }
+      },
+      "upc_password_hash": {
+        "id": "upc_password_hash",
+        "tableId": "user_password_credentials_table",
+        "name": "password_hash",
+        "comment": "bcrypt 해시",
+        "dataType": "VARCHAR(255)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 90,
+          "widthComment": 63,
+          "widthDataType": 90,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 0,
+          "createAt": 0
+        }
+      },
+      "upc_password_changed_at": {
+        "id": "upc_password_changed_at",
+        "tableId": "user_password_credentials_table",
+        "name": "password_changed_at",
+        "comment": "비밀번호 변경 일시",
+        "dataType": "DATETIME",
+        "default": "CURRENT_TIMESTAMP",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 130,
+          "widthComment": 92,
+          "widthDataType": 61,
+          "widthDefault": 133
+        },
+        "meta": {
+          "updateAt": 0,
+          "createAt": 0
+        }
+      }
+    },
+    "relationshipEntities": {
+      "rel_users_blogs": {
+        "id": "rel_users_blogs",
+        "identification": true,
+        "relationshipType": 4,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "users_table",
+          "columnIds": [
+            "users_id"
+          ],
+          "x": 10587.1935,
+          "y": 9415.5367,
+          "direction": 1
+        },
+        "end": {
+          "tableId": "blogs_table",
+          "columnIds": [
+            "blogs_author_id"
+          ],
+          "x": 10552.0333,
+          "y": 9221.2694,
+          "direction": 8
+        },
+        "meta": {
+          "updateAt": 1699999999999,
+          "createAt": 1699999999999
+        }
+      },
+      "rel_blogs_revisions": {
+        "id": "rel_blogs_revisions",
+        "identification": true,
+        "relationshipType": 4,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "blogs_table",
+          "columnIds": [
+            "blogs_id"
+          ],
+          "x": 10202.5333,
+          "y": 9085.2694,
+          "direction": 1
+        },
+        "end": {
+          "tableId": "blog_revisions_table",
+          "columnIds": [
+            "blog_revisions_blog_id"
+          ],
+          "x": 10128.5463,
+          "y": 9085.7936,
+          "direction": 2
+        },
+        "meta": {
+          "updateAt": 1699999999999,
+          "createAt": 1699999999999
+        }
+      },
+      "rel_users_rag_queries": {
+        "id": "rel_users_rag_queries",
+        "identification": true,
+        "relationshipType": 4,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "users_table",
+          "columnIds": [
+            "users_id"
+          ],
+          "x": 10587.1935,
+          "y": 9539.5367,
+          "direction": 1
+        },
+        "end": {
+          "tableId": "rag_queries_table",
+          "columnIds": [
+            "rag_queries_user_id"
+          ],
+          "x": 10510.9573,
+          "y": 9539.6758,
+          "direction": 2
+        },
+        "meta": {
+          "updateAt": 1699999999999,
+          "createAt": 1699999999999
+        }
+      },
+      "rel_users_resume_jobs": {
+        "id": "rel_users_resume_jobs",
+        "identification": true,
+        "relationshipType": 4,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "users_table",
+          "columnIds": [
+            "users_id"
+          ],
+          "x": 10911.1935,
+          "y": 9601.5367,
+          "direction": 8
+        },
+        "end": {
+          "tableId": "resume_jobs_table",
+          "columnIds": [
+            "resume_jobs_user_id"
+          ],
+          "x": 10961.2452,
+          "y": 9776.4935,
+          "direction": 1
+        },
+        "meta": {
+          "updateAt": 1699999999999,
+          "createAt": 1699999999999
+        }
+      },
+      "rel_uoa_user": {
+        "id": "rel_uoa_user",
+        "identification": true,
+        "relationshipType": 4,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "users_table",
+          "columnIds": [
+            "users_id"
+          ],
+          "x": 11235.1935,
+          "y": 9415.5367,
+          "direction": 2
+        },
+        "end": {
+          "tableId": "user_oauth_accounts_table",
+          "columnIds": [
+            "uoa_user_id"
+          ],
+          "x": 11335,
+          "y": 9199,
+          "direction": 1
+        },
+        "meta": {
+          "updateAt": 0,
+          "createAt": 0
+        }
+      },
+      "rel_upc_user": {
+        "id": "rel_upc_user",
+        "identification": true,
+        "relationshipType": 4,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "users_table",
+          "columnIds": [
+            "users_id"
+          ],
+          "x": 11235.1935,
+          "y": 9539.5367,
+          "direction": 2
+        },
+        "end": {
+          "tableId": "user_password_credentials_table",
+          "columnIds": [
+            "upc_user_id"
+          ],
+          "x": 11319,
+          "y": 9540,
+          "direction": 1
+        },
+        "meta": {
+          "updateAt": 0,
+          "createAt": 0
+        }
+      }
+    },
+    "indexEntities": {},
+    "indexColumnEntities": {},
+    "memoEntities": {}
+  }
+}
