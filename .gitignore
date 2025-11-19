@@ -28,3 +28,7 @@ replay_pid*
 
 .DS_Store
 *json
+
+build/
+.project
+.settings/
