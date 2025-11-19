@@ -1,0 +1,8 @@
+spring:
+  application:
+    name: keepgoing
+
+springdoc:
+  swagger-ui:
+    url: /openapi.yml
+    disable-swagger-default-url: true
