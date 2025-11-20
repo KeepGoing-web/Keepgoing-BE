@@ -8,14 +8,14 @@ import java.util.List;
 @Schema(description = "에러 상세 정보")
 public record ErrorDetail(
 
-        @Schema(description = "에러 코드", example = "AUTH_INVALID_CREDENTIAL")
+        @Schema(description = "에러 코드", example = "AUTH_INVALID_CREDENTIALS")
         ErrorCode code,
 
         @Schema(description = "에러 메시지", example = "이메일 또는 비밀번호가 일치하지 않습니다.")
         String message,
 
         @Schema(
-                description = "필드별 에러 목록 (주로 검증 오류 시 사용, 일반 비즈니스 에러는 null/빈 배열",
+                description = "필드별 에러 목록 (주로 검증 오류 시 사용, 일반 비즈니스 에러는 null/빈 배열)",
                 nullable = true
         )
         List<FieldError> fieldErrors
@@ -34,6 +34,7 @@ public record ErrorDetail(
 
     /**
      * 검증 에러용 (여러 필드 에러 발생 가능)
+     *
      * @param fieldErrors
      * @return
      */
@@ -54,5 +55,5 @@ public record ErrorDetail(
             @Schema(description = "필드 에러 메시지", example = "이메일 형식이 올바르지 않습니다.")
             String message
     ) {
-   }
+    }
 }

@@ -55,6 +55,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    @DisplayName("예상치 못한 예외는 내부 서버 에러를 반환해야 한다.")
     void unexpected_exception_should_return_internal_server_error() throws Exception {
         mockMvc.perform(get("/test/errors/unexpected"))
                 .andExpect(status().isInternalServerError())

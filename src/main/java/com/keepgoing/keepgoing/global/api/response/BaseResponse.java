@@ -10,6 +10,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
 public abstract class BaseResponse {
 
-    @Schema(description = "요청 여부", example = "true")
+    @Schema(description = "성공 여부", example = "true")
     private final boolean success;
 }
