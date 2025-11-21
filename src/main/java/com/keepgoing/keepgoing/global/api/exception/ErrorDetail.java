@@ -5,6 +5,13 @@ import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 
+/**
+ * 클라이언트에게 전달할 에러 정보를 구조화하는 DTO
+ *
+ * @param code
+ * @param message
+ * @param fieldErrors
+ */
 @Schema(description = "에러 상세 정보")
 public record ErrorDetail(
 
@@ -39,9 +46,10 @@ public record ErrorDetail(
      * @return
      */
     public static ErrorDetail ofValidation(List<FieldError> fieldErrors) {
+        ErrorCode code = ErrorCode.VALIDATION_FAILED;
         return new ErrorDetail(
-                ErrorCode.VALIDATION_FAILED,
-                "입력값 검증 실패",
+                code,
+                code.getDefaultMessage(),
                 fieldErrors
         );
     }

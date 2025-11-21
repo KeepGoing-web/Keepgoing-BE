@@ -3,16 +3,17 @@ package com.keepgoing.keepgoing.global.api.exception;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 
+import com.keepgoing.keepgoing.global.api.response.ErrorResponse;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
-import com.keepgoing.keepgoing.global.api.response.ErrorResponse;
-import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -20,28 +21,25 @@ public class GlobalExceptionHandler {
      * 비즈니스 예외 처리 (도메인에서 직접 던진 예외)
      *
      * @param ex
-     * @param request
      * @return
      */
     @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<ErrorResponse> handleBusiness(
-            BusinessException ex,
-            HttpServletRequest request
-    ) {
+    public ResponseEntity<ErrorResponse> handleBusiness(BusinessException ex) {
+        ErrorCode errorCode = ex.getErrorCode();
         ErrorDetail detail = ErrorDetail.of(
-                ex.getErrorCode(),
+                errorCode,
                 ex.getMessage()
         );
         ErrorResponse response = ErrorResponse.of(detail);
 
-        return ResponseEntity.status(ex.getHttpStatus())
+        return ResponseEntity.status(errorCode.getHttpStatus())
                 .body(response);
     }
 
     /**
-     * @Valid 검증 실패 처리
      * @param ex
      * @return
+     * @Valid 검증 실패 처리
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(
@@ -58,6 +56,7 @@ public class GlobalExceptionHandler {
         ErrorDetail detail = ErrorDetail.ofValidation(fieldErrors);
         ErrorResponse response = ErrorResponse.of(detail);
 
+        log.info("검증");
         return ResponseEntity.status(BAD_REQUEST)
                 .body(response);
     }

@@ -4,7 +4,6 @@ import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,11 +17,7 @@ public class TestErrorController {
     @GetMapping("/business")
     void businessError() {
         // service
-        throw new BusinessException(
-                ErrorCode.USER_NOT_FOUND,
-                HttpStatus.NOT_FOUND,
-                "사용자를 찾을 수 없습니다."
-        );
+        throw new BusinessException(ErrorCode.USER_NOT_FOUND);
     }
 
     @GetMapping("/unexpected")
@@ -35,6 +30,7 @@ public class TestErrorController {
     }
 
     static class ValidationRequest {
+
         @NotBlank(message = "이메일은 필수입니다.")
         public String email;
     }
