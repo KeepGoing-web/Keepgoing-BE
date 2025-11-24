@@ -26,8 +26,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.willDoNothing;
+import static org.mockito.BDDMockito.*;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -235,6 +234,35 @@ public class PostControllerTest {
                 .andExpect(jsonPath("$.data.title").value("수정된 제목"));
     }
 
+    @Test
+    @DisplayName("PUT /api/v1/posts/{postId} - 작성자가 아니면 POST_ACCESS_DENIED 에러 반환")
+    void updatePost_accessDenied() throws Exception {
+        // given
+        Long postId = 1L;
+        Long authorId = 1L; // 컨트롤러 안에서 하드코딩 쓰는 값
+
+        PostUpdateRequest request = PostUpdateRequest.builder()
+                .title("남의 글 수정")
+                .content("이건 실패해야 함")
+                .visibility(PostVisibility.PUBLIC)
+                .aiCollectable(true)
+                .build();
+
+        // 서비스가 권한 체크 후 예외 던지는 상황 시뮬레이션
+        given(postService.updatePost(eq(authorId), eq(postId), any(PostUpdateRequest.class)))
+                .willThrow(new BusinessException(ErrorCode.POST_ACCESS_DENIED));
+
+        String json = objectMapper.writeValueAsString(request);
+
+        // when & then
+        mockMvc.perform(put("/api/v1/posts/{postId}", postId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isForbidden())                     // 403 가정
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("POST_ACCESS_DENIED"));
+    }
+
     // ========== DELETE ==========
 
     @Test
@@ -252,5 +280,22 @@ public class PostControllerTest {
                 .andExpect(jsonPath("$.success").value(true));
 
         verify(postService).deletePost(authorId, postId);
+    }
+
+    @Test
+    @DisplayName("DELETE /api/v1/posts/{postId} - 작성자가 아니면 POST_ACCESS_DENIED 에러 반환")
+    void deletePost_accessDenied() throws Exception {
+        // given
+        Long postId = 1L;
+        Long authorId = 1L; // 컨트롤러 내부에서 쓰는 값
+
+        willThrow(new BusinessException(ErrorCode.POST_ACCESS_DENIED))
+                .given(postService).deletePost(authorId, postId);
+
+        // when & then
+        mockMvc.perform(delete("/api/v1/posts/{postId}", postId))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("POST_ACCESS_DENIED"));
     }
 }
