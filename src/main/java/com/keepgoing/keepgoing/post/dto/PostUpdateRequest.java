@@ -2,13 +2,14 @@ package com.keepgoing.keepgoing.post.dto;
 
 import com.keepgoing.keepgoing.post.domain.PostVisibility;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.NonNull;
+import lombok.*;
 
 @Getter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class PostUpdateRequest {
 
     @NotBlank
@@ -18,7 +19,7 @@ public class PostUpdateRequest {
     @NotBlank
     private String content;
 
-    @NonNull
+    @NotNull
     private PostVisibility visibility;
 
     private boolean aiCollectable;

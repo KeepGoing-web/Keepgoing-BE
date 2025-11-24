@@ -3,11 +3,15 @@ package com.keepgoing.keepgoing.post.dto;
 import com.keepgoing.keepgoing.post.domain.PostVisibility;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class PostCreateRequest {
 
     @NotBlank
@@ -17,7 +21,9 @@ public class PostCreateRequest {
     @NotBlank
     private String content;
 
+    @Builder.Default
     private PostVisibility visibility = PostVisibility.PRIVATE;
 
+    @Builder.Default
     private boolean aiCollectable = true;
 }

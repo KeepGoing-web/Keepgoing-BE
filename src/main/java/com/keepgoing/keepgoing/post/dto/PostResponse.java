@@ -28,7 +28,6 @@ public class PostResponse {
         return new PostResponse(
                 post.getId(),
                 post.getAuthorId(),
-//                null,
                 post.getTitle(),
                 post.getContent(),
                 post.getVisibility(),
