@@ -8,6 +8,8 @@ import com.keepgoing.keepgoing.post.dto.PostCreateRequest;
 import com.keepgoing.keepgoing.post.dto.PostResponse;
 import com.keepgoing.keepgoing.post.dto.PostUpdateRequest;
 import com.keepgoing.keepgoing.post.repository.PostRepository;
+import com.keepgoing.keepgoing.user.domain.User;
+import com.keepgoing.keepgoing.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,13 +22,18 @@ import java.util.List;
 public class PostService {
 
     private final PostRepository postRepository;
+    private final UserRepository userRepository;
 
     /**
      * 포스트 생성
      */
     public PostResponse createPost(Long authorId, PostCreateRequest request) {
+
+        User author = userRepository.findById(authorId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
         Post post = Post.create(
-                authorId,
+                author,
                 request.getTitle(),
                 request.getContent(),
                 request.getVisibility(),
@@ -53,7 +60,7 @@ public class PostService {
      */
     @Transactional(readOnly = true)
     public List<PostResponse> getMyPosts(Long authorId) {
-        return postRepository.findByAuthorIdOrderByCreatedAtDesc(authorId)
+        return postRepository.findByAuthor_IdOrderByCreatedAtDesc(authorId)
                 .stream()
                 .map(PostResponse::from)
                 .toList();

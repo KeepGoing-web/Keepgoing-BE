@@ -9,8 +9,13 @@ import java.util.List;
 
 public interface PostRepository extends JpaRepository<Post, Long> {
 
-    // @Where 덕분에 deleted_at IS NULL은 자동으로 붙음
-    List<Post> findByAuthorIdOrderByCreatedAtDesc(Long authorId);
+    /**
+     * authorId 로 필터해서, createdAt 기준 내림차순으로 정렬해서 찾는다.
+     * */
+    List<Post> findByAuthor_IdOrderByCreatedAtDesc(Long authorId);
 
+    /**
+     * visibility 값으로 필터해서, createdAt 기준 내림차순으로 정렬해서 찾는다.
+     * */
     List<Post> findByVisibilityOrderByCreatedAtDesc(PostVisibility visibility);
 }

@@ -2,6 +2,7 @@ package com.keepgoing.keepgoing.post.domain;
 
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
+import com.keepgoing.keepgoing.user.domain.User;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
@@ -25,13 +26,9 @@ public class Post {
     @Column(name = "id", nullable = false, updatable = false)
     private Long id;
 
-    // TODO: 나중에 User 엔티티랑 ManyToOne으로 매핑
-//    @ManyToOne(optional = false)
-//    @JoinColumn(name = "author_id", nullable = false)
-//    private User author;
-
-    @Column(name = "author_id", nullable = false)
-    private Long authorId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "author_id", nullable = false)
+    private User author;
 
     @Column(name = "title", nullable = false, length = 200)
     private String title;
@@ -65,7 +62,7 @@ public class Post {
      * 글 생성 팩토리 메서드
      * - visibility가 null이면 기본값 PRIVATE 사용
      */
-    public static Post create(Long authorId,
+    public static Post create(User author,
                               String title,
                               String content,
                               PostVisibility visibility,
@@ -75,7 +72,7 @@ public class Post {
                 (visibility != null) ? visibility : PostVisibility.PRIVATE;
 
         return Post.builder()
-                .authorId(authorId)
+                .author(author)
                 .title(title)
                 .content(content)
                 .visibility(finalVisibility)
@@ -100,7 +97,9 @@ public class Post {
      * 소프트 삭제
      */
     public void softDelete() {
-        this.deletedAt = LocalDateTime.now();
+        if (this.deletedAt == null) {
+            this.deletedAt = LocalDateTime.now();
+        }
     }
 
     /**
@@ -113,8 +112,8 @@ public class Post {
     /**
      * 작성자 권한 검증
      */
-    public void validateAuthor(Long authorId) {
-        if (!this.authorId.equals(authorId)) {
+    public void validateAuthor(Long authorID) {
+        if (!isAuthor(authorID)) {
             throw new BusinessException(ErrorCode.POST_ACCESS_DENIED);
         }
     }
@@ -123,6 +122,18 @@ public class Post {
      * 이 글의 작성자 여부
      * */
     public boolean isAuthor(Long authorId) {
-        return this.authorId.equals(authorId);
+        return this.author != null
+                && this.author.getId() != null
+                && this.author.getId().equals(authorId);
+    }
+
+    /**
+     * 작성자 ID 가져오기
+     */
+    public Long getAuthorId() {
+        if (this.author == null || this.author.getId() == null) {
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+        return this.author.getId();
     }
 }
