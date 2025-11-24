@@ -192,7 +192,10 @@ public class PostServiceTest {
         PostResponse response = postService.updatePost(authorId, postId, request);
 
         // then
-         assertThat(response.getTitle()).isEqualTo("수정 제목");
+        assertThat(response.getTitle()).isEqualTo(request.getTitle());
+        assertThat(response.getContent()).isEqualTo(request.getContent());
+        assertThat(response.getVisibility()).isEqualTo(request.getVisibility());
+        assertThat(response.isAiCollectable()).isEqualTo(request.isAiCollectable());
         verify(postRepository).findById(postId);
     }
 

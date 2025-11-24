@@ -1,6 +1,7 @@
 package com.keepgoing.keepgoing.post.domain;
 
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
+import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import com.keepgoing.keepgoing.user.domain.User;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -173,7 +174,8 @@ class PostTest {
 
         // when & then
         assertThatThrownBy(() -> post.validateAuthor(2L))
-                .isInstanceOf(BusinessException.class); // ErrorCode까지 보고 싶으면 hasFieldOrPropertyWithValue(...) 추가
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.POST_ACCESS_DENIED);
     }
 
     // ========== isAuthor ==========
