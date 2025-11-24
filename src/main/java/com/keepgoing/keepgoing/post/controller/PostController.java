@@ -23,7 +23,7 @@ public class PostController {
      */
     @PostMapping
     public ApiResponse<PostResponse> createPost(@RequestBody @Valid PostCreateRequest request) {
-        Long authorId = 1L;
+        Long authorId = 1L; // TODO: Security 붙으면 현재 로그인 유저로 교체
         return ApiResponse.success(postService.createPost(authorId, request));
     }
 
@@ -32,7 +32,7 @@ public class PostController {
      */
     @GetMapping("/me")
     public ApiResponse<List<PostResponse>> getMyPosts() {
-        Long authorId = 1L;
+        Long authorId = 1L; // TODO: Security 붙으면 현재 로그인 유저로 교체
         return ApiResponse.success(postService.getMyPosts(authorId));
     }
 
@@ -50,7 +50,7 @@ public class PostController {
     @PutMapping("/{postId}")
     public ApiResponse<PostResponse> updatePost(@PathVariable Long postId,
                                                 @RequestBody @Valid PostUpdateRequest request) {
-        Long authorId = 1L;
+        Long authorId = 1L; // TODO: Security 붙으면 현재 로그인 유저로 교체
         return ApiResponse.success(postService.updatePost(authorId, postId, request));
     }
 
@@ -59,7 +59,7 @@ public class PostController {
      */
     @DeleteMapping("/{postId}")
     public ApiResponse<Void> deletePost(@PathVariable Long postId) {
-        Long authorId = 1L;
+        Long authorId = 1L; // TODO: Security 붙으면 현재 로그인 유저로 교체
         postService.deletePost(authorId, postId);
         return ApiResponse.success(null);
     }

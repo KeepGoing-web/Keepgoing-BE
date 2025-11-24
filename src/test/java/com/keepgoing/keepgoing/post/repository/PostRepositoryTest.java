@@ -38,12 +38,12 @@ class PostRepositoryTest {
     void findByAuthorId_OrderByCreatedAtDesc() {
         // given
         postRepository.save(Post.create(user1, "제목1-1", "내용", PostVisibility.PUBLIC, true));
-        // 시간차를 두기 위해 sleep 사용 (실제로는 id, @CreatedDate 등으로 정렬 순서 보장)
+
+        //NOTE: createdAt 정렬 보장용 (나중에 id 정렬 등으로 리팩터링 후보)
         try { Thread.sleep(10); } catch (InterruptedException e) {}
         postRepository.save(Post.create(user2, "제목2-1", "내용", PostVisibility.PUBLIC, true)); // 다른 유저의 글
         try { Thread.sleep(10); } catch (InterruptedException e) {}
         postRepository.save(Post.create(user1, "제목1-2", "내용", PostVisibility.PUBLIC, true));
-
 
         // when
         List<Post> result = postRepository.findByAuthor_IdOrderByCreatedAtDesc(user1.getId());
@@ -66,5 +66,58 @@ class PostRepositoryTest {
 
         // then
         assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("findByVisibilityOrderByCreatedAtDesc: 공개 범위에 따라 필터링하고 최신순으로 정렬한다")
+    void findByVisibilityOrderByCreatedAtDesc() {
+        // given
+        postRepository.save(Post.create(user1, "비공개글1", "내용", PostVisibility.PRIVATE, true));
+        postRepository.save(Post.create(user1, "비공개글2", "내용", PostVisibility.PRIVATE, true));
+        postRepository.save(Post.create(user1, "공개글1", "내용", PostVisibility.PUBLIC, true));
+        postRepository.save(Post.create(user2, "공개글2", "내용", PostVisibility.PUBLIC, true));
+
+        // when
+        List<Post> result = postRepository.findByVisibilityOrderByCreatedAtDesc(PostVisibility.PUBLIC);
+
+        // then
+        assertThat(result).hasSize(2);
+        // 최신순 보장 (생성 순서의 역순)
+        assertThat(result.get(0).getTitle()).isEqualTo("공개글2");
+        assertThat(result.get(1).getTitle()).isEqualTo("공개글1");
+    }
+
+    @Test
+    @DisplayName("findByVisibilityOrderByCreatedAtDesc: 해당 공개 범위의 게시글이 없으면 빈 리스트를 반환한다")
+    void findByVisibilityOrderByCreatedAtDesc_returnsEmptyListWhenNoPosts() {
+        // given
+        // PUBLIC 글 없음
+
+        // when
+        List<Post> result = postRepository.findByVisibilityOrderByCreatedAtDesc(PostVisibility.PUBLIC);
+
+        // then
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("findByAuthor_IdOrderByCreatedAtDesc: soft delete 된 게시글은 조회되지 않는다")
+    void findByAuthorIdOrderByCreatedAtDesc_excludesSoftDeletedPosts() {
+        // given
+        Post post1 = postRepository.save(Post.create(user1, "살아있는 글", "내용", PostVisibility.PUBLIC, true));
+        Post post2 = postRepository.save(Post.create(user1, "삭제된 글", "내용", PostVisibility.PUBLIC, true));
+
+        // soft delete
+        post2.softDelete();
+        postRepository.save(post2); // 변경사항 반영
+
+        // when
+        List<Post> result = postRepository.findByAuthor_IdOrderByCreatedAtDesc(user1.getId());
+
+        // then
+        assertThat(result)
+                .hasSize(1)
+                .extracting(Post::getTitle)
+                .containsExactly("살아있는 글");
     }
 }

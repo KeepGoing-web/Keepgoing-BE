@@ -114,7 +114,7 @@ public class PostControllerTest {
     @DisplayName("GET /api/v1/posts/{postId} - 단일 게시글 조회 성공")
     void getPost_success() throws Exception {
         // given
-        Long postId = 1L;
+        Long postId = 1L; // TODO: Security 붙으면 현재 로그인 유저로 교체
 
         User author = User.builder()
                 .id(1L)
@@ -162,7 +162,7 @@ public class PostControllerTest {
     @DisplayName("GET /api/v1/posts/me - 내 게시글 목록 조회 성공")
     void getMyPosts_success() throws Exception {
         // given
-        Long authorId = 1L; // 컨트롤러 안에서 하드코딩된 값
+        Long authorId = 1L; // TODO: Security 붙으면 현재 로그인 유저로 교체
 
         User author = User.builder()
                 .id(authorId)
@@ -196,7 +196,7 @@ public class PostControllerTest {
     void updatePost_success() throws Exception {
         // given
         Long postId = 1L;
-        Long authorId = 1L; // 컨트롤러에서 하드코딩한 값
+        Long authorId = 1L; // TODO: Security 붙으면 현재 로그인 유저로 교체
 
         PostUpdateRequest request = PostUpdateRequest.builder()
                 .title("수정된 제목")
@@ -239,7 +239,7 @@ public class PostControllerTest {
     void updatePost_accessDenied() throws Exception {
         // given
         Long postId = 1L;
-        Long authorId = 1L; // 컨트롤러 안에서 하드코딩 쓰는 값
+        Long authorId = 1L; // TODO: Security 붙으면 현재 로그인 유저로 교체
 
         PostUpdateRequest request = PostUpdateRequest.builder()
                 .title("남의 글 수정")
@@ -270,7 +270,7 @@ public class PostControllerTest {
     void deletePost_success() throws Exception {
         // given
         Long postId = 1L;
-        Long authorId = 1L;
+        Long authorId = 1L; // TODO: Security 붙으면 현재 로그인 유저로 교체
 
         willDoNothing().given(postService).deletePost(authorId, postId);
 
@@ -287,7 +287,7 @@ public class PostControllerTest {
     void deletePost_accessDenied() throws Exception {
         // given
         Long postId = 1L;
-        Long authorId = 1L; // 컨트롤러 내부에서 쓰는 값
+        Long authorId = 1L; // TODO: Security 붙으면 현재 로그인 유저로 교체
 
         willThrow(new BusinessException(ErrorCode.POST_ACCESS_DENIED))
                 .given(postService).deletePost(authorId, postId);
