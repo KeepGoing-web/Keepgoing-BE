@@ -90,4 +90,12 @@ public class User {
     public void activate() {
         this.status = UserStatus.ACTIVE;
     }
+
+    public static User create(String email, String name) {
+        return User.builder()
+                .email(email)
+                .name(name)
+                .lastLoginAt(LocalDateTime.now())
+                .build();
+    }
 }
