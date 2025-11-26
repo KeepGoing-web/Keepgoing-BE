@@ -120,4 +120,20 @@ class PostRepositoryTest {
                 .extracting(Post::getTitle)
                 .containsExactly("살아있는 글");
     }
+
+    @Test
+    @DisplayName("findById는 author를 함께 로딩한다(@EntityGraph)")
+    void findById_loadsAuthorWithEntityGraph() {
+        // given
+        User author = user1;
+
+        Post saved = postRepository.save(Post.create(author, "title", "content", PostVisibility.PRIVATE, true));
+
+        // when
+        Post found = postRepository.findById(saved.getId())
+                .orElseThrow();
+
+        // then
+        assertThat(found.getAuthor().getId()).isEqualTo(author.getId());
+    }
 }
