@@ -40,16 +40,16 @@ public class PostControllerTest {
     @Autowired
     ObjectMapper objectMapper;
 
-    @MockBean
+    @MockitoBean
     PostService postService;
 
-    @MockBean
+    @MockitoBean
     JpaMetamodelMappingContext jpaMappingContext;
 
     // ========== Post ==========
 
     @Test
-    @DisplayName("Post /api/v1/posts - 글 생성 성공")
+    @DisplayName("Post /api/v1/posts - 글 생성 성공 시 201 Created 반환")
     void createPost_success() throws Exception {
         //given
         PostCreateRequest request = PostCreateRequest.builder()

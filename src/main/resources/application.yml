@@ -3,8 +3,8 @@ spring:
     name: keepgoing
   jpa:
     hibernate:
-      ddl-auto: create   # 또는 update (로컬 개발용)
+      ddl-auto: create
     defer-datasource-initialization: true
     sql:
       init:
-        mode: always
+        mode: embedded
