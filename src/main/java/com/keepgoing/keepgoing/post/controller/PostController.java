@@ -1,12 +1,15 @@
 package com.keepgoing.keepgoing.post.controller;
 
 import com.keepgoing.keepgoing.global.api.response.ApiResponse;
-import com.keepgoing.keepgoing.post.dto.PostCreateRequest;
-import com.keepgoing.keepgoing.post.dto.PostResponse;
-import com.keepgoing.keepgoing.post.dto.PostUpdateRequest;
+import com.keepgoing.keepgoing.post.controller.dto.PostCreateRequest;
+import com.keepgoing.keepgoing.post.controller.dto.PostResponse;
+import com.keepgoing.keepgoing.post.controller.dto.PostUpdateRequest;
+import com.keepgoing.keepgoing.post.domain.Post;
 import com.keepgoing.keepgoing.post.service.PostService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,45 +25,77 @@ public class PostController {
      * 포스트 생성
      */
     @PostMapping
-    public ApiResponse<PostResponse> createPost(@RequestBody @Valid PostCreateRequest request) {
+    public ResponseEntity<ApiResponse<PostResponse>> createPost(
+            @RequestBody @Valid PostCreateRequest request
+    ) {
         Long authorId = 1L; // TODO: Security 붙으면 현재 로그인 유저로 교체
-        return ApiResponse.success(postService.createPost(authorId, request));
-    }
 
-    /**
-     * 내가 쓴 포스트 목록 조회
-     */
-    @GetMapping("/me")
-    public ApiResponse<List<PostResponse>> getMyPosts() {
-        Long authorId = 1L; // TODO: Security 붙으면 현재 로그인 유저로 교체
-        return ApiResponse.success(postService.getMyPosts(authorId));
+        Post created = postService.createPost(
+                authorId,
+                request.getTitle(),
+                request.getContent(),
+                request.getVisibility(),
+                request.isAiCollectable()
+        );
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(PostResponse.from(created)));
     }
 
     /**
      * 단일 포스트 조회
      */
     @GetMapping("/{postId}")
-    public ApiResponse<PostResponse> getPost(@PathVariable Long postId) {
-        return ApiResponse.success(postService.getPost(postId));
+    public ResponseEntity<ApiResponse<PostResponse>> getPost(@PathVariable Long postId) {
+        Post post = postService.getPost(postId);
+
+        return ResponseEntity.ok(ApiResponse.success(PostResponse.from(post)));
+    }
+
+    /**
+     * 내가 쓴 포스트 목록 조회
+     */
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<List<PostResponse>>> getMyPosts() {
+        Long authorId = 1L; // TODO: Security 붙으면 현재 로그인 유저로 교체
+
+        List<Post> posts = postService.getMyPosts(authorId);
+        List<PostResponse> responses = posts.stream()
+                .map(PostResponse::from)
+                .toList();
+
+        return ResponseEntity.ok(ApiResponse.success(responses));
     }
 
     /**
      * 포스트 수정
      */
     @PutMapping("/{postId}")
-    public ApiResponse<PostResponse> updatePost(@PathVariable Long postId,
+    public ResponseEntity<ApiResponse<PostResponse>> updatePost(@PathVariable Long postId,
                                                 @RequestBody @Valid PostUpdateRequest request) {
         Long authorId = 1L; // TODO: Security 붙으면 현재 로그인 유저로 교체
-        return ApiResponse.success(postService.updatePost(authorId, postId, request));
+
+        Post updated = postService.updatePost(
+                authorId,
+                postId,
+                request.getTitle(),
+                request.getContent(),
+                request.getVisibility(),
+                request.isAiCollectable()
+        );
+
+        return ResponseEntity.ok(ApiResponse.success(PostResponse.from(updated)));
     }
 
     /**
      * 포스트 삭제
      */
     @DeleteMapping("/{postId}")
-    public ApiResponse<Void> deletePost(@PathVariable Long postId) {
+    public ResponseEntity<Void> deletePost(@PathVariable Long postId) {
         Long authorId = 1L; // TODO: Security 붙으면 현재 로그인 유저로 교체
+
         postService.deletePost(authorId, postId);
-        return ApiResponse.success(null);
+
+        return ResponseEntity.noContent().build();
     }
 }

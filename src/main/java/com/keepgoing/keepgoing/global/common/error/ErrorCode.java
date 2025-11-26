@@ -146,7 +146,8 @@ public enum ErrorCode {
     POST_ACCESS_DENIED(
             HttpStatus.FORBIDDEN,
             "POST_02",
-            "해당 게시글에 대한 권한이 없습니다."),
+            "해당 게시글에 대한 권한이 없습니다."
+    ),
     ;
 
     private final HttpStatus httpStatus;

@@ -75,8 +75,13 @@ public class PostControllerTest {
 
         PostResponse response = PostResponse.from(post);
 
-        given(postService.createPost(any(Long.class), any(PostCreateRequest.class)))
-                .willReturn(response);
+        given(postService.createPost(
+                anyLong(),
+                anyString(),
+                anyString(),
+                any(PostVisibility.class),
+                anyBoolean()
+        )).willReturn(post);
 
         String json = objectMapper.writeValueAsString(request);
 
@@ -84,7 +89,7 @@ public class PostControllerTest {
         mockMvc.perform(post("/api/v1/posts")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.title").value("테스트 제목"));
     }
@@ -129,9 +134,7 @@ public class PostControllerTest {
                 true
         );
 
-        PostResponse response = PostResponse.from(post);
-
-        given(postService.getPost(postId)).willReturn(response);
+        given(postService.getPost(postId)).willReturn(post);
 
         // when & then
         mockMvc.perform(get("/api/v1/posts/{postId}", postId))
@@ -172,12 +175,7 @@ public class PostControllerTest {
         Post post1 = Post.create(author, "제목1", "내용1", PostVisibility.PRIVATE, true);
         Post post2 = Post.create(author, "제목2", "내용2", PostVisibility.PUBLIC, true);
 
-        List<PostResponse> responses = List.of(
-                PostResponse.from(post1),
-                PostResponse.from(post2)
-        );
-
-        given(postService.getMyPosts(authorId)).willReturn(responses);
+        given(postService.getMyPosts(authorId)).willReturn(List.of(post1, post2));
 
         // when & then
         mockMvc.perform(get("/api/v1/posts/me"))
@@ -217,10 +215,15 @@ public class PostControllerTest {
                 PostVisibility.PUBLIC,
                 false
         );
-        PostResponse response = PostResponse.from(updatedPost);
 
-        given(postService.updatePost(any(Long.class), eq(postId), any(PostUpdateRequest.class)))
-                .willReturn(response);
+        given(postService.updatePost(
+                anyLong(),
+                anyLong(),
+                anyString(),
+                anyString(),
+                any(PostVisibility.class),
+                anyBoolean()
+        )).willReturn(updatedPost);
 
         String json = objectMapper.writeValueAsString(request);
 
@@ -248,8 +251,14 @@ public class PostControllerTest {
                 .build();
 
         // 서비스가 권한 체크 후 예외 던지는 상황 시뮬레이션
-        given(postService.updatePost(eq(authorId), eq(postId), any(PostUpdateRequest.class)))
-                .willThrow(new BusinessException(ErrorCode.POST_ACCESS_DENIED));
+        given(postService.updatePost(
+                eq(authorId),
+                eq(postId),
+                anyString(),
+                anyString(),
+                any(PostVisibility.class),
+                anyBoolean()
+        )).willThrow(new BusinessException(ErrorCode.POST_ACCESS_DENIED));
 
         String json = objectMapper.writeValueAsString(request);
 
@@ -275,8 +284,8 @@ public class PostControllerTest {
 
         // when & then
         mockMvc.perform(delete("/api/v1/posts/{postId}", postId))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(status().isNoContent())
+                .andExpect(content().string(""));
 
         verify(postService).deletePost(authorId, postId);
     }
