@@ -74,7 +74,7 @@ class PostTest {
 
     @Test
     @DisplayName("create: visibility가 주어지면 그 값을 사용")
-    void creat_useGivenVisibility() {
+    void create_useGivenVisibility() {
         //given
         User author = User.builder()
                 .id(1L)

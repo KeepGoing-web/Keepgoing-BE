@@ -4,9 +4,6 @@ import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import com.keepgoing.keepgoing.post.domain.Post;
 import com.keepgoing.keepgoing.post.domain.PostVisibility;
-import com.keepgoing.keepgoing.post.dto.PostCreateRequest;
-import com.keepgoing.keepgoing.post.dto.PostResponse;
-import com.keepgoing.keepgoing.post.dto.PostUpdateRequest;
 import com.keepgoing.keepgoing.post.repository.PostRepository;
 import com.keepgoing.keepgoing.user.domain.User;
 import com.keepgoing.keepgoing.user.repository.UserRepository;
@@ -50,25 +47,6 @@ public class PostServiceTest {
                 .build();
     }
 
-    private PostCreateRequest createPostCreateRequest() {
-        return PostCreateRequest.builder()
-                .title("제목")
-                .content("내용")
-                .visibility(PostVisibility.PRIVATE)
-                .aiCollectable(true)
-                .build();
-    }
-
-
-    private PostUpdateRequest createPostUpdateRequest() {
-        return PostUpdateRequest.builder()
-                .title("수정 제목")
-                .content("수정 내용")
-                .visibility(PostVisibility.PUBLIC)
-                .aiCollectable(false)
-                .build();
-    }
-
     // ========== createPost ==========
 
     @Test
@@ -77,24 +55,37 @@ public class PostServiceTest {
         // given
         Long authorId = 1L;
         User author = createAuthor(authorId);
-        PostCreateRequest request = createPostCreateRequest();
+
+        String title = "제목";
+        String content = "내용";
+        PostVisibility visibility = PostVisibility.PRIVATE;
+        boolean aiCollectable = true;
 
         given(userRepository.findById(authorId)).willReturn(Optional.of(author));
 
         Post post = Post.create(
                 author,
-                request.getTitle(),
-                request.getContent(),
-                request.getVisibility(),
-                request.isAiCollectable()
+                title,
+                content,
+                visibility,
+                aiCollectable
         );
         given(postRepository.save(any(Post.class))).willReturn(post);
 
         // when
-        PostResponse response = postService.createPost(authorId, request);
+        Post result = postService.createPost(
+                authorId,
+                title,
+                content,
+                visibility,
+                aiCollectable
+        );
 
         // then
-        assertThat(response.getTitle()).isEqualTo("제목");
+        assertThat(result.getTitle()).isEqualTo(title);
+        assertThat(result.getContent()).isEqualTo(content);
+        assertThat(result.getVisibility()).isEqualTo(visibility);
+        assertThat(result.isAiCollectable()).isEqualTo(aiCollectable);
         verify(userRepository).findById(authorId);
         verify(postRepository).save(any(Post.class));
     }
@@ -104,12 +95,15 @@ public class PostServiceTest {
     void createPost_throwsWhenUserNotFound() {
         // given
         Long authorId = 1L;
-        PostCreateRequest request = createPostCreateRequest();
+        String title = "제목";
+        String content = "내용";
+        PostVisibility visibility = PostVisibility.PRIVATE;
+        boolean aiCollectable = true;
 
         given(userRepository.findById(authorId)).willReturn(Optional.empty());
 
         // when & then
-        assertThatThrownBy(() -> postService.createPost(authorId, request))
+        assertThatThrownBy(() -> postService.createPost(authorId, title, content, visibility, aiCollectable))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.USER_NOT_FOUND);
     }
@@ -127,10 +121,10 @@ public class PostServiceTest {
         given(postRepository.findById(postId)).willReturn(Optional.of(post));
 
         // when
-        PostResponse response = postService.getPost(postId);
+        Post result = postService.getPost(postId);
 
         // then
-        assertThat(response.getTitle()).isEqualTo("제목");
+        assertThat(result.getTitle()).isEqualTo("제목");
         verify(postRepository).findById(postId);
     }
 
@@ -163,12 +157,12 @@ public class PostServiceTest {
                 .willReturn(List.of(post1, post2));
 
         // when
-        var responses = postService.getMyPosts(authorId);
+        List<Post> posts = postService.getMyPosts(authorId);
 
         // then
-        assertThat(responses).hasSize(2);
-        assertThat(responses.get(0).getTitle()).isEqualTo("제목1");
-        assertThat(responses.get(1).getTitle()).isEqualTo("제목2");
+        assertThat(posts).hasSize(2);
+        assertThat(posts.get(0).getTitle()).isEqualTo("제목1");
+        assertThat(posts.get(1).getTitle()).isEqualTo("제목2");
         verify(postRepository).findByAuthor_IdOrderByCreatedAtDesc(authorId);
     }
 
@@ -184,18 +178,21 @@ public class PostServiceTest {
         User author = createAuthor(authorId);
         Post post = Post.create(author, "old", "old", PostVisibility.PRIVATE, true);
 
-        PostUpdateRequest request = createPostUpdateRequest(); // title/content/visibility/aiCollectable 세팅
+        String newTitle = "수정 제목";
+        String newContent = "수정 내용";
+        PostVisibility newVisibility = PostVisibility.PUBLIC;
+        boolean newAiCollectable = false;
 
         given(postRepository.findById(postId)).willReturn(Optional.of(post));
 
         // when
-        PostResponse response = postService.updatePost(authorId, postId, request);
+        Post result = postService.updatePost(authorId, postId, newTitle, newContent, newVisibility, newAiCollectable);
 
         // then
-        assertThat(response.getTitle()).isEqualTo(request.getTitle());
-        assertThat(response.getContent()).isEqualTo(request.getContent());
-        assertThat(response.getVisibility()).isEqualTo(request.getVisibility());
-        assertThat(response.isAiCollectable()).isEqualTo(request.isAiCollectable());
+        assertThat(result.getTitle()).isEqualTo(newTitle);
+        assertThat(result.getContent()).isEqualTo(newContent);
+        assertThat(result.getVisibility()).isEqualTo(newVisibility);
+        assertThat(result.isAiCollectable()).isEqualTo(newAiCollectable);
         verify(postRepository).findById(postId);
     }
 
@@ -205,12 +202,18 @@ public class PostServiceTest {
         // given
         Long authorId = 1L;
         Long postId = 10L;
-        PostUpdateRequest request = createPostUpdateRequest();
+
+        String newTitle = "수정 제목";
+        String newContent = "수정 내용";
+        PostVisibility newVisibility = PostVisibility.PUBLIC;
+        boolean newAiCollectable = false;
 
         given(postRepository.findById(postId)).willReturn(Optional.empty());
 
         // when & then
-        assertThatThrownBy(() -> postService.updatePost(authorId, postId, request))
+        assertThatThrownBy(() ->
+                postService.updatePost(authorId, postId, newTitle, newContent, newVisibility, newAiCollectable)
+        )
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.POST_NOT_FOUND);
     }
@@ -226,12 +229,17 @@ public class PostServiceTest {
         User author = createAuthor(othersId); // 실제 작성자는 2번
         Post post = Post.create(author, "old", "old", PostVisibility.PRIVATE, true);
 
-        PostUpdateRequest request = createPostUpdateRequest();
+        String newTitle = "수정 제목";
+        String newContent = "수정 내용";
+        PostVisibility newVisibility = PostVisibility.PUBLIC;
+        boolean newAiCollectable = false;
 
         given(postRepository.findById(postId)).willReturn(Optional.of(post));
 
         // when & then
-        assertThatThrownBy(() -> postService.updatePost(authorId, postId, request))
+        assertThatThrownBy(() ->
+                postService.updatePost(authorId, postId, newTitle, newContent, newVisibility, newAiCollectable)
+        )
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.POST_ACCESS_DENIED);
     }
