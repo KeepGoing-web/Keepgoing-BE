@@ -13,6 +13,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -62,16 +63,11 @@ public class PostController {
      */
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<PagedResponse<PostResponse>>> getMyPosts(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
+            Pageable pageable
     ) {
         Long authorId = 1L; // TODO: Security 붙으면 현재 로그인 유저로 교체
 
-        Pageable pageable = PageRequest.of(
-                page,
-                size,
-                Sort.by(Sort.Direction.DESC, "createdAt")
-        );
         Page<Post> postPage = postService.getMyPosts(authorId, pageable);
 
         List<PostResponse> contents = postPage.getContent().stream()
