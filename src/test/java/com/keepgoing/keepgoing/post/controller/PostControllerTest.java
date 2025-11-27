@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.*;
 import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -160,7 +161,7 @@ public class PostControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/v1/posts/me - 내 게시글 목록 조회 성공")
+    @DisplayName("GET /api/v1/posts/me - 내 게시글 페이지네이션 조회 성공")
     void getMyPosts_success() throws Exception {
         // given
         Long authorId = 1L; // TODO: Security 붙으면 현재 로그인 유저로 교체
@@ -173,16 +174,30 @@ public class PostControllerTest {
 
         Post post1 = Post.create(author, "제목1", "내용1", PostVisibility.PRIVATE, true);
         Post post2 = Post.create(author, "제목2", "내용2", PostVisibility.PUBLIC, true);
+        var posts = List.of(post1, post2);
 
-        given(postService.getMyPosts(authorId)).willReturn(List.of(post1, post2));
+        // 페이지 정보 (0페이지, size=10, createdAt DESC 정렬)
+        Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Post> postPage = new PageImpl<>(posts, pageable, posts.size());
+
+        // 서비스 호출 스텁: authorId + 어떤 Pageable 이 오든 postPage 반환
+        given(postService.getMyPosts(eq(authorId), any(Pageable.class)))
+                .willReturn(postPage);
 
         // when & then
-        mockMvc.perform(get("/api/v1/posts/me"))
+        mockMvc.perform(get("/api/v1/posts/me")
+                        .param("page", "0")
+                        .param("size", "10"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.length()").value(2))
-                .andExpect(jsonPath("$.data[0].title").value("제목1"))
-                .andExpect(jsonPath("$.data[1].title").value("제목2"));
+                // 페이지네이션 구조 확인
+                .andExpect(jsonPath("$.data.page").value(0))
+                .andExpect(jsonPath("$.data.size").value(10))
+                .andExpect(jsonPath("$.data.totalElements").value(2))
+                // 실제 contents 목록 검증
+                .andExpect(jsonPath("$.data.contents.length()").value(2))
+                .andExpect(jsonPath("$.data.contents[0].title").value("제목1"))
+                .andExpect(jsonPath("$.data.contents[1].title").value("제목2"));
     }
 
     // ========== PUT ==========

@@ -1,6 +1,7 @@
 package com.keepgoing.keepgoing.post.controller;
 
 import com.keepgoing.keepgoing.global.api.response.ApiResponse;
+import com.keepgoing.keepgoing.global.api.response.PagedResponse;
 import com.keepgoing.keepgoing.post.controller.dto.PostCreateRequest;
 import com.keepgoing.keepgoing.post.controller.dto.PostResponse;
 import com.keepgoing.keepgoing.post.controller.dto.PostUpdateRequest;
@@ -8,6 +9,10 @@ import com.keepgoing.keepgoing.post.domain.Post;
 import com.keepgoing.keepgoing.post.service.PostService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -56,15 +61,26 @@ public class PostController {
      * 내가 쓴 포스트 목록 조회
      */
     @GetMapping("/me")
-    public ResponseEntity<ApiResponse<List<PostResponse>>> getMyPosts() {
+    public ResponseEntity<ApiResponse<PagedResponse<PostResponse>>> getMyPosts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
         Long authorId = 1L; // TODO: Security 붙으면 현재 로그인 유저로 교체
 
-        List<Post> posts = postService.getMyPosts(authorId);
-        List<PostResponse> responses = posts.stream()
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+        Page<Post> postPage = postService.getMyPosts(authorId, pageable);
+
+        List<PostResponse> contents = postPage.getContent().stream()
                 .map(PostResponse::from)
                 .toList();
 
-        return ResponseEntity.ok(ApiResponse.success(responses));
+        PagedResponse<PostResponse> body = PagedResponse.of(postPage, contents);
+
+        return ResponseEntity.ok(ApiResponse.success(body));
     }
 
     /**
