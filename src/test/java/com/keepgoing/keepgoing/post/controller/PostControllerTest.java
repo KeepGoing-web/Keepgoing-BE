@@ -140,7 +140,6 @@ public class PostControllerTest {
         mockMvc.perform(get("/api/v1/posts/{postId}", postId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-//                .andExpect(jsonPath("$.data.id").value(postId))
                 .andExpect(jsonPath("$.data.title").value("테스트 제목"));
     }
 
