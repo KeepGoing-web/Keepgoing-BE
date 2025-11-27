@@ -9,6 +9,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import java.util.List;
 
@@ -46,7 +50,9 @@ class PostRepositoryTest {
         postRepository.save(Post.create(user1, "제목1-2", "내용", PostVisibility.PUBLIC, true));
 
         // when
-        List<Post> result = postRepository.findByAuthor_IdOrderByCreatedAtDesc(user1.getId());
+        Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Post> page = postRepository.findByAuthor_Id(user1.getId(), pageable);
+        List<Post> result = page.getContent();
 
         // then
         assertThat(result).hasSize(2);
@@ -62,7 +68,9 @@ class PostRepositoryTest {
         // user1이 작성한 글 없음
 
         // when
-        List<Post> result = postRepository.findByAuthor_IdOrderByCreatedAtDesc(user1.getId());
+        Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
+        List<Post> result = postRepository.findByAuthor_Id(user1.getId(), pageable)
+                .getContent();
 
         // then
         assertThat(result).isEmpty();
@@ -112,7 +120,9 @@ class PostRepositoryTest {
         postRepository.save(post2); // 변경사항 반영
 
         // when
-        List<Post> result = postRepository.findByAuthor_IdOrderByCreatedAtDesc(user1.getId());
+        Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
+        List<Post> result = postRepository.findByAuthor_Id(user1.getId(), pageable)
+                .getContent();
 
         // then
         assertThat(result)

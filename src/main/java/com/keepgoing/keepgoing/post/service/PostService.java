@@ -8,6 +8,10 @@ import com.keepgoing.keepgoing.post.repository.PostRepository;
 import com.keepgoing.keepgoing.user.domain.User;
 import com.keepgoing.keepgoing.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -56,8 +60,17 @@ public class PostService {
      * 내가 쓴 포스트 목록 조회
      */
     @Transactional(readOnly = true)
+    public Page<Post> getMyPosts(Long authorId, Pageable pageable) {
+        return postRepository.findByAuthor_Id(authorId, pageable);
+    }
+
+    //  옛날 버전: 기존 컨트롤러/테스트가 쓰던 시그니처 (임시 어댑터)
     public List<Post> getMyPosts(Long authorId) {
-        return postRepository.findByAuthor_IdOrderByCreatedAtDesc(authorId);
+        Page<Post> page = getMyPosts(
+                authorId,
+                PageRequest.of(0, Integer.MAX_VALUE, Sort.by(Sort.Direction.DESC, "createdAt"))
+        );
+        return page.getContent();
     }
 
     /**
