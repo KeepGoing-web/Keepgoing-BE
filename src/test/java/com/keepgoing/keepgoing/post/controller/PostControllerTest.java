@@ -198,6 +198,44 @@ public class PostControllerTest {
                 .andExpect(jsonPath("$.data.contents[1].title").value("제목2"));
     }
 
+    @Test
+    @DisplayName("GET /api/v1/posts/me - size가 MAX_PAGE_SIZE보다 크면 상한으로 제한된다")
+    void getMyPosts_clampsPageSize() throws Exception {
+        // given
+        Long authorId = 1L;
+
+        User author = User.builder()
+                .id(authorId)
+                .email("test@example.com")
+                .name("테스트유저")
+                .build();
+
+        Post post = Post.create(
+                author,
+                "제목",
+                "내용",
+                PostVisibility.PUBLIC,
+                true
+        );
+
+        int requestedSize = 1000;
+        int expectedSize = 100; // MAX_PAGE_SIZE
+
+        Pageable clampedPageable = PageRequest.of(0, expectedSize, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Post> postPage = new PageImpl<>(List.of(post), clampedPageable, 1);
+
+        given(postService.getMyPosts(eq(authorId), any(Pageable.class)))
+                .willReturn(postPage);
+
+        // when & then
+        mockMvc.perform(get("/api/v1/posts/me")
+                        .param("page", "0")
+                        .param("size", String.valueOf(requestedSize)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.size").value(expectedSize)); // 100
+    }
+
     // ========== PUT ==========
 
     @Test

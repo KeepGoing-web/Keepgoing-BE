@@ -10,6 +10,7 @@ import com.keepgoing.keepgoing.post.service.PostService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -23,6 +24,8 @@ import java.util.List;
 @RequestMapping("/api/v1/posts")
 @RequiredArgsConstructor
 public class PostController {
+
+    private static final int MAX_PAGE_SIZE = 100;
 
     private final PostService postService;
 
@@ -66,6 +69,13 @@ public class PostController {
             Pageable pageable
     ) {
         Long authorId = 1L; // TODO: Security 붙으면 현재 로그인 유저로 교체
+
+        int safeSize = Math.min(pageable.getPageSize(), MAX_PAGE_SIZE);
+        Pageable safePageable = PageRequest.of(
+                pageable.getPageNumber(),
+                safeSize,
+                pageable.getSort()
+        );
 
         Page<Post> postPage = postService.getMyPosts(authorId, pageable);
 
