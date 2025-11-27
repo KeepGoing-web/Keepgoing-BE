@@ -185,9 +185,7 @@ public class PostControllerTest {
                 .willReturn(postPage);
 
         // when & then
-        mockMvc.perform(get("/api/v1/posts/me")
-                        .param("page", "0")
-                        .param("size", "10"))
+        mockMvc.perform(get("/api/v1/posts/me"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 // 페이지네이션 구조 확인
