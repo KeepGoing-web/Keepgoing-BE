@@ -64,15 +64,6 @@ public class PostService {
         return postRepository.findByAuthor_Id(authorId, pageable);
     }
 
-    //  옛날 버전: 기존 컨트롤러/테스트가 쓰던 시그니처 (임시 어댑터)
-    public List<Post> getMyPosts(Long authorId) {
-        Page<Post> page = getMyPosts(
-                authorId,
-                PageRequest.of(0, Integer.MAX_VALUE, Sort.by(Sort.Direction.DESC, "createdAt"))
-        );
-        return page.getContent();
-    }
-
     /**
      * 포스트 수정
      */
