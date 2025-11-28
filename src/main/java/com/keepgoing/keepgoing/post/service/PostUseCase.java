@@ -5,7 +5,6 @@ import com.keepgoing.keepgoing.post.service.dto.CreatePostCommand;
 import com.keepgoing.keepgoing.post.service.dto.UpdatePostCommand;
 import com.keepgoing.keepgoing.post.service.dto.UserPostQuery;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 
 public interface PostUseCase {
 

@@ -6,7 +6,6 @@ import com.keepgoing.keepgoing.post.controller.dto.PostCreateRequest;
 import com.keepgoing.keepgoing.post.controller.dto.PostResponse;
 import com.keepgoing.keepgoing.post.controller.dto.PostUpdateRequest;
 import com.keepgoing.keepgoing.post.domain.Post;
-import com.keepgoing.keepgoing.post.service.PostService;
 import com.keepgoing.keepgoing.post.service.PostUseCase;
 import com.keepgoing.keepgoing.post.service.dto.CreatePostCommand;
 import com.keepgoing.keepgoing.post.service.dto.UpdatePostCommand;

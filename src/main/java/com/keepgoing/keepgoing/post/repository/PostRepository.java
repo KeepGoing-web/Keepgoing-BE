@@ -18,7 +18,6 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     /**
      * authorId 로 필터해서, 전달받은 Pageable 조건(페이지/정렬)에 맞게 조회한다.
-     * */
     @EntityGraph(attributePaths = {"author"})
     Page<Post> findByAuthor_Id(Long authorId, Pageable pageable);
 
