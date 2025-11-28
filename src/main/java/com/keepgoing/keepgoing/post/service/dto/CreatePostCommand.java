@@ -11,6 +11,5 @@ public record CreatePostCommand(
         String content,
         PostVisibility visibility,
         boolean aiCollectable
-) {
-}
+) {}
 

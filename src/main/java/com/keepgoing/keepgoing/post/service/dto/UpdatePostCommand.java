@@ -12,5 +12,4 @@ public record UpdatePostCommand(
         String content,
         PostVisibility visibility,
         boolean aiCollectable
-) {
-}
+) {}
