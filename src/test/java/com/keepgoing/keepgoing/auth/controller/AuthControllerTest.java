@@ -108,7 +108,7 @@ class AuthControllerTest {
         }
 
         @Test
-        @DisplayName("검증 실패 시 400과 VALIDATION_FAILED, FiledErrors 배열을 반환한다.")
+        @DisplayName("검증 실패 시 400과 VALIDATION_FAILED, FieldErrors 배열을 반환한다.")
         void validation_failed() throws Exception {
             // given
             var invalid = SignupRequest.builder()

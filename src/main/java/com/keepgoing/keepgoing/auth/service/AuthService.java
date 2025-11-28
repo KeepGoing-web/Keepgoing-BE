@@ -8,6 +8,7 @@ import com.keepgoing.keepgoing.user.domain.UserPasswordCredential;
 import com.keepgoing.keepgoing.user.repository.UserPasswordCredentialRepository;
 import com.keepgoing.keepgoing.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,15 +32,19 @@ public class AuthService {
 
         // User 생성 후 저장
         User user = User.create(command.email(), command.name());
-        userRepository.save(user);
+        try {
+            userRepository.save(user);
 
-        // encodedPassword 생성 후 저장
-        UserPasswordCredential credential = UserPasswordCredential.create(
-                user,
-                command.email(),
-                passwordEncoder.encode(command.rawPassword())
-        );
-        credentialRepository.save(credential);
+            // encodedPassword 생성 후 저장
+            UserPasswordCredential credential = UserPasswordCredential.create(
+                    user,
+                    command.email(),
+                    passwordEncoder.encode(command.rawPassword())
+            );
+            credentialRepository.save(credential);
+        } catch (DataIntegrityViolationException ex) {
+            throw new BusinessException(ErrorCode.USER_ALREADY_EXISTS);
+        }
 
         return authMapper.toSignupResult(user);
     }

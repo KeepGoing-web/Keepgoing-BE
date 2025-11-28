@@ -70,6 +70,7 @@ public class User {
     private LocalDateTime updatedAt;
 
     // === 비즈니스 로직 메서드 ===
+
     /**
      * 마지막 로그인 시간 갱신
      */
@@ -95,7 +96,6 @@ public class User {
         return User.builder()
                 .email(email)
                 .name(name)
-                .lastLoginAt(LocalDateTime.now())
                 .build();
     }
 }
