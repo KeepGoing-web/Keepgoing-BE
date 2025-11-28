@@ -13,8 +13,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.*;
 
-import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -142,26 +142,40 @@ public class PostServiceTest {
     // ========== getMyPosts ==========
 
     @Test
-    @DisplayName("getMyPosts: 작성자 ID로 게시글 목록을 최신순으로 가져온다")
-    void getMyPosts_returnsList() {
+    @DisplayName("getMyPosts: 작성자 ID와 Pageable로 게시글 페이지를 가져온다")
+    void getMyPosts_returnsPage() {
         // given
         Long authorId = 1L;
         User author = createAuthor(authorId);
 
         Post post1 = Post.create(author, "제목1", "내용1", PostVisibility.PRIVATE, true);
         Post post2 = Post.create(author, "제목2", "내용2", PostVisibility.PUBLIC, true);
+        var posts = java.util.List.of(post1, post2);
 
-        given(postRepository.findByAuthor_IdOrderByCreatedAtDesc(authorId))
-                .willReturn(List.of(post1, post2));
+        Pageable pageable = PageRequest.of(
+                0,
+                10,
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+        Page<Post> postPage = new PageImpl<>(
+                posts,
+                pageable,
+                posts.size()
+        );
+
+        // 저장소가 페이지를 반환하는 동작을 스텁
+        given(postRepository.findByAuthor_Id(authorId, pageable))
+                .willReturn(postPage);
 
         // when
-        List<Post> posts = postService.getMyPosts(authorId);
+        Page<Post> result = postService.getMyPosts(authorId, pageable);
 
         // then
-        assertThat(posts).hasSize(2);
-        assertThat(posts.get(0).getTitle()).isEqualTo("제목1");
-        assertThat(posts.get(1).getTitle()).isEqualTo("제목2");
-        verify(postRepository).findByAuthor_IdOrderByCreatedAtDesc(authorId);
+        assertThat(result.getTotalElements()).isEqualTo(2);
+        assertThat(result.getContent()).hasSize(2);
+        assertThat(result.getContent().get(0).getTitle()).isEqualTo("제목1");
+        assertThat(result.getContent().get(1).getTitle()).isEqualTo("제목2");
+        verify(postRepository).findByAuthor_Id(authorId, pageable);
     }
 
     // ========== updatePost ==========

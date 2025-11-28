@@ -34,11 +34,11 @@ public class Post {
     private String title;
 
     @Lob
-    @Column(name = "content",nullable = false, columnDefinition = "MEDIUMTEXT")
+    @Column(name = "content", nullable = false, columnDefinition = "MEDIUMTEXT")
     private String content;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "visibility",nullable = false, length = 20)
+    @Column(name = "visibility", nullable = false, length = 20)
     @Builder.Default
     private PostVisibility visibility = PostVisibility.PRIVATE;
 
@@ -112,8 +112,8 @@ public class Post {
     /**
      * 작성자 권한 검증
      */
-    public void validateAuthor(Long authorID) {
-        if (!isAuthor(authorID)) {
+    public void validateAuthor(Long authorId) {
+        if (!isAuthor(authorId)) {
             throw new BusinessException(ErrorCode.POST_ACCESS_DENIED);
         }
     }

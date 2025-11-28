@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.*;
 import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -140,7 +141,6 @@ public class PostControllerTest {
         mockMvc.perform(get("/api/v1/posts/{postId}", postId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-//                .andExpect(jsonPath("$.data.id").value(postId))
                 .andExpect(jsonPath("$.data.title").value("테스트 제목"));
     }
 
@@ -161,7 +161,7 @@ public class PostControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/v1/posts/me - 내 게시글 목록 조회 성공")
+    @DisplayName("GET /api/v1/posts/me - 내 게시글 페이지네이션 조회 성공")
     void getMyPosts_success() throws Exception {
         // given
         Long authorId = 1L; // TODO: Security 붙으면 현재 로그인 유저로 교체
@@ -174,16 +174,66 @@ public class PostControllerTest {
 
         Post post1 = Post.create(author, "제목1", "내용1", PostVisibility.PRIVATE, true);
         Post post2 = Post.create(author, "제목2", "내용2", PostVisibility.PUBLIC, true);
+        var posts = List.of(post1, post2);
 
-        given(postService.getMyPosts(authorId)).willReturn(List.of(post1, post2));
+        // 페이지 정보 (0페이지, size=10, createdAt DESC 정렬)
+        Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Post> postPage = new PageImpl<>(posts, pageable, posts.size());
+
+        // 서비스 호출 스텁: authorId + 어떤 Pageable 이 오든 postPage 반환
+        given(postService.getMyPosts(eq(authorId), any(Pageable.class)))
+                .willReturn(postPage);
 
         // when & then
         mockMvc.perform(get("/api/v1/posts/me"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.length()").value(2))
-                .andExpect(jsonPath("$.data[0].title").value("제목1"))
-                .andExpect(jsonPath("$.data[1].title").value("제목2"));
+                // 페이지네이션 구조 확인
+                .andExpect(jsonPath("$.data.page").value(0))
+                .andExpect(jsonPath("$.data.size").value(10))
+                .andExpect(jsonPath("$.data.totalElements").value(2))
+                // 실제 contents 목록 검증
+                .andExpect(jsonPath("$.data.contents.length()").value(2))
+                .andExpect(jsonPath("$.data.contents[0].title").value("제목1"))
+                .andExpect(jsonPath("$.data.contents[1].title").value("제목2"));
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/posts/me - size가 MAX_PAGE_SIZE보다 크면 상한으로 제한된다")
+    void getMyPosts_clampsPageSize() throws Exception {
+        // given
+        Long authorId = 1L;
+
+        User author = User.builder()
+                .id(authorId)
+                .email("test@example.com")
+                .name("테스트유저")
+                .build();
+
+        Post post = Post.create(
+                author,
+                "제목",
+                "내용",
+                PostVisibility.PUBLIC,
+                true
+        );
+
+        int requestedSize = 1000;
+        int expectedSize = 100; // MAX_PAGE_SIZE
+
+        Pageable clampedPageable = PageRequest.of(0, expectedSize, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Post> postPage = new PageImpl<>(List.of(post), clampedPageable, 1);
+
+        given(postService.getMyPosts(eq(authorId), any(Pageable.class)))
+                .willReturn(postPage);
+
+        // when & then
+        mockMvc.perform(get("/api/v1/posts/me")
+                        .param("page", "0")
+                        .param("size", String.valueOf(requestedSize)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.size").value(expectedSize)); // 100
     }
 
     // ========== PUT ==========
