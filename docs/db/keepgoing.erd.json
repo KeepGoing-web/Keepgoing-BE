@@ -4,9 +4,9 @@
   "settings": {
     "width": 20000,
     "height": 20000,
-    "scrollTop": -8911.4006,
-    "scrollLeft": -10437.6437,
-    "zoomLevel": 0.97,
+    "scrollTop": -9031.3711,
+    "scrollLeft": -10153.6461,
+    "zoomLevel": 0.79,
     "show": 495,
     "database": 4,
     "databaseName": "blog_system",
@@ -91,7 +91,7 @@
       },
       "blogs_table": {
         "id": "blogs_table",
-        "name": "blogs",
+        "name": "posts",
         "comment": "블로그 포스트 - FULLTEXT 검색 지원",
         "columnIds": [
           "blogs_id",
@@ -124,13 +124,13 @@
           "color": "#27AE60"
         },
         "meta": {
-          "updateAt": 1763464683917,
+          "updateAt": 1763550109541,
           "createAt": 1699999999999
         }
       },
       "blog_revisions_table": {
         "id": "blog_revisions_table",
-        "name": "blog_revisions",
+        "name": "post_revisions",
         "comment": "블로그 수정 이력 - 버전 관리",
         "columnIds": [
           "blog_revisions_id",
@@ -156,7 +156,7 @@
           "color": "#9B59B6"
         },
         "meta": {
-          "updateAt": 1763464696425,
+          "updateAt": 1763549959294,
           "createAt": 1699999999999
         }
       },
@@ -695,7 +695,7 @@
       "blog_revisions_blog_id": {
         "id": "blog_revisions_blog_id",
         "tableId": "blog_revisions_table",
-        "name": "blog_id",
+        "name": "post_id",
         "comment": "블로그 ID (FK)",
         "dataType": "BIGINT",
         "default": "",
@@ -708,7 +708,7 @@
           "widthDefault": 60
         },
         "meta": {
-          "updateAt": 1763457794354,
+          "updateAt": 1763551017009,
           "createAt": 1699999999999
         }
       },

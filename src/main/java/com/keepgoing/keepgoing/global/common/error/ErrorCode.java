@@ -7,11 +7,11 @@ import org.springframework.http.HttpStatus;
 
 /**
  * ErrorCode에 HttpStatus를 포함하는 이유
- *
+ * <p>
  * - Service 계층이 BusinessException 생성 시 HttpStatus를 직접 다루면
- *   Web 계층(HTTP)에 대한 의존성이 생김.
+ * Web 계층(HTTP)에 대한 의존성이 생김.
  * - 이를 피하기 위해 HttpStatus를 ErrorCode에 포함시켜,
- *   Service는 ErrorCode만 사용하고 Web 계층에서만 HttpStatus를 참조하도록 설계.
+ * Service는 ErrorCode만 사용하고 Web 계층에서만 HttpStatus를 참조하도록 설계.
  * - 향후 gRPC 등 다른 표현 계층에서는 이 필드를 무시하는 전략을 사용할 수 있음.
  */
 @Schema(description = "에러 코드")
@@ -134,7 +134,21 @@ public enum ErrorCode {
             HttpStatus.NOT_FOUND,
             "SYS_003",
             "요청한 리소스를 찾을 수 없습니다."
-    );
+    ),
+
+
+    // ===== Post =====
+    POST_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "POST_01",
+            "게시글을 찾을 수 없습니다."
+    ),
+    POST_ACCESS_DENIED(
+            HttpStatus.FORBIDDEN,
+            "POST_02",
+            "해당 게시글에 대한 권한이 없습니다."
+    ),
+    ;
 
     private final HttpStatus httpStatus;
     private final String code;        // 시스템 내부/프론트에서 쓰는 에러 코드
