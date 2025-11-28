@@ -25,7 +25,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
-public class UserPasswordCredentials {
+public class UserPasswordCredential {
 
     /**
      * PK이자 FK
@@ -34,7 +34,7 @@ public class UserPasswordCredentials {
      */
     @Id
     @Column(name = "user_id", nullable = false, updatable = false)
-    private Long id;
+    private Long userId;
 
     /**
      * User 엔티티와 1:1 연관관계
@@ -85,8 +85,8 @@ public class UserPasswordCredentials {
         this.loginId = newLoginId;
     }
 
-    public static UserPasswordCredentials create(User user, String loginId, String encodedPassword) {
-        return UserPasswordCredentials.builder()
+    public static UserPasswordCredential create(User user, String loginId, String encodedPassword) {
+        return UserPasswordCredential.builder()
                 .user(user)                 // @MapsId 때문에 user.id 가 곧 이 엔티티의 id
                 .loginId(loginId)
                 .passwordHash(encodedPassword)

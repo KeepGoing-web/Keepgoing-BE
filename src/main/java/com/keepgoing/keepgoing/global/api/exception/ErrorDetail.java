@@ -1,6 +1,8 @@
 package com.keepgoing.keepgoing.global.api.exception;
 
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
@@ -13,6 +15,7 @@ import java.util.List;
  * @param fieldErrors
  */
 @Schema(description = "에러 상세 정보")
+@JsonInclude(Include.NON_NULL)
 public record ErrorDetail(
 
         @Schema(description = "에러 코드", example = "AUTH_INVALID_CREDENTIALS")
