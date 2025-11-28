@@ -3,7 +3,6 @@ package com.keepgoing.keepgoing.post.service;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import com.keepgoing.keepgoing.post.domain.Post;
-import com.keepgoing.keepgoing.post.domain.PostVisibility;
 import com.keepgoing.keepgoing.post.repository.PostRepository;
 import com.keepgoing.keepgoing.post.service.dto.CreatePostCommand;
 import com.keepgoing.keepgoing.post.service.dto.UpdatePostCommand;
@@ -12,14 +11,13 @@ import com.keepgoing.keepgoing.user.domain.User;
 import com.keepgoing.keepgoing.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
 @RequiredArgsConstructor
-public class PostService implements PostUseCase{
+public class PostService implements PostUseCase {
 
     private final PostRepository postRepository;
     private final UserRepository userRepository;
@@ -64,7 +62,7 @@ public class PostService implements PostUseCase{
 
     /**
      * 포스트 수정
-     * */
+     */
     @Override
     public Post updatePost(UpdatePostCommand command) {
         Post post = postRepository.findById(command.postId())
