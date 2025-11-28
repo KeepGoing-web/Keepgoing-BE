@@ -9,7 +9,6 @@ import com.keepgoing.keepgoing.post.controller.dto.PostResponse;
 import com.keepgoing.keepgoing.post.controller.dto.PostUpdateRequest;
 import com.keepgoing.keepgoing.post.domain.Post;
 import com.keepgoing.keepgoing.post.domain.PostVisibility;
-import com.keepgoing.keepgoing.post.service.PostService;
 import com.keepgoing.keepgoing.post.service.PostUseCase;
 import com.keepgoing.keepgoing.post.service.dto.CreatePostCommand;
 import com.keepgoing.keepgoing.post.service.dto.UpdatePostCommand;
@@ -30,7 +29,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.*;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
