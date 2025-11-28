@@ -77,14 +77,13 @@ public class PostController {
     ) {
         Long authorId = 1L; // TODO: Security 붙으면 현재 로그인 유저로 교체
 
-        int safeSize = Math.min(pageable.getPageSize(), MAX_PAGE_SIZE);
         Pageable safePageable = PageRequest.of(
-                pageable.getPageNumber(),
-                safeSize,
+                Math.max(0, pageable.getPageNumber()),
+                Math.min(pageable.getPageSize(), MAX_PAGE_SIZE),
                 pageable.getSort()
         );
 
-        UserPostQuery query = new UserPostQuery(authorId, pageable);
+        UserPostQuery query = new UserPostQuery(authorId, safePageable);
 
         Page<Post> postPage = postUseCase.getMyPosts(query);
 
