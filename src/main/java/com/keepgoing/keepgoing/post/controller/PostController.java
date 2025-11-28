@@ -7,6 +7,10 @@ import com.keepgoing.keepgoing.post.controller.dto.PostResponse;
 import com.keepgoing.keepgoing.post.controller.dto.PostUpdateRequest;
 import com.keepgoing.keepgoing.post.domain.Post;
 import com.keepgoing.keepgoing.post.service.PostService;
+import com.keepgoing.keepgoing.post.service.PostUseCase;
+import com.keepgoing.keepgoing.post.service.dto.CreatePostCommand;
+import com.keepgoing.keepgoing.post.service.dto.UpdatePostCommand;
+import com.keepgoing.keepgoing.post.service.dto.UserPostQuery;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -27,7 +31,7 @@ public class PostController {
 
     private static final int MAX_PAGE_SIZE = 100;
 
-    private final PostService postService;
+    private final PostUseCase postUseCase;
 
     /**
      * 포스트 생성
@@ -38,13 +42,15 @@ public class PostController {
     ) {
         Long authorId = 1L; // TODO: Security 붙으면 현재 로그인 유저로 교체
 
-        Post created = postService.createPost(
+        CreatePostCommand command = new CreatePostCommand(
                 authorId,
                 request.getTitle(),
                 request.getContent(),
                 request.getVisibility(),
                 request.isAiCollectable()
         );
+
+        Post created = postUseCase.createPost(command);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(PostResponse.from(created)));
@@ -54,14 +60,16 @@ public class PostController {
      * 단일 포스트 조회
      */
     @GetMapping("/{postId}")
-    public ResponseEntity<ApiResponse<PostResponse>> getPost(@PathVariable Long postId) {
-        Post post = postService.getPost(postId);
+    public ResponseEntity<ApiResponse<PostResponse>> getPost(
+            @PathVariable Long postId
+    ) {
+        Post post = postUseCase.getPost(postId);
 
         return ResponseEntity.ok(ApiResponse.success(PostResponse.from(post)));
     }
 
     /**
-     * 내가 쓴 포스트 목록 조회
+     * 내가 쓴 포스트 목록 조회 (페이지네이션)
      */
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<PagedResponse<PostResponse>>> getMyPosts(
@@ -77,7 +85,9 @@ public class PostController {
                 pageable.getSort()
         );
 
-        Page<Post> postPage = postService.getMyPosts(authorId, pageable);
+        UserPostQuery query = new UserPostQuery(authorId, pageable);
+
+        Page<Post> postPage = postUseCase.getMyPosts(query);
 
         List<PostResponse> contents = postPage.getContent().stream()
                 .map(PostResponse::from)
@@ -92,11 +102,13 @@ public class PostController {
      * 포스트 수정
      */
     @PutMapping("/{postId}")
-    public ResponseEntity<ApiResponse<PostResponse>> updatePost(@PathVariable Long postId,
-                                                @RequestBody @Valid PostUpdateRequest request) {
+    public ResponseEntity<ApiResponse<PostResponse>> updatePost(
+            @PathVariable Long postId,
+            @RequestBody @Valid PostUpdateRequest request
+    ) {
         Long authorId = 1L; // TODO: Security 붙으면 현재 로그인 유저로 교체
 
-        Post updated = postService.updatePost(
+        UpdatePostCommand command = new UpdatePostCommand(
                 authorId,
                 postId,
                 request.getTitle(),
@@ -105,6 +117,8 @@ public class PostController {
                 request.isAiCollectable()
         );
 
+        Post updated = postUseCase.updatePost(command);
+
         return ResponseEntity.ok(ApiResponse.success(PostResponse.from(updated)));
     }
 
@@ -112,10 +126,12 @@ public class PostController {
      * 포스트 삭제
      */
     @DeleteMapping("/{postId}")
-    public ResponseEntity<Void> deletePost(@PathVariable Long postId) {
+    public ResponseEntity<Void> deletePost(
+            @PathVariable Long postId
+    ) {
         Long authorId = 1L; // TODO: Security 붙으면 현재 로그인 유저로 교체
 
-        postService.deletePost(authorId, postId);
+        postUseCase.deletePost(authorId, postId);
 
         return ResponseEntity.noContent().build();
     }
