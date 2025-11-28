@@ -255,7 +255,6 @@ public class PostServiceTest {
                 newAiCollectable
         );
 
-
         // when & then
         assertThatThrownBy(() ->
                 postService.updatePost(command)

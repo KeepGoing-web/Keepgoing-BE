@@ -43,7 +43,6 @@ public class SecurityConfig {
                                 "/api/v1/posts/**"
                         ).permitAll()
 
-
                         // 나머지는 인증 필요
                         .anyRequest().authenticated()
                 );

@@ -265,8 +265,8 @@ public class PostControllerTest {
                 false
         );
 
-        given(postUseCase.updatePost(any(UpdatePostCommand.class))).
-                willReturn(updatedPost);
+        given(postUseCase.updatePost(any(UpdatePostCommand.class)))
+                .willReturn(updatedPost);
 
         String json = objectMapper.writeValueAsString(request);
 
