@@ -5,6 +5,9 @@ import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import com.keepgoing.keepgoing.post.domain.Post;
 import com.keepgoing.keepgoing.post.domain.PostVisibility;
 import com.keepgoing.keepgoing.post.repository.PostRepository;
+import com.keepgoing.keepgoing.post.service.dto.CreatePostCommand;
+import com.keepgoing.keepgoing.post.service.dto.UpdatePostCommand;
+import com.keepgoing.keepgoing.post.service.dto.UserPostQuery;
 import com.keepgoing.keepgoing.user.domain.User;
 import com.keepgoing.keepgoing.user.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -70,14 +73,16 @@ public class PostServiceTest {
         );
         given(postRepository.save(any(Post.class))).willReturn(post);
 
-        // when
-        Post result = postService.createPost(
+        CreatePostCommand command = new CreatePostCommand(
                 authorId,
                 title,
                 content,
                 visibility,
                 aiCollectable
         );
+
+        // when
+        Post result = postService.createPost(command);
 
         // then
         assertThat(result.getTitle()).isEqualTo(title);
@@ -100,8 +105,16 @@ public class PostServiceTest {
 
         given(userRepository.findById(authorId)).willReturn(Optional.empty());
 
+        CreatePostCommand command = new CreatePostCommand(
+                authorId,
+                title,
+                content,
+                visibility,
+                aiCollectable
+        );
+
         // when & then
-        assertThatThrownBy(() -> postService.createPost(authorId, title, content, visibility, aiCollectable))
+        assertThatThrownBy(() -> postService.createPost(command))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.USER_NOT_FOUND);
     }
@@ -167,8 +180,10 @@ public class PostServiceTest {
         given(postRepository.findByAuthor_Id(authorId, pageable))
                 .willReturn(postPage);
 
+        UserPostQuery query = new UserPostQuery(authorId, pageable);
+
         // when
-        Page<Post> result = postService.getMyPosts(authorId, pageable);
+        Page<Post> result = postService.getMyPosts(query);
 
         // then
         assertThat(result.getTotalElements()).isEqualTo(2);
@@ -197,8 +212,17 @@ public class PostServiceTest {
 
         given(postRepository.findById(postId)).willReturn(Optional.of(post));
 
+        UpdatePostCommand command = new UpdatePostCommand(
+                authorId,
+                postId,
+                newTitle,
+                newContent,
+                newVisibility,
+                newAiCollectable
+        );
+
         // when
-        Post result = postService.updatePost(authorId, postId, newTitle, newContent, newVisibility, newAiCollectable);
+        Post result = postService.updatePost(command);
 
         // then
         assertThat(result.getTitle()).isEqualTo(newTitle);
@@ -222,9 +246,19 @@ public class PostServiceTest {
 
         given(postRepository.findById(postId)).willReturn(Optional.empty());
 
+        UpdatePostCommand command = new UpdatePostCommand(
+                authorId,
+                postId,
+                newTitle,
+                newContent,
+                newVisibility,
+                newAiCollectable
+        );
+
+
         // when & then
         assertThatThrownBy(() ->
-                postService.updatePost(authorId, postId, newTitle, newContent, newVisibility, newAiCollectable)
+                postService.updatePost(command)
         )
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.POST_NOT_FOUND);
@@ -248,9 +282,18 @@ public class PostServiceTest {
 
         given(postRepository.findById(postId)).willReturn(Optional.of(post));
 
+        UpdatePostCommand command = new UpdatePostCommand(
+                authorId,
+                postId,
+                newTitle,
+                newContent,
+                newVisibility,
+                newAiCollectable
+        );
+
         // when & then
         assertThatThrownBy(() ->
-                postService.updatePost(authorId, postId, newTitle, newContent, newVisibility, newAiCollectable)
+                postService.updatePost(command)
         )
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.POST_ACCESS_DENIED);
