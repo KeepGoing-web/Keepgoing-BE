@@ -38,7 +38,7 @@ public class SecurityConfig {
                                 "/api/auth/**"
                         ).permitAll()
 
-                        // 포스트 API는 일단 모두 허용 (개발용)
+                        // TODO: 포스트 API는 일단 모두 허용 (개발용)
                         .requestMatchers(
                                 "/api/v1/posts/**"
                         ).permitAll()
