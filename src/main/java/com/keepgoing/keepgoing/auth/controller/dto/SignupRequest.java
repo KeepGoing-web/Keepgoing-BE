@@ -1,5 +1,6 @@
-package com.keepgoing.keepgoing.auth.controller;
+package com.keepgoing.keepgoing.auth.controller.dto;
 
+import com.keepgoing.keepgoing.auth.validation.Password;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -16,13 +17,7 @@ public record SignupRequest(
         @Schema(description = "로그인 이메일", example = "user@example.com")
         String email,
 
-        // TODO: 추후 비밀번호 찾기에서 커스텀 어노테이션으로 리팩토링 예정.
-        @NotBlank
-        @Size(min = 8, max = 64)
-        @Pattern(
-                regexp = "^(?=.*[A-Z])(?=.*[a-z])(?=.*\\d)(?=.*[!@#$%^&*]).+$",
-                message = "비밀번호는 대소문자, 숫자, 특수문자를 각각 1자 이상 포함해야 합니다."
-        )
+        @Password
         @Schema(description = "평문 비밀번호", example = "P@ssw0rd!")
         String password,
 

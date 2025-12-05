@@ -1,5 +1,9 @@
 package com.keepgoing.keepgoing.auth.controller;
 
+import com.keepgoing.keepgoing.auth.controller.dto.LoginRequest;
+import com.keepgoing.keepgoing.auth.controller.dto.LoginResponse;
+import com.keepgoing.keepgoing.auth.controller.dto.SignupRequest;
+import com.keepgoing.keepgoing.auth.controller.dto.SignupResponse;
 import com.keepgoing.keepgoing.global.api.response.ApiResponse;
 import com.keepgoing.keepgoing.global.api.response.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -56,5 +60,45 @@ public interface AuthApiDocs {
     @PostMapping("/signup")
     ResponseEntity<ApiResponse<SignupResponse>> signup(
             @Valid @RequestBody SignupRequest request
+    );
+
+
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "로그인 성공"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "입력값 검증 실패",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class)
+                    )
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "인증 실패 (이메일 없음 또는 비밀번호 불일치)",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(
+                                    name = "AuthenticationFailed",
+                                    value = """
+                                            {
+                                              "success": false,
+                                              "error": {
+                                                "code": "AUTH_INVALID_CREDENTIALS",
+                                                "message": "이메일 또는 비밀번호가 올바르지 않습니다."
+                                              }
+                                            }
+                                            """
+                            )
+                    )
+            )
+    })
+    @PostMapping("/login")
+    ResponseEntity<ApiResponse<LoginResponse>> login(
+            @Valid @RequestBody LoginRequest request
     );
 }
