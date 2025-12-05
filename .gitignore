@@ -1,6 +1,5 @@
 # Compiled class file
 *.class
-
 # Log file
 *.log
 
@@ -31,3 +30,5 @@ replay_pid*
 build/
 .project
 .settings/
+
+.env
