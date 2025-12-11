@@ -9,11 +9,15 @@ import com.keepgoing.keepgoing.post.controller.dto.PostResponse;
 import com.keepgoing.keepgoing.post.controller.dto.PostUpdateRequest;
 import com.keepgoing.keepgoing.post.domain.Post;
 import com.keepgoing.keepgoing.post.domain.PostVisibility;
-import com.keepgoing.keepgoing.post.service.PostService;
+import com.keepgoing.keepgoing.post.service.PostUseCase;
+import com.keepgoing.keepgoing.post.service.dto.CreatePostCommand;
+import com.keepgoing.keepgoing.post.service.dto.UpdatePostCommand;
+import com.keepgoing.keepgoing.post.service.dto.UserPostQuery;
 import com.keepgoing.keepgoing.user.domain.User;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.*;
@@ -25,7 +29,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.*;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -33,6 +36,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(PostController.class)
 @Import(GlobalExceptionHandler.class)
+@AutoConfigureMockMvc(addFilters = false)
 public class PostControllerTest {
 
     @Autowired
@@ -42,7 +46,7 @@ public class PostControllerTest {
     ObjectMapper objectMapper;
 
     @MockitoBean
-    PostService postService;
+    PostUseCase postUseCase;
 
     @MockitoBean
     JpaMetamodelMappingContext jpaMappingContext;
@@ -76,13 +80,8 @@ public class PostControllerTest {
 
         PostResponse response = PostResponse.from(post);
 
-        given(postService.createPost(
-                anyLong(),
-                anyString(),
-                anyString(),
-                any(PostVisibility.class),
-                anyBoolean()
-        )).willReturn(post);
+        given(postUseCase.createPost(any(CreatePostCommand.class)))
+                .willReturn(post);
 
         String json = objectMapper.writeValueAsString(request);
 
@@ -135,7 +134,7 @@ public class PostControllerTest {
                 true
         );
 
-        given(postService.getPost(postId)).willReturn(post);
+        given(postUseCase.getPost(postId)).willReturn(post);
 
         // when & then
         mockMvc.perform(get("/api/v1/posts/{postId}", postId))
@@ -150,7 +149,7 @@ public class PostControllerTest {
         // given
         Long postId = 999L;
 
-        given(postService.getPost(postId))
+        given(postUseCase.getPost(postId))
                 .willThrow(new BusinessException(ErrorCode.POST_NOT_FOUND));
 
         // when & then
@@ -181,7 +180,7 @@ public class PostControllerTest {
         Page<Post> postPage = new PageImpl<>(posts, pageable, posts.size());
 
         // 서비스 호출 스텁: authorId + 어떤 Pageable 이 오든 postPage 반환
-        given(postService.getMyPosts(eq(authorId), any(Pageable.class)))
+        given(postUseCase.getMyPosts(any(UserPostQuery.class)))
                 .willReturn(postPage);
 
         // when & then
@@ -224,7 +223,7 @@ public class PostControllerTest {
         Pageable clampedPageable = PageRequest.of(0, expectedSize, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<Post> postPage = new PageImpl<>(List.of(post), clampedPageable, 1);
 
-        given(postService.getMyPosts(eq(authorId), any(Pageable.class)))
+        given(postUseCase.getMyPosts(any(UserPostQuery.class)))
                 .willReturn(postPage);
 
         // when & then
@@ -266,14 +265,8 @@ public class PostControllerTest {
                 false
         );
 
-        given(postService.updatePost(
-                anyLong(),
-                anyLong(),
-                anyString(),
-                anyString(),
-                any(PostVisibility.class),
-                anyBoolean()
-        )).willReturn(updatedPost);
+        given(postUseCase.updatePost(any(UpdatePostCommand.class)))
+                .willReturn(updatedPost);
 
         String json = objectMapper.writeValueAsString(request);
 
@@ -301,14 +294,8 @@ public class PostControllerTest {
                 .build();
 
         // 서비스가 권한 체크 후 예외 던지는 상황 시뮬레이션
-        given(postService.updatePost(
-                eq(authorId),
-                eq(postId),
-                anyString(),
-                anyString(),
-                any(PostVisibility.class),
-                anyBoolean()
-        )).willThrow(new BusinessException(ErrorCode.POST_ACCESS_DENIED));
+        given(postUseCase.updatePost(any(UpdatePostCommand.class)))
+                .willThrow(new BusinessException(ErrorCode.POST_ACCESS_DENIED));
 
         String json = objectMapper.writeValueAsString(request);
 
@@ -330,14 +317,14 @@ public class PostControllerTest {
         Long postId = 1L;
         Long authorId = 1L; // TODO: Security 붙으면 현재 로그인 유저로 교체
 
-        willDoNothing().given(postService).deletePost(authorId, postId);
+        willDoNothing().given(postUseCase).deletePost(authorId, postId);
 
         // when & then
         mockMvc.perform(delete("/api/v1/posts/{postId}", postId))
                 .andExpect(status().isNoContent())
                 .andExpect(content().string(""));
 
-        verify(postService).deletePost(authorId, postId);
+        verify(postUseCase).deletePost(authorId, postId);
     }
 
     @Test
@@ -348,7 +335,7 @@ public class PostControllerTest {
         Long authorId = 1L; // TODO: Security 붙으면 현재 로그인 유저로 교체
 
         willThrow(new BusinessException(ErrorCode.POST_ACCESS_DENIED))
-                .given(postService).deletePost(authorId, postId);
+                .given(postUseCase).deletePost(authorId, postId);
 
         // when & then
         mockMvc.perform(delete("/api/v1/posts/{postId}", postId))

@@ -4,9 +4,9 @@
   "settings": {
     "width": 20000,
     "height": 20000,
-    "scrollTop": -9031.3711,
-    "scrollLeft": -10153.6461,
-    "zoomLevel": 0.79,
+    "scrollTop": -9165.6667,
+    "scrollLeft": -10216.1732,
+    "zoomLevel": 0.75,
     "show": 495,
     "database": 4,
     "databaseName": "blog_system",
@@ -224,44 +224,6 @@
         "meta": {
           "updateAt": 1763464772436,
           "createAt": 1699999999999
-        }
-      },
-      "NM7Jgbcq5EED6yUsjBw8x": {
-        "id": "NM7Jgbcq5EED6yUsjBw8x",
-        "name": "",
-        "comment": "",
-        "columnIds": [],
-        "seqColumnIds": [],
-        "ui": {
-          "x": 10362.1019,
-          "y": 8726.5003,
-          "zIndex": 89,
-          "widthName": 60,
-          "widthComment": 60,
-          "color": ""
-        },
-        "meta": {
-          "updateAt": 1763457869993,
-          "createAt": 1763457868028
-        }
-      },
-      "fN-om-gxl9OH1Sop90m0S": {
-        "id": "fN-om-gxl9OH1Sop90m0S",
-        "name": "",
-        "comment": "",
-        "columnIds": [],
-        "seqColumnIds": [],
-        "ui": {
-          "x": 10360.1019,
-          "y": 8724.5003,
-          "zIndex": 96,
-          "widthName": 60,
-          "widthComment": 60,
-          "color": ""
-        },
-        "meta": {
-          "updateAt": 1763457911905,
-          "createAt": 1763457911905
         }
       },
       "user_oauth_accounts_table": {

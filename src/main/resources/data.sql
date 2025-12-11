@@ -1,6 +1,6 @@
 INSERT INTO users (email, name, role, status, last_login_at, created_at, updated_at)
-VALUES ('test@example.com',
-        '테스트유저',
+VALUES ('post-test@example.com',
+        'post테스트유저',
         'USER',
         'ACTIVE',
         NULL,
@@ -8,8 +8,8 @@ VALUES ('test@example.com',
         CURRENT_TIMESTAMP);
 
 INSERT INTO users(email, name, role, status, created_at, updated_at)
-VALUES ('other@example.com',
-        '다른유저',
+VALUES ('post-other@example.com',
+        'post다른유저',
         'USER',
         'ACTIVE',
         CURRENT_TIMESTAMP,
