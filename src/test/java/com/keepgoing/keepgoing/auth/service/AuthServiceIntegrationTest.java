@@ -161,7 +161,7 @@ class AuthServiceIntegrationTest {
         }
 
         @Test
-        @DisplayName("잘못된 비밀번호로 로그인 시 BadCredentialsExceptions이 발생한다.")
+        @DisplayName("잘못된 비밀번호로 로그인 시 BadCredentialsException이 발생한다.")
         void login_with_wrong_password_throws() {
             // given
             signupTestUser();

@@ -40,7 +40,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 /**
  * WebMvcTest + JPA Auditing 충돌 해결
- * <k>
+ * <p>
  * WebMvcTest는 엔티티 스캔을 하지 않아 JPA 메타모델이 비어있는데, EnableJpaAuditing이 메타모델을 요구하여 예외가 발생합니다.
  * <p>
  * 컨트롤러 테스트에서는 실제 JPA 동작이 필요 없으므로, JpaAuditingConfig를 따로 만들어 컨트롤러 테스트 시 해당 설정을 로드하지 않게 합니다.
