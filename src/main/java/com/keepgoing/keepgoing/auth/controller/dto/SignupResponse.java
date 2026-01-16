@@ -1,4 +1,4 @@
-package com.keepgoing.keepgoing.auth.controller;
+package com.keepgoing.keepgoing.auth.controller.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 

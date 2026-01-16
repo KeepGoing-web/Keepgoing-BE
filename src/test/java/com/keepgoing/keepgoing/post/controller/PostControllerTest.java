@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.keepgoing.keepgoing.global.api.exception.GlobalExceptionHandler;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
+import com.keepgoing.keepgoing.global.security.jwt.JwtAuthenticationFilter;
 import com.keepgoing.keepgoing.post.controller.dto.PostCreateRequest;
 import com.keepgoing.keepgoing.post.controller.dto.PostResponse;
 import com.keepgoing.keepgoing.post.controller.dto.PostUpdateRequest;
@@ -13,10 +14,15 @@ import com.keepgoing.keepgoing.post.service.PostUseCase;
 import com.keepgoing.keepgoing.post.service.dto.CreatePostCommand;
 import com.keepgoing.keepgoing.post.service.dto.UpdatePostCommand;
 import com.keepgoing.keepgoing.post.service.dto.UserPostQuery;
+import com.keepgoing.keepgoing.post.service.PostUseCase;
+import com.keepgoing.keepgoing.post.service.dto.CreatePostCommand;
+import com.keepgoing.keepgoing.post.service.dto.UpdatePostCommand;
+import com.keepgoing.keepgoing.post.service.dto.UserPostQuery;
 import com.keepgoing.keepgoing.user.domain.User;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -50,6 +56,9 @@ public class PostControllerTest {
 
     @MockitoBean
     JpaMetamodelMappingContext jpaMappingContext;
+
+    @MockitoBean
+    JwtAuthenticationFilter jwtAuthenticationFilter;
 
     // ========== Post ==========
 

@@ -1,9 +1,15 @@
 package com.keepgoing.keepgoing.auth.controller;
 
 import com.keepgoing.keepgoing.auth.AuthMapper;
+import com.keepgoing.keepgoing.auth.controller.dto.LoginRequest;
+import com.keepgoing.keepgoing.auth.controller.dto.LoginResponse;
+import com.keepgoing.keepgoing.auth.controller.dto.SignupRequest;
+import com.keepgoing.keepgoing.auth.controller.dto.SignupResponse;
 import com.keepgoing.keepgoing.auth.service.AuthService;
-import com.keepgoing.keepgoing.auth.service.SignupCommand;
-import com.keepgoing.keepgoing.auth.service.SignupResult;
+import com.keepgoing.keepgoing.auth.service.dto.LoginCommand;
+import com.keepgoing.keepgoing.auth.service.dto.LoginResult;
+import com.keepgoing.keepgoing.auth.service.dto.SignupCommand;
+import com.keepgoing.keepgoing.auth.service.dto.SignupResult;
 import com.keepgoing.keepgoing.global.api.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +37,18 @@ public class AuthController implements AuthApiDocs {
         SignupResponse response = authMapper.toResponse(result);
 
         return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(response));
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<ApiResponse<LoginResponse>> login(
+            @Valid @RequestBody LoginRequest request
+    ) {
+        LoginCommand command = authMapper.toCommand(request);
+        LoginResult result = authService.login(command);
+        LoginResponse response = authMapper.toResponse(result);
+
+        return ResponseEntity.status(HttpStatus.OK)
                 .body(ApiResponse.success(response));
     }
 }

@@ -1,4 +1,4 @@
-package com.keepgoing.keepgoing.auth.service;
+package com.keepgoing.keepgoing.auth.service.dto;
 
 public record SignupResult(
         Long id,
