@@ -63,6 +63,7 @@ public interface AuthApiDocs {
     );
 
 
+    @Operation(summary = "로그인")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "200",

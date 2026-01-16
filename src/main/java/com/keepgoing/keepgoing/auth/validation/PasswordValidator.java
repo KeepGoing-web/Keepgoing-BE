@@ -12,6 +12,7 @@ public class PasswordValidator implements ConstraintValidator<Password, String> 
             "^(?=.*[A-Z])(?=.*[a-z])(?=.*\\d)(?=.*[!@#$%^&*]).+$"
     );
 
+    @Override
     public boolean isValid(String value, ConstraintValidatorContext context) {
         if (value == null || value.isBlank()) {
             return false;
