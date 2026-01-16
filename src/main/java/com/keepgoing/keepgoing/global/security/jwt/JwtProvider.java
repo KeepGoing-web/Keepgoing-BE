@@ -94,7 +94,8 @@ public class JwtProvider {
 
     public Long getUserIdFromToken(String token) {
         JWTClaimsSet claims = validateAccessTokenAndGetClaims(token);
-        return Long.parseLong(claims.getSubject());
+
+        return parseUserIdFromSubject(claims);
     }
 
     public JWTClaimsSet validateAccessTokenAndGetClaims(String token) {
@@ -114,7 +115,16 @@ public class JwtProvider {
         validateIssuer(claims, ErrorCode.AUTH_REFRESH_TOKEN_INVALID);
         validateType(claims, TYPE_REFRESH, ErrorCode.AUTH_REFRESH_TOKEN_INVALID);
 
-        return Long.parseLong(claims.getSubject());
+        return parseUserIdFromSubject(claims);
+    }
+
+    private static Long parseUserIdFromSubject(JWTClaimsSet claims) {
+        try {
+            return Long.parseLong(claims.getSubject());
+        } catch (NumberFormatException e) {
+            log.debug("토큰 Subject 파싱 실패: {}", claims.getSubject() );
+            throw new BusinessException(ErrorCode.AUTH_TOKEN_INVALID);
+        }
     }
 
     private JWTClaimsSet parseAndVerify(String token, ErrorCode invalidCode) {
