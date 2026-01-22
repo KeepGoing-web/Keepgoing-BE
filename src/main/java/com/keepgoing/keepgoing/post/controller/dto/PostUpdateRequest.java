@@ -8,7 +8,7 @@ import lombok.*;
 
 @Getter
 @NoArgsConstructor
-@AllArgsConstructor
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
 public class PostUpdateRequest {
 
