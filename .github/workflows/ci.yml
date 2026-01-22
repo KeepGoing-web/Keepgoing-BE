@@ -23,8 +23,6 @@ jobs:
 
       - name: Make gradlew executable
         run: chmod +x ./gradlew
-        working-directory: ./Keepgoing-BE
 
       - name: Test with Gradle
         run: ./gradlew test --no-daemon
-        working-directory: ./Keepgoing-BE
