@@ -77,7 +77,7 @@ public class PostController {
                 pageable.getSort()
         );
 
-        Page<Post> postPage = postService.getMyPosts(authorId, pageable);
+        Page<Post> postPage = postService.getMyPosts(authorId, safePageable);
 
         List<PostResponse> contents = postPage.getContent().stream()
                 .map(PostResponse::from)
