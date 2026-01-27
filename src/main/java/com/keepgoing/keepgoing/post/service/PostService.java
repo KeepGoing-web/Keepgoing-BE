@@ -84,7 +84,7 @@ public class PostService {
     /**
      * 포스트 삭제 (soft delete)
      */
-    public void deletePost( Long authorId, Long postId) {
+    public void deletePost(Long authorId, Long postId) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
 

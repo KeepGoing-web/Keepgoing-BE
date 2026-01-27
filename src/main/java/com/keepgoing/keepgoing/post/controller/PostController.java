@@ -109,7 +109,7 @@ public class PostController {
             @PathVariable Long postId,
             @AuthenticationPrincipal Long userId
     ) {
-        postService.deletePost(postId, userId);
+        postService.deletePost(userId, postId);
         return ResponseEntity.noContent().build();
     }
 }
