@@ -1,26 +1,41 @@
 package com.keepgoing.keepgoing.post.controller.dto;
 
 import com.keepgoing.keepgoing.post.domain.PostVisibility;
+import com.keepgoing.keepgoing.post.service.dto.PostCreateCommand;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import lombok.*;
 
-@Getter
-@NoArgsConstructor
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
-@Builder
-public class PostCreateRequest {
+public record PostCreateRequest(
 
-    @NotBlank
-    @Size(max = 200)
-    private String title;
+        @NotBlank
+        @Size(max = 200)
+        String title,
 
-    @NotBlank
-    private String content;
+        @NotBlank
+        String content,
 
-    @Builder.Default
-    private PostVisibility visibility = PostVisibility.PRIVATE;
+        PostVisibility visibility,
 
-    @Builder.Default
-    private boolean aiCollectable = true;
+        Boolean aiCollectable
+) {
+    public PostCreateRequest {
+        // visibility가 요청에 없거나 null이면 기본값 PRIVATE
+        if (visibility == null) {
+            visibility = PostVisibility.PRIVATE;
+        }
+        // aiCollectable이 요청에 없거나 null이면 기본값 true
+        if (aiCollectable == null) {
+            aiCollectable = true;
+        }
+    }
+
+    public PostCreateCommand toCommand(Long userId) {
+        return new PostCreateCommand(
+                userId,
+                this.title,
+                this.content,
+                this.visibility,
+                this.aiCollectable
+        );
+    }
 }

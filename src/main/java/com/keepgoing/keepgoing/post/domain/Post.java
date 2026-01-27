@@ -66,7 +66,7 @@ public class Post {
                               String title,
                               String content,
                               PostVisibility visibility,
-                              boolean aiCollectable) {
+                              Boolean aiCollectable) {
 
         PostVisibility finalVisibility =
                 (visibility != null) ? visibility : PostVisibility.PRIVATE;
