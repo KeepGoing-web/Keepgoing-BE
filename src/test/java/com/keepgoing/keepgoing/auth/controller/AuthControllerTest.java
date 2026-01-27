@@ -2,6 +2,8 @@ package com.keepgoing.keepgoing.auth.controller;
 
 import static com.keepgoing.keepgoing.auth.AuthTestFixtures.signupRequestWithEmail;
 import static com.keepgoing.keepgoing.auth.AuthTestFixtures.toJson;
+import static com.keepgoing.keepgoing.auth.AuthTestFixtures.validLoginRequest;
+import static com.keepgoing.keepgoing.global.common.error.ErrorCode.AUTH_INVALID_CREDENTIALS;
 import static com.keepgoing.keepgoing.global.common.error.ErrorCode.USER_ALREADY_EXISTS;
 import static com.keepgoing.keepgoing.global.common.error.ErrorCode.VALIDATION_FAILED;
 import static org.mockito.BDDMockito.any;
@@ -14,10 +16,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.keepgoing.keepgoing.auth.AuthMapper;
 import com.keepgoing.keepgoing.auth.AuthTestFixtures;
+import com.keepgoing.keepgoing.auth.controller.dto.LoginRequest;
+import com.keepgoing.keepgoing.auth.controller.dto.SignupRequest;
+import com.keepgoing.keepgoing.auth.controller.dto.SignupResponse;
 import com.keepgoing.keepgoing.auth.service.AuthService;
-import com.keepgoing.keepgoing.auth.service.SignupCommand;
-import com.keepgoing.keepgoing.auth.service.SignupResult;
+import com.keepgoing.keepgoing.auth.service.dto.LoginCommand;
+import com.keepgoing.keepgoing.auth.service.dto.LoginResult;
+import com.keepgoing.keepgoing.auth.service.dto.SignupCommand;
+import com.keepgoing.keepgoing.auth.service.dto.SignupResult;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
+import com.keepgoing.keepgoing.global.security.jwt.JwtAuthenticationFilter;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -26,6 +34,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -49,6 +58,9 @@ class AuthControllerTest {
 
     @MockitoBean
     AuthService authService;
+
+    @MockitoBean
+    JwtAuthenticationFilter jwtAuthenticationFilter;
 
     // 계층 구조로 테스트 코드 가독성 증가
     @Nested
@@ -126,6 +138,73 @@ class AuthControllerTest {
                     .andExpect(jsonPath("$.success").value(false))
                     .andExpect(jsonPath("$.error.code").value(VALIDATION_FAILED.name()))
                     .andExpect(jsonPath("$.error.fieldErrors").isArray());
+        }
+    }
+
+    @Nested
+    @DisplayName("POST /api/auth/login - 로그인")
+    class Login {
+
+        @Test
+        @DisplayName("성공 시 200과 토큰을 반환한다.")
+        void success() throws Exception {
+
+            // given
+            LoginRequest request = validLoginRequest();
+            LoginResult result = new LoginResult(
+                    "access-token",
+                    "refresh-token",
+                    1L
+            );
+
+            given(authService.login(any(LoginCommand.class)))
+                    .willReturn(result);
+
+            String json = toJson(objectMapper, request);
+
+            // when & then
+            mockMvc.perform(post("/api/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json)
+                    ).andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data.accessToken").value("access-token"))
+                    .andExpect(jsonPath("$.data.refreshToken").value("refresh-token"))
+                    .andExpect(jsonPath("$.data.userId").value(1L));
+        }
+
+        @Test
+        @DisplayName("잘못된 자격 증명 시 401과 AUTH_INVALID_CREDENTIALS 에러를 반환한다.")
+        void invalid_credentials() throws Exception {
+            // given
+            LoginRequest request = validLoginRequest();
+            String json = toJson(objectMapper, request);
+
+            willThrow(new BadCredentialsException("Bad credentials"))
+                    .given(authService)
+                    .login(any(LoginCommand.class));
+
+            // when & then
+            mockMvc.perform(post("/api/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json))
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andExpect(jsonPath("$.error.code").value(AUTH_INVALID_CREDENTIALS.name()));
+        }
+
+        @Test
+        @DisplayName("검증 실패 시 400과 VALIDATION_FAILED를 반환한다.")
+        void validation_failed() throws Exception {
+            // given
+            LoginRequest invalidRequest = new LoginRequest("", "");
+            String json = toJson(objectMapper, invalidRequest);
+
+            // when & then
+            mockMvc.perform(post("/api/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json))
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andExpect(jsonPath("$.error.code").value(VALIDATION_FAILED.name()));
         }
     }
 }

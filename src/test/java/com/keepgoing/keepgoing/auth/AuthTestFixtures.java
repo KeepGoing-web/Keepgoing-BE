@@ -2,8 +2,10 @@ package com.keepgoing.keepgoing.auth;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.keepgoing.keepgoing.auth.controller.SignupRequest;
-import com.keepgoing.keepgoing.auth.service.SignupCommand;
+import com.keepgoing.keepgoing.auth.controller.dto.LoginRequest;
+import com.keepgoing.keepgoing.auth.controller.dto.SignupRequest;
+import com.keepgoing.keepgoing.auth.service.dto.LoginCommand;
+import com.keepgoing.keepgoing.auth.service.dto.SignupCommand;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -64,5 +66,47 @@ public final class AuthTestFixtures {
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public static LoginRequest validLoginRequest() {
+        return new LoginRequest(
+                "user@example.com",
+                "P@ssw0rd!"
+        );
+    }
+
+    public static LoginRequest loginRequestWithEmail(String email) {
+        return new LoginRequest(
+                email,
+                "P@ssw0rd!"
+        );
+    }
+
+    public static LoginRequest loginRequestWithPassword(String password) {
+        return new LoginRequest(
+                "user@example.com",
+                password
+        );
+    }
+
+    public static LoginCommand validLoginCommand() {
+        return new LoginCommand(
+                "user@example.com",
+                "P@ssw0rd!"
+        );
+    }
+
+    public static LoginCommand loginCommandWithEmail(String email) {
+        return new LoginCommand(
+                email,
+                "P@ssw0rd!"
+        );
+    }
+
+    public static LoginCommand loginCommandWithPassword(String password) {
+        return new LoginCommand(
+                "user@example.com",
+                password
+        );
     }
 }

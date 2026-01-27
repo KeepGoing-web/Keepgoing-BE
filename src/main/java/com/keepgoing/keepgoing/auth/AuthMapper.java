@@ -1,9 +1,13 @@
 package com.keepgoing.keepgoing.auth;
 
-import com.keepgoing.keepgoing.auth.controller.SignupRequest;
-import com.keepgoing.keepgoing.auth.controller.SignupResponse;
-import com.keepgoing.keepgoing.auth.service.SignupCommand;
-import com.keepgoing.keepgoing.auth.service.SignupResult;
+import com.keepgoing.keepgoing.auth.controller.dto.LoginRequest;
+import com.keepgoing.keepgoing.auth.controller.dto.LoginResponse;
+import com.keepgoing.keepgoing.auth.controller.dto.SignupRequest;
+import com.keepgoing.keepgoing.auth.controller.dto.SignupResponse;
+import com.keepgoing.keepgoing.auth.service.dto.LoginCommand;
+import com.keepgoing.keepgoing.auth.service.dto.LoginResult;
+import com.keepgoing.keepgoing.auth.service.dto.SignupCommand;
+import com.keepgoing.keepgoing.auth.service.dto.SignupResult;
 import com.keepgoing.keepgoing.user.domain.User;
 import org.springframework.stereotype.Component;
 
@@ -27,11 +31,26 @@ public class AuthMapper {
         );
     }
 
-    public SignupResponse toResponse(SignupResult result) {
+    public SignupResponse toResponse(SignupResult dto) {
         return new SignupResponse(
-                result.id(),
-                result.email(),
-                result.name()
+                dto.id(),
+                dto.email(),
+                dto.name()
+        );
+    }
+
+    public LoginCommand toCommand(LoginRequest dto) {
+        return new LoginCommand(
+                dto.email(),
+                dto.password()
+        );
+    }
+
+    public LoginResponse toResponse(LoginResult dto) {
+        return new LoginResponse(
+                dto.accessToken(),
+                dto.refreshToken(),
+                dto.userId()
         );
     }
 }

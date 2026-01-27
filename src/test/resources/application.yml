@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: keepgoing
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+
+jwt:
+  secret-key: "test-secret-key-for-testing-purpose-only-32bytes!!"
+  access-token-expiry: 3600000
+  refresh-token-expiry: 604800000
+  issuer: keepgoing-test
+
+cors:
+  allowed-origins:
+    - http://localhost:5173
+  max-age: 3600

@@ -1,5 +1,6 @@
 package com.keepgoing.keepgoing.post.repository;
 
+import com.keepgoing.keepgoing.global.config.JpaAuditingConfig;
 import com.keepgoing.keepgoing.post.domain.Post;
 import com.keepgoing.keepgoing.post.domain.PostVisibility;
 import com.keepgoing.keepgoing.user.domain.User;
@@ -9,6 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -18,7 +20,8 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@DataJpaTest // JPA 관련 컴포넌트만 로드하여 테스트
+@DataJpaTest
+@Import(JpaAuditingConfig.class)
 class PostRepositoryTest {
 
     @Autowired

@@ -7,7 +7,9 @@ import com.keepgoing.keepgoing.global.api.response.ErrorResponse;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import java.util.List;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -67,6 +69,19 @@ public class GlobalExceptionHandler {
         ErrorResponse response = ErrorResponse.of(detail);
 
         return ResponseEntity.status(INTERNAL_SERVER_ERROR)
+                .body(response);
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ErrorResponse> handleBadCredentials(BadCredentialsException ex) {
+        ErrorCode errorCode = ErrorCode.AUTH_INVALID_CREDENTIALS;
+        ErrorDetail detail = ErrorDetail.of(
+                errorCode,
+                errorCode.getDefaultMessage()
+        );
+        ErrorResponse response = ErrorResponse.of(detail);
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(response);
     }
 }

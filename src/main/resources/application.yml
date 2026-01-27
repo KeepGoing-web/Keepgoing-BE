@@ -1,10 +1,14 @@
 spring:
   application:
     name: keepgoing
-  jpa:
-    hibernate:
-      ddl-auto: create
-    defer-datasource-initialization: true
-    sql:
-      init:
-        mode: embedded
+
+jwt:
+  secret-key: ${JWT_SECRET_KEY}
+  access-token-expiry: 3600000      # 1시간
+  refresh-token-expiry: 604800000   # 7일
+  issuer: keepgoing
+
+cors:
+  allowed-origins:
+    - http://localhost:5173
+  max-age: 3600
