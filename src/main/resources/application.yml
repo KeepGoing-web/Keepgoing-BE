@@ -8,3 +8,7 @@ jwt:
   refresh-token-expiry: 604800000   # 7일
   issuer: keepgoing
 
+cors:
+  allowed-origins:
+    - http://localhost:5173
+  max-age: 3600
