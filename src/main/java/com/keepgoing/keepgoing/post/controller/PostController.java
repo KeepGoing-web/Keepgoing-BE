@@ -3,10 +3,14 @@ package com.keepgoing.keepgoing.post.controller;
 import com.keepgoing.keepgoing.global.api.response.ApiResponse;
 import com.keepgoing.keepgoing.global.api.response.PagedResponse;
 import com.keepgoing.keepgoing.post.controller.dto.PostCreateRequest;
-import com.keepgoing.keepgoing.post.controller.dto.PostResponse;
+import com.keepgoing.keepgoing.post.controller.dto.PostDetailResponse;
+import com.keepgoing.keepgoing.post.controller.dto.PostSummaryResponse;
 import com.keepgoing.keepgoing.post.controller.dto.PostUpdateRequest;
-import com.keepgoing.keepgoing.post.domain.Post;
 import com.keepgoing.keepgoing.post.service.PostService;
+import com.keepgoing.keepgoing.post.service.dto.PostCreateCommand;
+import com.keepgoing.keepgoing.post.service.dto.PostDetailResult;
+import com.keepgoing.keepgoing.post.service.dto.PostSummaryResult;
+import com.keepgoing.keepgoing.post.service.dto.PostUpdateCommand;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -16,12 +20,13 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/posts")
+@RequestMapping("/api/posts")
 @RequiredArgsConstructor
 public class PostController {
 
@@ -33,43 +38,37 @@ public class PostController {
      * 포스트 생성
      */
     @PostMapping
-    public ResponseEntity<ApiResponse<PostResponse>> createPost(
-            @RequestBody @Valid PostCreateRequest request
+    public ResponseEntity<ApiResponse<PostDetailResponse>> createPost(
+            @RequestBody @Valid PostCreateRequest request,
+            @AuthenticationPrincipal Long userId
     ) {
-        Long authorId = 1L; // TODO: Security 붙으면 현재 로그인 유저로 교체
+        PostCreateCommand command = request.toCommand(userId);
 
-        Post created = postService.createPost(
-                authorId,
-                request.getTitle(),
-                request.getContent(),
-                request.getVisibility(),
-                request.isAiCollectable()
-        );
+        PostDetailResult created = postService.createPost(command);
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(PostResponse.from(created)));
+                .body(ApiResponse.success(PostDetailResponse.from(created)));
     }
 
     /**
      * 단일 포스트 조회
      */
     @GetMapping("/{postId}")
-    public ResponseEntity<ApiResponse<PostResponse>> getPost(@PathVariable Long postId) {
-        Post post = postService.getPost(postId);
+    public ResponseEntity<ApiResponse<PostDetailResponse>> getPost(@PathVariable Long postId) {
+        PostDetailResult post = postService.getPost(postId);
 
-        return ResponseEntity.ok(ApiResponse.success(PostResponse.from(post)));
+        return ResponseEntity.ok(ApiResponse.success(PostDetailResponse.from(post)));
     }
 
     /**
-     * 내가 쓴 포스트 목록 조회
+     * 포스트 목록 조회
      */
     @GetMapping("/me")
-    public ResponseEntity<ApiResponse<PagedResponse<PostResponse>>> getMyPosts(
+    public ResponseEntity<ApiResponse<PagedResponse<PostSummaryResponse>>> getPosts(
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
-            Pageable pageable
+            Pageable pageable,
+            @AuthenticationPrincipal Long userId
     ) {
-        Long authorId = 1L; // TODO: Security 붙으면 현재 로그인 유저로 교체
-
         int safeSize = Math.min(pageable.getPageSize(), MAX_PAGE_SIZE);
         Pageable safePageable = PageRequest.of(
                 pageable.getPageNumber(),
@@ -77,46 +76,40 @@ public class PostController {
                 pageable.getSort()
         );
 
-        Page<Post> postPage = postService.getMyPosts(authorId, safePageable);
+        Page<PostSummaryResult> page = postService.getPosts(userId, safePageable);
 
-        List<PostResponse> contents = postPage.getContent().stream()
-                .map(PostResponse::from)
+        List<PostSummaryResponse> contents = page.getContent().stream()
+                .map(PostSummaryResponse::from)
                 .toList();
 
-        PagedResponse<PostResponse> body = PagedResponse.of(postPage, contents);
-
-        return ResponseEntity.ok(ApiResponse.success(body));
+        return ResponseEntity.ok(ApiResponse.success(PagedResponse.of(page, contents)));
     }
 
     /**
      * 포스트 수정
      */
     @PutMapping("/{postId}")
-    public ResponseEntity<ApiResponse<PostResponse>> updatePost(@PathVariable Long postId,
-                                                @RequestBody @Valid PostUpdateRequest request) {
-        Long authorId = 1L; // TODO: Security 붙으면 현재 로그인 유저로 교체
+    public ResponseEntity<ApiResponse<PostDetailResponse>> updatePost(
+            @PathVariable Long postId,
+            @RequestBody @Valid PostUpdateRequest request,
+            @AuthenticationPrincipal Long userId
+    ) {
+        PostUpdateCommand command = request.toCommand(postId, userId);
 
-        Post updated = postService.updatePost(
-                authorId,
-                postId,
-                request.getTitle(),
-                request.getContent(),
-                request.getVisibility(),
-                request.isAiCollectable()
-        );
+        PostDetailResult updated = postService.updatePost(command);
 
-        return ResponseEntity.ok(ApiResponse.success(PostResponse.from(updated)));
+        return ResponseEntity.ok(ApiResponse.success(PostDetailResponse.from(updated)));
     }
 
     /**
      * 포스트 삭제
      */
     @DeleteMapping("/{postId}")
-    public ResponseEntity<Void> deletePost(@PathVariable Long postId) {
-        Long authorId = 1L; // TODO: Security 붙으면 현재 로그인 유저로 교체
-
-        postService.deletePost(authorId, postId);
-
+    public ResponseEntity<Void> deletePost(
+            @PathVariable Long postId,
+            @AuthenticationPrincipal Long userId
+    ) {
+        postService.deletePost(postId, userId);
         return ResponseEntity.noContent().build();
     }
 }
