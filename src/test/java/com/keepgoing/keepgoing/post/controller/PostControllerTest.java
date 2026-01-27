@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.keepgoing.keepgoing.global.api.exception.GlobalExceptionHandler;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
+import com.keepgoing.keepgoing.global.security.jwt.JwtProvider;
 import com.keepgoing.keepgoing.post.controller.dto.PostCreateRequest;
 import com.keepgoing.keepgoing.post.controller.dto.PostUpdateRequest;
 import com.keepgoing.keepgoing.post.domain.PostVisibility;
@@ -51,6 +52,9 @@ public class PostControllerTest {
 
     @MockitoBean
     JpaMetamodelMappingContext jpaMappingContext;
+
+    @MockitoBean
+    JwtProvider jwtProvider;
 
     // ========== Post ==========
 
