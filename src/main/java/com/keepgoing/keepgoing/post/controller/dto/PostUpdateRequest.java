@@ -1,26 +1,34 @@
 package com.keepgoing.keepgoing.post.controller.dto;
 
 import com.keepgoing.keepgoing.post.domain.PostVisibility;
+import com.keepgoing.keepgoing.post.service.dto.PostUpdateCommand;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import lombok.*;
 
-@Getter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
-public class PostUpdateRequest {
+public record PostUpdateRequest (
 
     @NotBlank
     @Size(max = 200)
-    private String title;
+    String title,
 
     @NotBlank
-    private String content;
+    String content,
 
     @NotNull
-    private PostVisibility visibility;
+    PostVisibility visibility,
 
-    private boolean aiCollectable;
+    @NotNull
+    Boolean aiCollectable
+) {
+    public PostUpdateCommand toCommand(Long postId, Long userId) {
+        return new PostUpdateCommand(
+                postId,
+                userId,
+                title,
+                content,
+                visibility,
+                aiCollectable
+        );
+    }
 }

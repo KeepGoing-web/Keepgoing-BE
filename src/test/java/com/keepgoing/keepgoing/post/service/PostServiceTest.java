@@ -5,9 +5,10 @@ import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import com.keepgoing.keepgoing.post.domain.Post;
 import com.keepgoing.keepgoing.post.domain.PostVisibility;
 import com.keepgoing.keepgoing.post.repository.PostRepository;
-import com.keepgoing.keepgoing.post.service.dto.CreatePostCommand;
-import com.keepgoing.keepgoing.post.service.dto.UpdatePostCommand;
-import com.keepgoing.keepgoing.post.service.dto.UserPostQuery;
+import com.keepgoing.keepgoing.post.service.dto.PostCreateCommand;
+import com.keepgoing.keepgoing.post.service.dto.PostDetailResult;
+import com.keepgoing.keepgoing.post.service.dto.PostSummaryResult;
+import com.keepgoing.keepgoing.post.service.dto.PostUpdateCommand;
 import com.keepgoing.keepgoing.user.domain.User;
 import com.keepgoing.keepgoing.user.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -40,7 +41,7 @@ public class PostServiceTest {
 
     // ===== 테스트용 헬퍼 메서드들 =====
 
-    private User createAuthor(Long id) {
+    private User createUser(Long id) {
         return User.builder()
                 .id(id)
                 .email("test@example.com")
@@ -54,18 +55,18 @@ public class PostServiceTest {
     @DisplayName("createPost: 유저가 존재하면 게시글을 생성한다")
     void createPost_createsPostWhenUserExists() {
         // given
-        Long authorId = 1L;
-        User author = createAuthor(authorId);
+        Long userId = 1L;
+        User user = createUser(userId);
 
         String title = "제목";
         String content = "내용";
         PostVisibility visibility = PostVisibility.PRIVATE;
         boolean aiCollectable = true;
 
-        given(userRepository.findById(authorId)).willReturn(Optional.of(author));
+        given(userRepository.findById(userId)).willReturn(Optional.of(user));
 
         Post post = Post.create(
-                author,
+                user,
                 title,
                 content,
                 visibility,
@@ -73,8 +74,8 @@ public class PostServiceTest {
         );
         given(postRepository.save(any(Post.class))).willReturn(post);
 
-        CreatePostCommand command = new CreatePostCommand(
-                authorId,
+        PostCreateCommand command = new PostCreateCommand(
+                userId,
                 title,
                 content,
                 visibility,
@@ -82,14 +83,14 @@ public class PostServiceTest {
         );
 
         // when
-        Post result = postService.createPost(command);
+        PostDetailResult result = postService.createPost(command);
 
         // then
-        assertThat(result.getTitle()).isEqualTo(title);
-        assertThat(result.getContent()).isEqualTo(content);
-        assertThat(result.getVisibility()).isEqualTo(visibility);
-        assertThat(result.isAiCollectable()).isEqualTo(aiCollectable);
-        verify(userRepository).findById(authorId);
+        assertThat(result.title()).isEqualTo(title);
+        assertThat(result.content()).isEqualTo(content);
+        assertThat(result.visibility()).isEqualTo(visibility);
+        assertThat(result.aiCollectable()).isEqualTo(aiCollectable);
+        verify(userRepository).findById(userId);
         verify(postRepository).save(any(Post.class));
     }
 
@@ -97,22 +98,21 @@ public class PostServiceTest {
     @DisplayName("createPost: 유저가 없으면 USER_NOT_FOUND 예외 발생")
     void createPost_throwsWhenUserNotFound() {
         // given
-        Long authorId = 1L;
+        Long userId = 1L;
         String title = "제목";
         String content = "내용";
         PostVisibility visibility = PostVisibility.PRIVATE;
         boolean aiCollectable = true;
 
-        given(userRepository.findById(authorId)).willReturn(Optional.empty());
+        given(userRepository.findById(userId)).willReturn(Optional.empty());
 
-        CreatePostCommand command = new CreatePostCommand(
-                authorId,
+        PostCreateCommand command = new PostCreateCommand(
+                userId,
                 title,
                 content,
                 visibility,
                 aiCollectable
         );
-
         // when & then
         assertThatThrownBy(() -> postService.createPost(command))
                 .isInstanceOf(BusinessException.class)
@@ -126,16 +126,16 @@ public class PostServiceTest {
     void getPost_returnsPostWhenExists() {
         // given
         Long postId = 1L;
-        User author = createAuthor(1L);
-        Post post = Post.create(author, "제목", "내용", PostVisibility.PRIVATE, true);
+        User user = createUser(1L);
+        Post post = Post.create(user, "제목", "내용", PostVisibility.PRIVATE, true);
 
         given(postRepository.findById(postId)).willReturn(Optional.of(post));
 
         // when
-        Post result = postService.getPost(postId);
+        PostDetailResult result = postService.getPost(postId);
 
         // then
-        assertThat(result.getTitle()).isEqualTo("제목");
+        assertThat(result.title()).isEqualTo("제목");
         verify(postRepository).findById(postId);
     }
 
@@ -152,17 +152,17 @@ public class PostServiceTest {
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.POST_NOT_FOUND);
     }
 
-    // ========== getMyPosts ==========
+    // ========== getPosts ==========
 
     @Test
-    @DisplayName("getMyPosts: 작성자 ID와 Pageable로 게시글 페이지를 가져온다")
-    void getMyPosts_returnsPage() {
+    @DisplayName("getPosts: 작성자 ID와 Pageable로 게시글 페이지를 가져온다")
+    void getPosts_returnsPage() {
         // given
-        Long authorId = 1L;
-        User author = createAuthor(authorId);
+        Long userId = 1L;
+        User user = createUser(userId);
 
-        Post post1 = Post.create(author, "제목1", "내용1", PostVisibility.PRIVATE, true);
-        Post post2 = Post.create(author, "제목2", "내용2", PostVisibility.PUBLIC, true);
+        Post post1 = Post.create(user, "제목1", "내용1", PostVisibility.PRIVATE, true);
+        Post post2 = Post.create(user, "제목2", "내용2", PostVisibility.PUBLIC, true);
         var posts = java.util.List.of(post1, post2);
 
         Pageable pageable = PageRequest.of(
@@ -177,20 +177,18 @@ public class PostServiceTest {
         );
 
         // 저장소가 페이지를 반환하는 동작을 스텁
-        given(postRepository.findByAuthor_Id(authorId, pageable))
+        given(postRepository.findByAuthor_Id(userId, pageable))
                 .willReturn(postPage);
 
-        UserPostQuery query = new UserPostQuery(authorId, pageable);
-
         // when
-        Page<Post> result = postService.getMyPosts(query);
+        Page<PostSummaryResult> result = postService.getPosts(userId, pageable);
 
         // then
         assertThat(result.getTotalElements()).isEqualTo(2);
         assertThat(result.getContent()).hasSize(2);
-        assertThat(result.getContent().get(0).getTitle()).isEqualTo("제목1");
-        assertThat(result.getContent().get(1).getTitle()).isEqualTo("제목2");
-        verify(postRepository).findByAuthor_Id(authorId, pageable);
+        assertThat(result.getContent().get(0).title()).isEqualTo("제목1");
+        assertThat(result.getContent().get(1).title()).isEqualTo("제목2");
+        verify(postRepository).findByAuthor_Id(userId, pageable);
     }
 
     // ========== updatePost ==========
@@ -199,11 +197,11 @@ public class PostServiceTest {
     @DisplayName("updatePost: 작성자가 맞으면 게시글이 수정된다")
     void updatePost_updatesWhenAuthorMatches() {
         // given
-        Long authorId = 1L;
+        Long userId = 1L;
         Long postId = 10L;
 
-        User author = createAuthor(authorId);
-        Post post = Post.create(author, "old", "old", PostVisibility.PRIVATE, true);
+        User user = createUser(userId);
+        Post post = Post.create(user, "old", "old", PostVisibility.PRIVATE, true);
 
         String newTitle = "수정 제목";
         String newContent = "수정 내용";
@@ -212,9 +210,9 @@ public class PostServiceTest {
 
         given(postRepository.findById(postId)).willReturn(Optional.of(post));
 
-        UpdatePostCommand command = new UpdatePostCommand(
-                authorId,
+        PostUpdateCommand command = new PostUpdateCommand(
                 postId,
+                userId,
                 newTitle,
                 newContent,
                 newVisibility,
@@ -222,13 +220,13 @@ public class PostServiceTest {
         );
 
         // when
-        Post result = postService.updatePost(command);
+        PostDetailResult result = postService.updatePost(command);
 
         // then
-        assertThat(result.getTitle()).isEqualTo(newTitle);
-        assertThat(result.getContent()).isEqualTo(newContent);
-        assertThat(result.getVisibility()).isEqualTo(newVisibility);
-        assertThat(result.isAiCollectable()).isEqualTo(newAiCollectable);
+        assertThat(result.title()).isEqualTo(newTitle);
+        assertThat(result.content()).isEqualTo(newContent);
+        assertThat(result.visibility()).isEqualTo(newVisibility);
+        assertThat(result.aiCollectable()).isEqualTo(newAiCollectable);
         verify(postRepository).findById(postId);
     }
 
@@ -236,7 +234,7 @@ public class PostServiceTest {
     @DisplayName("updatePost: 게시글이 없으면 POST_NOT_FOUND 예외")
     void updatePost_throwsWhenPostNotFound() {
         // given
-        Long authorId = 1L;
+        Long userId = 1L;
         Long postId = 10L;
 
         String newTitle = "수정 제목";
@@ -246,9 +244,9 @@ public class PostServiceTest {
 
         given(postRepository.findById(postId)).willReturn(Optional.empty());
 
-        UpdatePostCommand command = new UpdatePostCommand(
-                authorId,
+        PostUpdateCommand command = new PostUpdateCommand(
                 postId,
+                userId,
                 newTitle,
                 newContent,
                 newVisibility,
@@ -256,9 +254,7 @@ public class PostServiceTest {
         );
 
         // when & then
-        assertThatThrownBy(() ->
-                postService.updatePost(command)
-        )
+        assertThatThrownBy(() -> postService.updatePost(command))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.POST_NOT_FOUND);
     }
@@ -267,12 +263,12 @@ public class PostServiceTest {
     @DisplayName("updatePost: 작성자가 아니면 POST_ACCESS_DENIED 예외")
     void updatePost_throwsWhenNotAuthor() {
         // given
-        Long authorId = 1L;
+        Long userId = 1L;
         Long othersId = 2L;
         Long postId = 10L;
 
-        User author = createAuthor(othersId); // 실제 작성자는 2번
-        Post post = Post.create(author, "old", "old", PostVisibility.PRIVATE, true);
+        User user = createUser(othersId); // 실제 작성자는 2번
+        Post post = Post.create(user, "old", "old", PostVisibility.PRIVATE, true);
 
         String newTitle = "수정 제목";
         String newContent = "수정 내용";
@@ -281,9 +277,9 @@ public class PostServiceTest {
 
         given(postRepository.findById(postId)).willReturn(Optional.of(post));
 
-        UpdatePostCommand command = new UpdatePostCommand(
-                authorId,
+        PostUpdateCommand command = new PostUpdateCommand(
                 postId,
+                userId,
                 newTitle,
                 newContent,
                 newVisibility,
@@ -291,9 +287,7 @@ public class PostServiceTest {
         );
 
         // when & then
-        assertThatThrownBy(() ->
-                postService.updatePost(command)
-        )
+        assertThatThrownBy(() -> postService.updatePost(command))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.POST_ACCESS_DENIED);
     }
@@ -304,16 +298,16 @@ public class PostServiceTest {
     @DisplayName("deletePost: 작성자가 맞으면 softDelete 된다")
     void deletePost_softDeletesWhenAuthorMatches() {
         // given
-        Long authorId = 1L;
+        Long userId = 1L;
         Long postId = 10L;
 
-        User author = createAuthor(authorId);
-        Post post = Post.create(author, "title", "content", PostVisibility.PRIVATE, true);
+        User user = createUser(userId);
+        Post post = Post.create(user, "title", "content", PostVisibility.PRIVATE, true);
 
         given(postRepository.findById(postId)).willReturn(Optional.of(post));
 
         // when
-        postService.deletePost(authorId, postId);
+        postService.deletePost(userId, postId);
 
         // then
         assertThat(post.isDeleted()).isTrue(); // isDeleted 없으면 deletedAt != null 로 체크
@@ -324,13 +318,13 @@ public class PostServiceTest {
     @DisplayName("deletePost: 게시글이 없으면 POST_NOT_FOUND 예외")
     void deletePost_throwsWhenPostNotFound() {
         // given
-        Long authorId = 1L;
+        Long userId = 1L;
         Long postId = 10L;
 
         given(postRepository.findById(postId)).willReturn(Optional.empty());
 
         // when & then
-        assertThatThrownBy(() -> postService.deletePost(authorId, postId))
+        assertThatThrownBy(() -> postService.deletePost(userId, postId))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.POST_NOT_FOUND);
     }
@@ -339,17 +333,17 @@ public class PostServiceTest {
     @DisplayName("deletePost: 작성자가 아니면 POST_ACCESS_DENIED 예외")
     void deletePost_throwsWhenNotAuthor() {
         // given
-        Long authorId = 1L;
+        Long userId = 1L;
         Long othersId = 2L;
         Long postId = 10L;
 
-        User author = createAuthor(othersId); // 작성자는 2번
-        Post post = Post.create(author, "title", "content", PostVisibility.PRIVATE, true);
+        User user = createUser(othersId); // 작성자는 2번
+        Post post = Post.create(user, "title", "content", PostVisibility.PRIVATE, true);
 
         given(postRepository.findById(postId)).willReturn(Optional.of(post));
 
         // when & then
-        assertThatThrownBy(() -> postService.deletePost(authorId, postId))
+        assertThatThrownBy(() -> postService.deletePost(userId, postId))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.POST_ACCESS_DENIED);
     }

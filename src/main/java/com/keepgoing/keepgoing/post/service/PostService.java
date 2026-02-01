@@ -4,20 +4,22 @@ import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import com.keepgoing.keepgoing.post.domain.Post;
 import com.keepgoing.keepgoing.post.repository.PostRepository;
-import com.keepgoing.keepgoing.post.service.dto.CreatePostCommand;
-import com.keepgoing.keepgoing.post.service.dto.UpdatePostCommand;
-import com.keepgoing.keepgoing.post.service.dto.UserPostQuery;
+import com.keepgoing.keepgoing.post.service.dto.PostCreateCommand;
+import com.keepgoing.keepgoing.post.service.dto.PostDetailResult;
+import com.keepgoing.keepgoing.post.service.dto.PostSummaryResult;
+import com.keepgoing.keepgoing.post.service.dto.PostUpdateCommand;
 import com.keepgoing.keepgoing.user.domain.User;
 import com.keepgoing.keepgoing.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
 @RequiredArgsConstructor
-public class PostService implements PostUseCase {
+public class PostService {
 
     private final PostRepository postRepository;
     private final UserRepository userRepository;
@@ -25,9 +27,8 @@ public class PostService implements PostUseCase {
     /**
      * 포스트 생성
      */
-    @Override
-    public Post createPost(CreatePostCommand command) {
-        User author = userRepository.findById(command.authorId())
+    public PostDetailResult createPost(PostCreateCommand command) {
+        User author = userRepository.findById(command.userId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         Post post = Post.create(
@@ -37,38 +38,37 @@ public class PostService implements PostUseCase {
                 command.visibility(),
                 command.aiCollectable()
         );
-
-        return postRepository.save(post);
+        Post saved = postRepository.save(post);
+        return toDetailResult(saved);
     }
 
     /**
      * 단일 포스트 조회
      */
-    @Override
     @Transactional(readOnly = true)
-    public Post getPost(Long postId) {
-        return postRepository.findById(postId)
+    public PostDetailResult getPost(Long postId) {
+        Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
+        return toDetailResult(post);
     }
 
     /**
-     * 내가 쓴 포스트 목록 조회
+     * 포스트 목록 조회
      */
-    @Override
     @Transactional(readOnly = true)
-    public Page<Post> getMyPosts(UserPostQuery query) {
-        return postRepository.findByAuthor_Id(query.authorId(), query.pageable());
+    public Page<PostSummaryResult> getPosts(Long userId, Pageable pageable) {
+        return postRepository.findByAuthor_Id(userId, pageable)
+                .map(this::toSummaryResult);
     }
 
     /**
      * 포스트 수정
      */
-    @Override
-    public Post updatePost(UpdatePostCommand command) {
+    public PostDetailResult updatePost(PostUpdateCommand command) {
         Post post = postRepository.findById(command.postId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
 
-        post.validateAuthor(command.authorId());
+        post.validateAuthor(command.userId());
 
         post.update(
                 command.title(),
@@ -77,17 +77,40 @@ public class PostService implements PostUseCase {
                 command.aiCollectable()
         );
 
-        return post;
+        return toDetailResult(post);
     }
 
     /**
      * 포스트 삭제 (soft delete)
      */
-    @Override
-    public void deletePost(Long authorId, Long postId) {
+    public void deletePost(Long userId, Long postId) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
-        post.validateAuthor(authorId);
-        post.softDelete();
+
+        post.validateAuthor(userId);
+        post.softDelete(); // deleted_at만 채움 → @Where 때문에 이후 조회에서 빠짐
+    }
+
+    private PostDetailResult toDetailResult(Post post) {
+        return new PostDetailResult(
+                post.getId(),
+                post.getAuthor().getId(),
+                post.getTitle(),
+                post.getContent(),
+                post.getVisibility(),
+                post.isAiCollectable(),
+                post.getCreatedAt(),
+                post.getUpdatedAt()
+        );
+    }
+
+    private PostSummaryResult toSummaryResult(Post post) {
+        return new PostSummaryResult(
+                post.getId(),
+                post.getTitle(),
+                post.getVisibility(),
+                post.isAiCollectable(),
+                post.getCreatedAt()
+        );
     }
 }
