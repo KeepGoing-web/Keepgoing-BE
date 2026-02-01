@@ -77,7 +77,6 @@ public class PostService {
                 command.aiCollectable()
         );
 
-        postRepository.flush();
         return toDetailResult(post);
     }
 
