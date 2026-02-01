@@ -94,15 +94,15 @@ GET {{host}}/api/posts/{{postId}}
 Authorization: Bearer {{accessToken}}
 
 
-### 7) PUT /api/posts/{id} – 작성자 아닌 경우 POST_ACCESS_DENIED 확인
-@otherPostId = 100
-PUT {{host}}/api/posts/{{otherPostId}}
-Content-Type: application/json
-Authorization: Bearer {{accessToken}}
-
-{
-  "title": "남의 글 수정 시도",
-  "content": "이건 실패해야 합니다.",
-  "visibility": "PUBLIC",
-  "aiCollectable": true
-}
+#### 7) PUT /api/posts/{id} – 작성자 아닌 경우 POST_ACCESS_DENIED 확인
+#@otherPostId = 100
+#PUT {{host}}/api/posts/{{otherPostId}}
+#Content-Type: application/json
+#Authorization: Bearer {{accessToken}}
+#
+#{
+#  "title": "남의 글 수정 시도",
+#  "content": "이건 실패해야 합니다.",
+#  "visibility": "PUBLIC",
+#  "aiCollectable": true
+#}

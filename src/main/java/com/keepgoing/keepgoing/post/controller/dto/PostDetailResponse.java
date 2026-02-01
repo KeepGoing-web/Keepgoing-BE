@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 
 public record PostDetailResponse(
         Long postId,
-        Long authorId,
+        Long userId,
         String title,
         String content,
         PostVisibility visibility,
@@ -18,7 +18,7 @@ public record PostDetailResponse(
     public static PostDetailResponse from(PostDetailResult result) {
         return new PostDetailResponse(
                 result.postId(),
-                result.authorId(),
+                result.userId(),
                 result.title(),
                 result.content(),
                 result.visibility(),

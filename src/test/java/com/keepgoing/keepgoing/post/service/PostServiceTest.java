@@ -55,15 +55,15 @@ public class PostServiceTest {
     @DisplayName("createPost: 유저가 존재하면 게시글을 생성한다")
     void createPost_createsPostWhenUserExists() {
         // given
-        Long authorId = 1L;
-        User user = createUser(authorId);
+        Long userId = 1L;
+        User user = createUser(userId);
 
         String title = "제목";
         String content = "내용";
         PostVisibility visibility = PostVisibility.PRIVATE;
         boolean aiCollectable = true;
 
-        given(userRepository.findById(authorId)).willReturn(Optional.of(user));
+        given(userRepository.findById(userId)).willReturn(Optional.of(user));
 
         Post post = Post.create(
                 user,
@@ -75,7 +75,7 @@ public class PostServiceTest {
         given(postRepository.save(any(Post.class))).willReturn(post);
 
         PostCreateCommand command = new PostCreateCommand(
-                authorId,
+                userId,
                 title,
                 content,
                 visibility,
@@ -90,7 +90,7 @@ public class PostServiceTest {
         assertThat(result.content()).isEqualTo(content);
         assertThat(result.visibility()).isEqualTo(visibility);
         assertThat(result.aiCollectable()).isEqualTo(aiCollectable);
-        verify(userRepository).findById(authorId);
+        verify(userRepository).findById(userId);
         verify(postRepository).save(any(Post.class));
     }
 
@@ -318,13 +318,13 @@ public class PostServiceTest {
     @DisplayName("deletePost: 게시글이 없으면 POST_NOT_FOUND 예외")
     void deletePost_throwsWhenPostNotFound() {
         // given
-        Long authorId = 1L;
+        Long userId = 1L;
         Long postId = 10L;
 
         given(postRepository.findById(postId)).willReturn(Optional.empty());
 
         // when & then
-        assertThatThrownBy(() -> postService.deletePost(authorId, postId))
+        assertThatThrownBy(() -> postService.deletePost(userId, postId))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.POST_NOT_FOUND);
     }

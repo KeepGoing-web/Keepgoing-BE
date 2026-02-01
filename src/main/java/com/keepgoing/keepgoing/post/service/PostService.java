@@ -56,8 +56,8 @@ public class PostService {
      * 포스트 목록 조회
      */
     @Transactional(readOnly = true)
-    public Page<PostSummaryResult> getPosts(Long authorId, Pageable pageable) {
-        return postRepository.findByAuthor_Id(authorId, pageable)
+    public Page<PostSummaryResult> getPosts(Long userId, Pageable pageable) {
+        return postRepository.findByAuthor_Id(userId, pageable)
                 .map(this::toSummaryResult);
     }
 
@@ -83,11 +83,11 @@ public class PostService {
     /**
      * 포스트 삭제 (soft delete)
      */
-    public void deletePost(Long authorId, Long postId) {
+    public void deletePost(Long userId, Long postId) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
 
-        post.validateAuthor(authorId);
+        post.validateAuthor(userId);
         post.softDelete(); // deleted_at만 채움 → @Where 때문에 이후 조회에서 빠짐
     }
 

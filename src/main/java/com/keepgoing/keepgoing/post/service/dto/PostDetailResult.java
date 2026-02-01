@@ -6,7 +6,7 @@ import java.time.LocalDateTime;
 
 public record PostDetailResult(
     Long postId,
-    Long authorId,
+    Long userId,
     String title,
     String content,
     PostVisibility visibility,
