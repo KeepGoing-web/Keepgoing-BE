@@ -5,7 +5,7 @@ import com.keepgoing.keepgoing.post.domain.PostVisibility;
 /**
  * 포스트 생성에 필요한 서비스 계층 전용 커맨드입니다.
  *
- * @param userId   작성자 ID
+ * @param userId     작성자 ID
  * @param title      포스트 제목
  * @param content    포스트 본문 내용
  * @param visibility 공개 범위
