@@ -123,8 +123,30 @@ public class PostController {
         );
 
         List<PostSummaryResponse> contents = page.getContent().stream()
-               .map(PostSummaryResponse::from)
-               .toList();
+                .map(PostSummaryResponse::from)
+                .toList();
+
+        return ResponseEntity.ok(ApiResponse.success(PagedResponse.of(page, contents)));
+    }
+
+    /**
+     * 포스트 검색
+     */
+    @GetMapping("/search")
+    public ResponseEntity<ApiResponse<PagedResponse<PostSummaryResponse>>> search(
+            @RequestParam String keyword,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
+            Pageable pageable
+    ) {
+        Pageable safePageable = safePageable(pageable);
+
+        Page<PostSummaryResult> page = postService.searchPost(
+                new PostSearchQuery(keyword, safePageable)
+        );
+
+        List<PostSummaryResponse> contents = page.getContent().stream()
+                .map(PostSummaryResponse::from)
+                .toList();
 
         return ResponseEntity.ok(ApiResponse.success(PagedResponse.of(page, contents)));
     }
