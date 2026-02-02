@@ -18,13 +18,23 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     /**
      * authorId 로 필터해서, 전달받은 Pageable 조건(페이지/정렬)에 맞게 조회한다.
-     * */
+     */
     @EntityGraph(attributePaths = {"author"})
     Page<Post> findByAuthor_Id(Long authorId, Pageable pageable);
 
     /**
      * visibility 값으로 필터해서, createdAt 기준 내림차순으로 정렬해서 찾는다.
-     * */
+     */
     @EntityGraph(attributePaths = {"author"})
     List<Post> findByVisibilityOrderByCreatedAtDesc(PostVisibility visibility);
+
+    /**
+     * keyword가 title 혹은 content에 포함된 게시글을 페이징 조회한다.
+     * */
+    @EntityGraph(attributePaths = {"author"})
+    Page<Post> findByTitleContainingIgnoreCaseOrContentContainingIgnoreCase(
+            String titleKeyword,
+            String contentKeyword,
+            Pageable pageable
+    );
 }

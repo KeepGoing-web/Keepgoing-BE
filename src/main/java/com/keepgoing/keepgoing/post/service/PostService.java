@@ -4,10 +4,7 @@ import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import com.keepgoing.keepgoing.post.domain.Post;
 import com.keepgoing.keepgoing.post.repository.PostRepository;
-import com.keepgoing.keepgoing.post.service.dto.PostCreateCommand;
-import com.keepgoing.keepgoing.post.service.dto.PostDetailResult;
-import com.keepgoing.keepgoing.post.service.dto.PostSummaryResult;
-import com.keepgoing.keepgoing.post.service.dto.PostUpdateCommand;
+import com.keepgoing.keepgoing.post.service.dto.*;
 import com.keepgoing.keepgoing.user.domain.User;
 import com.keepgoing.keepgoing.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -89,6 +86,23 @@ public class PostService {
 
         post.validateAuthor(userId);
         post.softDelete(); // deleted_at만 채움 → @Where 때문에 이후 조회에서 빠짐
+    }
+
+    /**
+     * 포스트 검색
+     */
+    public Page<PostSummaryResult> searchPost(PostSearchQuery query) {
+        if (query == null || !query.hasKeyword()) {
+            throw new BusinessException(ErrorCode.POST_SEARCH_KEYWORD_REQUIRED);
+        }
+
+        Page<Post> page = postRepository.findByTitleContainingIgnoreCaseOrContentContainingIgnoreCase(
+                query.keyword(),
+                query.keyword(),
+                query.pageable()
+        );
+
+        return page.map(this::toSummaryResult);
     }
 
     private PostDetailResult toDetailResult(Post post) {
