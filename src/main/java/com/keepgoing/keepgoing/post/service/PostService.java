@@ -89,7 +89,7 @@ public class PostService {
     }
 
     /**
-     * 포스트 검색
+     * 내 글 검색
      */
     @Transactional(readOnly = true)
     public Page<PostSummaryResult> searchMyPosts(Long userId, PostSearchQuery query) {
@@ -99,6 +99,28 @@ public class PostService {
 
         Page<Post> page = postRepository.searchMyPosts(
                 userId,
+                query.keyword(),
+                query.pageable()
+        );
+
+        return page.map(this::toSummaryResult);
+    }
+
+    /**
+     * 전체(공개/공통) 검색
+     *
+     * NOTE: MySQL에서 TEXT/MEDIUMTEXT 컬럼(content)이 CLOB로 매핑될 때,
+     *       IgnoreCase 파생 쿼리는 upper()/lower()를 사용하며 오류가 날 수 있어
+     *       Containing(대소문자 구분은 collation에 위임) 형태로 유지합니다.
+     */
+    @Transactional(readOnly = true)
+    public Page<PostSummaryResult> searchPost(PostSearchQuery query) {
+        if (query == null || !query.hasKeyword()) {
+            throw new BusinessException(ErrorCode.POST_SEARCH_KEYWORD_REQUIRED);
+        }
+
+        Page<Post> page = postRepository.findByTitleContainingOrContentContaining(
+                query.keyword(),
                 query.keyword(),
                 query.pageable()
         );

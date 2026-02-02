@@ -30,9 +30,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @EntityGraph(attributePaths = {"author"})
     List<Post> findByVisibilityOrderByCreatedAtDesc(PostVisibility visibility);
 
-    /**
-     * keyword가 title 혹은 content에 포함된 게시글을 페이징 조회한다.
-     * */
+    // 전체 검색(derived query)
     @EntityGraph(attributePaths = {"author"})
     Page<Post> findByTitleContainingOrContentContaining(
             String titleKeyword,
@@ -40,13 +38,14 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             Pageable pageable
     );
 
+    // (B) 내 글 검색(작성자 조건 포함)
     @Query("""
-    select p
-    from Post p
-    where p.author.id = :authorId
-      and (p.title like concat('%', :keyword, '%')
-           or p.content like concat('%', :keyword, '%'))
-    """)
+            select p
+            from Post p
+            where p.author.id = :authorId
+              and (p.title like concat('%', :keyword, '%')
+                   or p.content like concat('%', :keyword, '%'))
+            """)
     Page<Post> searchMyPosts(@Param("authorId") Long authorId,
                              @Param("keyword") String keyword,
                              Pageable pageable);
