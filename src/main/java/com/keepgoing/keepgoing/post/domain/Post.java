@@ -103,7 +103,7 @@ public class Post {
     }
 
     /**
-     * 삭제 여부 (테스트/관리용)
+     * 삭제 처리된 게시글인지 여부
      */
     public boolean isDeleted() {
         return deletedAt != null;
