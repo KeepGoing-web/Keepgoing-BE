@@ -7,10 +7,7 @@ import com.keepgoing.keepgoing.post.controller.dto.PostDetailResponse;
 import com.keepgoing.keepgoing.post.controller.dto.PostSummaryResponse;
 import com.keepgoing.keepgoing.post.controller.dto.PostUpdateRequest;
 import com.keepgoing.keepgoing.post.service.PostService;
-import com.keepgoing.keepgoing.post.service.dto.PostCreateCommand;
-import com.keepgoing.keepgoing.post.service.dto.PostDetailResult;
-import com.keepgoing.keepgoing.post.service.dto.PostSummaryResult;
-import com.keepgoing.keepgoing.post.service.dto.PostUpdateCommand;
+import com.keepgoing.keepgoing.post.service.dto.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -69,12 +66,7 @@ public class PostController {
             Pageable pageable,
             @AuthenticationPrincipal Long userId
     ) {
-        int safeSize = Math.min(pageable.getPageSize(), MAX_PAGE_SIZE);
-        Pageable safePageable = PageRequest.of(
-                pageable.getPageNumber(),
-                safeSize,
-                pageable.getSort()
-        );
+        Pageable safePageable = safePageable(pageable);
 
         Page<PostSummaryResult> page = postService.getPosts(userId, safePageable);
 
@@ -111,5 +103,36 @@ public class PostController {
     ) {
         postService.deletePost(userId, postId);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * 포스트 조회
+     */
+    @GetMapping("/search")
+    public ResponseEntity<ApiResponse<PagedResponse<PostSummaryResponse>>> search(
+            @RequestParam String keyword,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
+            Pageable pageable
+    ) {
+        Pageable safePageable = safePageable(pageable);
+
+        Page<PostSummaryResult> page = postService.searchPost(
+                new PostSearchQuery(keyword, safePageable)
+        );
+
+       List<PostSummaryResponse> contents = page.getContent().stream()
+               .map(PostSummaryResponse::from)
+               .toList();
+
+        return ResponseEntity.ok(ApiResponse.success(PagedResponse.of(page, contents)));
+    }
+
+    private Pageable safePageable(Pageable pageable) {
+        int safeSize = Math.min(pageable.getPageSize(), MAX_PAGE_SIZE);
+        return PageRequest.of(
+                pageable.getPageNumber(),
+                safeSize,
+                pageable.getSort()
+        );
     }
 }
