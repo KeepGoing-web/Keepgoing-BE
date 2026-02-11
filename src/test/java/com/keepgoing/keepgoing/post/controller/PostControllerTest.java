@@ -9,12 +9,11 @@ import com.keepgoing.keepgoing.post.controller.dto.PostCreateRequest;
 import com.keepgoing.keepgoing.post.controller.dto.PostUpdateRequest;
 import com.keepgoing.keepgoing.post.domain.PostVisibility;
 import com.keepgoing.keepgoing.post.service.PostService;
-import com.keepgoing.keepgoing.post.service.dto.PostCreateCommand;
-import com.keepgoing.keepgoing.post.service.dto.PostDetailResult;
-import com.keepgoing.keepgoing.post.service.dto.PostSummaryResult;
-import com.keepgoing.keepgoing.post.service.dto.PostUpdateCommand;
+import com.keepgoing.keepgoing.post.service.dto.*;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -29,6 +28,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.*;
@@ -56,6 +56,10 @@ public class PostControllerTest {
     @MockitoBean
     JwtProvider jwtProvider;
 
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
     // ========== Post ==========
 
     @Test
@@ -178,16 +182,24 @@ public class PostControllerTest {
                 .willReturn(postPage);
 
         SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken(1L, null, List.of())
+                new UsernamePasswordAuthenticationToken(userId, null, List.of())
         );
 
         // when & then
         mockMvc.perform(get("/api/posts/me")
                         .param("page", "0")
-                        .param("size", "1000"))
-                .andExpect(status().isOk());
-
-        SecurityContextHolder.clearContext();
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.contents").isArray())
+                .andExpect(jsonPath("$.data.contents.length()").value(2))
+                .andExpect(jsonPath("$.data.page").value(0))
+                .andExpect(jsonPath("$.data.size").value(10))
+                .andExpect(jsonPath("$.data.contents[0].title").value("제목1"))
+                .andExpect(jsonPath("$.data.totalElements").value(2))
+                .andExpect(jsonPath("$.data.totalPages").value(1))
+                .andExpect(jsonPath("$.data.last").value(true));
+        verify(postService).getPosts(eq(userId), any(Pageable.class));
     }
 
     @Test
@@ -196,36 +208,26 @@ public class PostControllerTest {
         // given
         Long userId = 1L;
 
-        PostSummaryResult post = new PostSummaryResult(
-                1L,
-                "제목",
-                PostVisibility.PUBLIC,
-                true,
-                null
-        );
-
-        int requestedSize = 1000;
-        int expectedSize = 100; // MAX_PAGE_SIZE
-
-        Pageable clampedPageable = PageRequest.of(0, expectedSize, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<PostSummaryResult> postPage = new PageImpl<>(List.of(post), clampedPageable, 1);
-
         given(postService.getPosts(eq(userId), any(Pageable.class)))
-                .willReturn(postPage);
+                .willReturn(Page.empty());
 
         SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken(1L, null, List.of())
+                new UsernamePasswordAuthenticationToken(userId, null, List.of())
         );
 
-        // when & then
+        // when
         mockMvc.perform(get("/api/posts/me")
                         .param("page", "0")
-                        .param("size", String.valueOf(requestedSize)))
+                        .param("size", "1000"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.size").value(expectedSize)); // 100
+                .andExpect(jsonPath("$.success").value(true));
 
-        SecurityContextHolder.clearContext();
+        // then
+        ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
+        verify(postService).getPosts(eq(userId), captor.capture());
+
+        assertThat(captor.getValue().getPageSize()).isEqualTo(100);
+
     }
 
     // ========== PUT ==========
@@ -319,7 +321,6 @@ public class PostControllerTest {
 
         verify(postService).deletePost(userId, postId);
 
-        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -341,7 +342,93 @@ public class PostControllerTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value("POST_ACCESS_DENIED"));
+    }
 
-        SecurityContextHolder.clearContext();
+    // ========== SEARCH ==========
+
+    @Test
+    @DisplayName("GET /api/posts/me/search - 검색 성공 시 200 OK 및 contents 반환")
+    void search_success() throws Exception {
+        // given
+        Long userId = 1L;
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(userId, null, List.of())
+        );
+
+        Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        List<PostSummaryResult> results = List.of(
+                new PostSummaryResult(1L, "spring 제목", PostVisibility.PUBLIC, true, null),
+                new PostSummaryResult(2L, "기타 제목", PostVisibility.PRIVATE, false, null)
+        );
+
+        Page<PostSummaryResult> page = new PageImpl<>(results, pageable, results.size());
+
+        given(postService.searchMyPosts(eq(userId), any(PostSearchQuery.class)))
+                .willReturn(page);
+
+        // when & then
+        mockMvc.perform(get("/api/posts/me/search")
+                        .param("keyword", "spring")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.contents").isArray())
+                .andExpect(jsonPath("$.data.contents.length()").value(2))
+                .andExpect(jsonPath("$.data.contents[0].title").value("spring 제목"));
+
+        verify(postService).searchMyPosts(eq(userId), any(PostSearchQuery.class));
+    }
+
+    @Test
+    @DisplayName("GET /api/posts/me/search - size가 MAX_PAGE_SIZE보다 크면 상한(100)으로 제한된다")
+    void search_clampsPageSize() throws Exception {
+        // given
+        Long userId = 1L;
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(userId, null, List.of())
+        );
+
+        given(postService.searchMyPosts(eq(userId), any(PostSearchQuery.class)))
+                .willReturn(Page.empty());
+
+        // when
+        mockMvc.perform(get("/api/posts/me/search")
+                        .param("keyword", "spring")
+                        .param("page", "0")
+                        .param("size", "1000"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        // then
+        ArgumentCaptor<PostSearchQuery> captor = ArgumentCaptor.forClass(PostSearchQuery.class);
+        verify(postService).searchMyPosts(eq(userId), captor.capture());
+
+        PostSearchQuery passed = captor.getValue();
+        assertThat(passed.keyword()).isEqualTo("spring");
+        assertThat(passed.pageable().getPageSize()).isEqualTo(100);
+    }
+
+    @Test
+    @DisplayName("GET /api/posts/me/search - keyword가 공백이면 400 + POST_SEARCH_KEYWORD_REQUIRED 반환")
+    void search_blankKeyword_returns400() throws Exception {
+        // given
+        Long userId = 1L;
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(userId, null, List.of())
+        );
+
+        given(postService.searchMyPosts(eq(userId), any(PostSearchQuery.class)))
+                .willThrow(new BusinessException(ErrorCode.POST_SEARCH_KEYWORD_REQUIRED));
+
+        // when & then
+        mockMvc.perform(get("/api/posts/me/search")
+                        .param("keyword", "   ")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("POST_SEARCH_KEYWORD_REQUIRED"));
     }
 }

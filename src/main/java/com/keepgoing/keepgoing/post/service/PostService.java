@@ -4,10 +4,7 @@ import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import com.keepgoing.keepgoing.post.domain.Post;
 import com.keepgoing.keepgoing.post.repository.PostRepository;
-import com.keepgoing.keepgoing.post.service.dto.PostCreateCommand;
-import com.keepgoing.keepgoing.post.service.dto.PostDetailResult;
-import com.keepgoing.keepgoing.post.service.dto.PostSummaryResult;
-import com.keepgoing.keepgoing.post.service.dto.PostUpdateCommand;
+import com.keepgoing.keepgoing.post.service.dto.*;
 import com.keepgoing.keepgoing.user.domain.User;
 import com.keepgoing.keepgoing.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -89,6 +86,46 @@ public class PostService {
 
         post.validateAuthor(userId);
         post.softDelete(); // deleted_at만 채움 → @Where 때문에 이후 조회에서 빠짐
+    }
+
+    /**
+     * 내 글 검색
+     */
+    @Transactional(readOnly = true)
+    public Page<PostSummaryResult> searchMyPosts(Long userId, PostSearchQuery query) {
+        if (query == null || !query.hasKeyword()) {
+            throw new BusinessException(ErrorCode.POST_SEARCH_KEYWORD_REQUIRED);
+        }
+
+        Page<Post> page = postRepository.searchMyPosts(
+                userId,
+                query.keyword(),
+                query.pageable()
+        );
+
+        return page.map(this::toSummaryResult);
+    }
+
+    /**
+     * 전체(공개/공통) 검색
+     *
+     * NOTE: MySQL에서 TEXT/MEDIUMTEXT 컬럼(content)이 CLOB로 매핑될 때,
+     *       IgnoreCase 파생 쿼리는 upper()/lower()를 사용하며 오류가 날 수 있어
+     *       Containing(대소문자 구분은 collation에 위임) 형태로 유지합니다.
+     */
+    @Transactional(readOnly = true)
+    public Page<PostSummaryResult> searchPost(PostSearchQuery query) {
+        if (query == null || !query.hasKeyword()) {
+            throw new BusinessException(ErrorCode.POST_SEARCH_KEYWORD_REQUIRED);
+        }
+
+        Page<Post> page = postRepository.findByTitleContainingOrContentContaining(
+                query.keyword(),
+                query.keyword(),
+                query.pageable()
+        );
+
+        return page.map(this::toSummaryResult);
     }
 
     private PostDetailResult toDetailResult(Post post) {

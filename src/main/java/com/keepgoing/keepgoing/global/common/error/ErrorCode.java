@@ -148,6 +148,11 @@ public enum ErrorCode {
             "POST_02",
             "해당 게시글에 대한 권한이 없습니다."
     ),
+    POST_SEARCH_KEYWORD_REQUIRED(
+            HttpStatus.BAD_REQUEST,
+            "POST_03",
+            "검색어(keyword)는 필수입니다."
+    )
     ;
 
     private final HttpStatus httpStatus;

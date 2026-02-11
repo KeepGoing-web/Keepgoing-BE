@@ -5,10 +5,7 @@ import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import com.keepgoing.keepgoing.post.domain.Post;
 import com.keepgoing.keepgoing.post.domain.PostVisibility;
 import com.keepgoing.keepgoing.post.repository.PostRepository;
-import com.keepgoing.keepgoing.post.service.dto.PostCreateCommand;
-import com.keepgoing.keepgoing.post.service.dto.PostDetailResult;
-import com.keepgoing.keepgoing.post.service.dto.PostSummaryResult;
-import com.keepgoing.keepgoing.post.service.dto.PostUpdateCommand;
+import com.keepgoing.keepgoing.post.service.dto.*;
 import com.keepgoing.keepgoing.user.domain.User;
 import com.keepgoing.keepgoing.user.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -25,7 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class PostServiceTest {
@@ -61,7 +58,7 @@ public class PostServiceTest {
         String title = "제목";
         String content = "내용";
         PostVisibility visibility = PostVisibility.PRIVATE;
-        boolean aiCollectable = true;
+        boolean aiCollectable = false;
 
         given(userRepository.findById(userId)).willReturn(Optional.of(user));
 
@@ -92,6 +89,7 @@ public class PostServiceTest {
         assertThat(result.aiCollectable()).isEqualTo(aiCollectable);
         verify(userRepository).findById(userId);
         verify(postRepository).save(any(Post.class));
+        verifyNoMoreInteractions(userRepository, postRepository);
     }
 
     @Test
@@ -102,7 +100,7 @@ public class PostServiceTest {
         String title = "제목";
         String content = "내용";
         PostVisibility visibility = PostVisibility.PRIVATE;
-        boolean aiCollectable = true;
+        boolean aiCollectable = false;
 
         given(userRepository.findById(userId)).willReturn(Optional.empty());
 
@@ -117,6 +115,8 @@ public class PostServiceTest {
         assertThatThrownBy(() -> postService.createPost(command))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.USER_NOT_FOUND);
+        verify(userRepository).findById(userId);
+        verifyNoInteractions(postRepository);
     }
 
     // ========== getPost ==========
@@ -136,7 +136,12 @@ public class PostServiceTest {
 
         // then
         assertThat(result.title()).isEqualTo("제목");
+        assertThat(result.content()).isEqualTo("내용");
+        assertThat(result.visibility()).isEqualTo(PostVisibility.PRIVATE);
+
         verify(postRepository).findById(postId);
+        verifyNoMoreInteractions(postRepository);
+        verifyNoInteractions(userRepository);
     }
 
     @Test
@@ -150,6 +155,10 @@ public class PostServiceTest {
         assertThatThrownBy(() -> postService.getPost(postId))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.POST_NOT_FOUND);
+        verify(postRepository).findById(postId);
+        verifyNoMoreInteractions(postRepository);
+        verifyNoInteractions(userRepository);
+
     }
 
     // ========== getPosts ==========
@@ -189,6 +198,8 @@ public class PostServiceTest {
         assertThat(result.getContent().get(0).title()).isEqualTo("제목1");
         assertThat(result.getContent().get(1).title()).isEqualTo("제목2");
         verify(postRepository).findByAuthor_Id(userId, pageable);
+        verifyNoMoreInteractions(postRepository);
+        verifyNoInteractions(userRepository);
     }
 
     // ========== updatePost ==========
@@ -228,6 +239,8 @@ public class PostServiceTest {
         assertThat(result.visibility()).isEqualTo(newVisibility);
         assertThat(result.aiCollectable()).isEqualTo(newAiCollectable);
         verify(postRepository).findById(postId);
+        verifyNoMoreInteractions(postRepository);
+        verifyNoInteractions(userRepository);
     }
 
     @Test
@@ -257,6 +270,9 @@ public class PostServiceTest {
         assertThatThrownBy(() -> postService.updatePost(command))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.POST_NOT_FOUND);
+        verify(postRepository).findById(postId);
+        verifyNoMoreInteractions(postRepository);
+        verifyNoInteractions(userRepository);
     }
 
     @Test
@@ -290,6 +306,9 @@ public class PostServiceTest {
         assertThatThrownBy(() -> postService.updatePost(command))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.POST_ACCESS_DENIED);
+        verify(postRepository).findById(postId);
+        verifyNoMoreInteractions(postRepository);
+        verifyNoInteractions(userRepository);
     }
 
     // ========== deletePost ==========
@@ -312,6 +331,8 @@ public class PostServiceTest {
         // then
         assertThat(post.isDeleted()).isTrue(); // isDeleted 없으면 deletedAt != null 로 체크
         verify(postRepository).findById(postId);
+        verifyNoMoreInteractions(postRepository);
+        verifyNoInteractions(userRepository);
     }
 
     @Test
@@ -327,6 +348,9 @@ public class PostServiceTest {
         assertThatThrownBy(() -> postService.deletePost(userId, postId))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.POST_NOT_FOUND);
+        verify(postRepository).findById(postId);
+        verifyNoMoreInteractions(postRepository);
+        verifyNoInteractions(userRepository);
     }
 
     @Test
@@ -346,5 +370,84 @@ public class PostServiceTest {
         assertThatThrownBy(() -> postService.deletePost(userId, postId))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.POST_ACCESS_DENIED);
+        verify(postRepository).findById(postId);
+        verifyNoMoreInteractions(postRepository);
+        verifyNoInteractions(userRepository);
+    }
+
+    // ========== searchMyPosts ==========
+
+    @Test
+    @DisplayName("searchMyPosts: keyword가 있으면 검색 결과를 페이지로 반환한다")
+    void searchPost_returnsPageWhenKeywordProvided() {
+        //given
+        Long userId = 1L;
+        User user = createUser(userId);
+
+        Post post1 = Post.create(user, "spring 제목", "내용", PostVisibility.PUBLIC, true);
+        Post post2 = Post.create(user, "제목", "spring 내용", PostVisibility.PUBLIC, true);
+
+        Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Post> postPage = new PageImpl<>(java.util.List.of(post1, post2), pageable, 2);
+
+        PostSearchQuery query = new PostSearchQuery("spring", pageable);
+
+        given(postRepository.searchMyPosts(userId, "spring", pageable))
+                .willReturn(postPage);
+
+        // when
+        Page<PostSummaryResult> result = postService.searchMyPosts(userId, query);
+
+        // then
+        assertThat(result.getTotalElements()).isEqualTo(2);
+        verify(postRepository).searchMyPosts(userId, "spring", pageable);
+        verifyNoMoreInteractions(postRepository);
+        verifyNoInteractions(userRepository);
+    }
+
+    @Test
+    @DisplayName("searchMyPosts: keyword가 비어있으면 POST_SEARCH_KEYWORD_REQUIRED 예외")
+    void searchPost_throwsWhenKeywordBlank() {
+        // given
+        Long userId = 1L;
+        Pageable pageable = PageRequest.of(0, 10);
+        PostSearchQuery query = new PostSearchQuery("   ", pageable);
+
+        // when & then
+        assertThatThrownBy(() -> postService.searchMyPosts(userId, query))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.POST_SEARCH_KEYWORD_REQUIRED);
+
+        // repository 호출되면 안 됨
+        verify(postRepository, never())
+                .searchMyPosts(any(), any(), any());
+        verifyNoInteractions(userRepository);
+    }
+
+
+    @Test
+    @DisplayName("searchMyPosts: keyword 앞뒤 공백은 trim되어 검색된다")
+    void searchPost_trimsKeywordBeforeSearching() {
+        // given
+        Long userId = 1L;
+        User user = createUser(userId);
+        Post post = Post.create(user, "spring 제목", "내용", PostVisibility.PUBLIC, true);
+
+        Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Post> postPage = new PageImpl<>(java.util.List.of(post), pageable, 1);
+
+        PostSearchQuery query = new PostSearchQuery("  spring  ", pageable);
+
+        given(postRepository.searchMyPosts(userId, "spring", pageable))
+                .willReturn(postPage);
+
+        // when
+        Page<PostSummaryResult> result = postService.searchMyPosts(userId, query);
+
+        // then
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        verify(postRepository).searchMyPosts(userId, "spring", pageable);
+        verifyNoMoreInteractions(postRepository);
+        verifyNoInteractions(userRepository);
     }
 }
