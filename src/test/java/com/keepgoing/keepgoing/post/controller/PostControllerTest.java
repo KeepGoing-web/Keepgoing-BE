@@ -347,9 +347,14 @@ public class PostControllerTest {
     // ========== SEARCH ==========
 
     @Test
-    @DisplayName("GET /api/posts/search - 검색 성공 시 200 OK 및 contents 반환")
+    @DisplayName("GET /api/posts/me/search - 검색 성공 시 200 OK 및 contents 반환")
     void search_success() throws Exception {
-        //given
+        // given
+        Long userId = 1L;
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(userId, null, List.of())
+        );
+
         Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
 
         List<PostSummaryResult> results = List.of(
@@ -359,11 +364,11 @@ public class PostControllerTest {
 
         Page<PostSummaryResult> page = new PageImpl<>(results, pageable, results.size());
 
-        given(postService.searchPost(any(PostSearchQuery.class)))
+        given(postService.searchMyPosts(eq(userId), any(PostSearchQuery.class)))
                 .willReturn(page);
 
         // when & then
-        mockMvc.perform(get("/api/posts/search")
+        mockMvc.perform(get("/api/posts/me/search")
                         .param("keyword", "spring")
                         .param("page", "0")
                         .param("size", "10"))
@@ -372,17 +377,24 @@ public class PostControllerTest {
                 .andExpect(jsonPath("$.data.contents").isArray())
                 .andExpect(jsonPath("$.data.contents.length()").value(2))
                 .andExpect(jsonPath("$.data.contents[0].title").value("spring 제목"));
+
+        verify(postService).searchMyPosts(eq(userId), any(PostSearchQuery.class));
     }
 
     @Test
-    @DisplayName("GET /api/posts/search - size가 MAX_PAGE_SIZE보다 크면 상한(100)으로 제한된다")
+    @DisplayName("GET /api/posts/me/search - size가 MAX_PAGE_SIZE보다 크면 상한(100)으로 제한된다")
     void search_clampsPageSize() throws Exception {
         // given
-        given(postService.searchPost(any(PostSearchQuery.class)))
+        Long userId = 1L;
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(userId, null, List.of())
+        );
+
+        given(postService.searchMyPosts(eq(userId), any(PostSearchQuery.class)))
                 .willReturn(Page.empty());
 
         // when
-        mockMvc.perform(get("/api/posts/search")
+        mockMvc.perform(get("/api/posts/me/search")
                         .param("keyword", "spring")
                         .param("page", "0")
                         .param("size", "1000"))
@@ -391,22 +403,27 @@ public class PostControllerTest {
 
         // then
         ArgumentCaptor<PostSearchQuery> captor = ArgumentCaptor.forClass(PostSearchQuery.class);
-        verify(postService).searchPost(captor.capture());
+        verify(postService).searchMyPosts(eq(userId), captor.capture());
 
         PostSearchQuery passed = captor.getValue();
         assertThat(passed.keyword()).isEqualTo("spring");
-        assertThat(passed.pageable().getPageSize()).isEqualTo(100); // MAX_PAGE_SIZE
+        assertThat(passed.pageable().getPageSize()).isEqualTo(100);
     }
 
     @Test
-    @DisplayName("GET /api/posts/search - keyword가 공백이면 400 + POST_SEARCH_KEYWORD_REQUIRED 반환")
+    @DisplayName("GET /api/posts/me/search - keyword가 공백이면 400 + POST_SEARCH_KEYWORD_REQUIRED 반환")
     void search_blankKeyword_returns400() throws Exception {
         // given
-        given(postService.searchPost(any(PostSearchQuery.class)))
+        Long userId = 1L;
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(userId, null, List.of())
+        );
+
+        given(postService.searchMyPosts(eq(userId), any(PostSearchQuery.class)))
                 .willThrow(new BusinessException(ErrorCode.POST_SEARCH_KEYWORD_REQUIRED));
 
         // when & then
-        mockMvc.perform(get("/api/posts/search")
+        mockMvc.perform(get("/api/posts/me/search")
                         .param("keyword", "   ")
                         .param("page", "0")
                         .param("size", "10"))

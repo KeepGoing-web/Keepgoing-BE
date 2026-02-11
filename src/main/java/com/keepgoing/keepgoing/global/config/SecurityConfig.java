@@ -52,7 +52,8 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
-                                "/swagger-ui.html"
+                                "/swagger-ui.html",
+                                "/api/posts/search"
                         ).permitAll()
 
                         // 회원가입/로그인 API 허용
