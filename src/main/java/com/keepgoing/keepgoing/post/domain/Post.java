@@ -44,7 +44,7 @@ public class Post {
 
     @Column(name = "ai_collectable", nullable = false)
     @Builder.Default
-    private boolean aiCollectable = true;
+    private boolean aiCollectable = false;
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -68,15 +68,28 @@ public class Post {
                               PostVisibility visibility,
                               Boolean aiCollectable) {
 
+        if (author == null || author.getId() == null) {
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+        if (title == null || title.isBlank()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT);
+        }
+        if (content == null || content.isBlank()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT);
+        }
+
         PostVisibility finalVisibility =
                 (visibility != null) ? visibility : PostVisibility.PRIVATE;
+
+        boolean finalAiCollectable =
+                (aiCollectable != null) && aiCollectable;
 
         return Post.builder()
                 .author(author)
                 .title(title)
                 .content(content)
                 .visibility(finalVisibility)
-                .aiCollectable(aiCollectable)
+                .aiCollectable(finalAiCollectable)
                 .build();
     }
 

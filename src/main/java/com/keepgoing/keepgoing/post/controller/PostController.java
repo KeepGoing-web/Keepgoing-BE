@@ -106,21 +106,23 @@ public class PostController {
     }
 
     /**
-     * 포스트 조회
+     * 내 포스트 검색
      */
-    @GetMapping("/search")
-    public ResponseEntity<ApiResponse<PagedResponse<PostSummaryResponse>>> search(
+    @GetMapping("/me/search")
+    public ResponseEntity<ApiResponse<PagedResponse<PostSummaryResponse>>> searchMyPosts(
             @RequestParam String keyword,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
-            Pageable pageable
+            Pageable pageable,
+            @AuthenticationPrincipal Long userId
     ) {
         Pageable safePageable = safePageable(pageable);
 
-        Page<PostSummaryResult> page = postService.searchPost(
+        Page<PostSummaryResult> page = postService.searchMyPosts(
+                userId,
                 new PostSearchQuery(keyword, safePageable)
         );
 
-       List<PostSummaryResponse> contents = page.getContent().stream()
+        List<PostSummaryResponse> contents = page.getContent().stream()
                .map(PostSummaryResponse::from)
                .toList();
 

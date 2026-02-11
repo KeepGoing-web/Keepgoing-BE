@@ -91,13 +91,14 @@ public class PostService {
     /**
      * 포스트 검색
      */
-    public Page<PostSummaryResult> searchPost(PostSearchQuery query) {
+    @Transactional(readOnly = true)
+    public Page<PostSummaryResult> searchMyPosts(Long userId, PostSearchQuery query) {
         if (query == null || !query.hasKeyword()) {
             throw new BusinessException(ErrorCode.POST_SEARCH_KEYWORD_REQUIRED);
         }
 
-        Page<Post> page = postRepository.findByTitleContainingIgnoreCaseOrContentContainingIgnoreCase(
-                query.keyword(),
+        Page<Post> page = postRepository.searchMyPosts(
+                userId,
                 query.keyword(),
                 query.pageable()
         );

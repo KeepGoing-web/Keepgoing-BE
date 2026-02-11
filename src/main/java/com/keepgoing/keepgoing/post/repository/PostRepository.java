@@ -6,6 +6,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -32,9 +34,20 @@ public interface PostRepository extends JpaRepository<Post, Long> {
      * keyword가 title 혹은 content에 포함된 게시글을 페이징 조회한다.
      * */
     @EntityGraph(attributePaths = {"author"})
-    Page<Post> findByTitleContainingIgnoreCaseOrContentContainingIgnoreCase(
+    Page<Post> findByTitleContainingOrContentContaining(
             String titleKeyword,
             String contentKeyword,
             Pageable pageable
     );
+
+    @Query("""
+    select p
+    from Post p
+    where p.author.id = :authorId
+      and (p.title like concat('%', :keyword, '%')
+           or p.content like concat('%', :keyword, '%'))
+    """)
+    Page<Post> searchMyPosts(@Param("authorId") Long authorId,
+                             @Param("keyword") String keyword,
+                             Pageable pageable);
 }
