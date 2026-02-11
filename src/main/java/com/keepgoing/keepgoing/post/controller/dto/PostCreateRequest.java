@@ -23,9 +23,9 @@ public record PostCreateRequest(
         if (visibility == null) {
             visibility = PostVisibility.PRIVATE;
         }
-        // aiCollectable이 요청에 없거나 null이면 기본값 true
+        // aiCollectable이 요청에 없거나 null이면 기본값 false
         if (aiCollectable == null) {
-            aiCollectable = true;
+            aiCollectable = false;
         }
     }
 
