@@ -53,7 +53,7 @@ class PostTest {
         String title = "제목";
         String content = "내용";
         PostVisibility visibility = null;
-        boolean aiCollectable = true;
+        boolean aiCollectable = false;
 
         //when
         Post post = Post.create(
@@ -69,7 +69,7 @@ class PostTest {
         assertThat(post.getTitle()).isEqualTo(title);
         assertThat(post.getContent()).isEqualTo(content);
         assertThat(post.getVisibility()).isEqualTo(PostVisibility.PRIVATE);
-        assertThat(post.isAiCollectable()).isTrue();
+        assertThat(post.isAiCollectable()).isFalse();
     }
 
     @Test

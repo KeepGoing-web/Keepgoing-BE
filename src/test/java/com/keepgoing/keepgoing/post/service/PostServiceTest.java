@@ -58,7 +58,7 @@ public class PostServiceTest {
         String title = "제목";
         String content = "내용";
         PostVisibility visibility = PostVisibility.PRIVATE;
-        boolean aiCollectable = true;
+        boolean aiCollectable = false;
 
         given(userRepository.findById(userId)).willReturn(Optional.of(user));
 
@@ -100,7 +100,7 @@ public class PostServiceTest {
         String title = "제목";
         String content = "내용";
         PostVisibility visibility = PostVisibility.PRIVATE;
-        boolean aiCollectable = true;
+        boolean aiCollectable = false;
 
         given(userRepository.findById(userId)).willReturn(Optional.empty());
 
@@ -375,10 +375,10 @@ public class PostServiceTest {
         verifyNoInteractions(userRepository);
     }
 
-    // ========== searchPost ==========
+    // ========== searchMyPosts ==========
 
     @Test
-    @DisplayName("searchPost: keyword가 있으면 검색 결과를 페이지로 반환한다")
+    @DisplayName("searchMyPosts: keyword가 있으면 검색 결과를 페이지로 반환한다")
     void searchPost_returnsPageWhenKeywordProvided() {
         //given
         Long userId = 1L;
@@ -392,46 +392,45 @@ public class PostServiceTest {
 
         PostSearchQuery query = new PostSearchQuery("spring", pageable);
 
-        given(postRepository.findByTitleContainingIgnoreCaseOrContentContainingIgnoreCase(
-                "spring",  "spring", pageable
-        )).willReturn(postPage);
+        given(postRepository.searchMyPosts(userId, "spring", pageable))
+                .willReturn(postPage);
 
         // when
-        Page<PostSummaryResult> result = postService.searchPost(query); // 메서드명 맞추기
+        Page<PostSummaryResult> result = postService.searchMyPosts(userId, query);
 
         // then
         assertThat(result.getTotalElements()).isEqualTo(2);
-        verify(postRepository).findByTitleContainingIgnoreCaseOrContentContainingIgnoreCase(
-                "spring", "spring", pageable
-        );
+        verify(postRepository).searchMyPosts(userId, "spring", pageable);
         verifyNoMoreInteractions(postRepository);
         verifyNoInteractions(userRepository);
     }
 
     @Test
-    @DisplayName("searchPost: keyword가 비어있으면 POST_SEARCH_KEYWORD_REQUIRED 예외")
+    @DisplayName("searchMyPosts: keyword가 비어있으면 POST_SEARCH_KEYWORD_REQUIRED 예외")
     void searchPost_throwsWhenKeywordBlank() {
         // given
+        Long userId = 1L;
         Pageable pageable = PageRequest.of(0, 10);
         PostSearchQuery query = new PostSearchQuery("   ", pageable);
 
         // when & then
-        assertThatThrownBy(() -> postService.searchPost(query)) // 메서드명 맞추기
+        assertThatThrownBy(() -> postService.searchMyPosts(userId, query))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.POST_SEARCH_KEYWORD_REQUIRED);
 
         // repository 호출되면 안 됨
         verify(postRepository, never())
-                .findByTitleContainingIgnoreCaseOrContentContainingIgnoreCase(any(), any(), any());
+                .searchMyPosts(any(), any(), any());
         verifyNoInteractions(userRepository);
     }
 
 
     @Test
-    @DisplayName("searchPost: keyword 앞뒤 공백은 trim되어 검색된다")
+    @DisplayName("searchMyPosts: keyword 앞뒤 공백은 trim되어 검색된다")
     void searchPost_trimsKeywordBeforeSearching() {
         // given
-        User user = createUser(1L);
+        Long userId = 1L;
+        User user = createUser(userId);
         Post post = Post.create(user, "spring 제목", "내용", PostVisibility.PUBLIC, true);
 
         Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
@@ -439,18 +438,15 @@ public class PostServiceTest {
 
         PostSearchQuery query = new PostSearchQuery("  spring  ", pageable);
 
-        given(postRepository.findByTitleContainingIgnoreCaseOrContentContainingIgnoreCase(
-                "spring", "spring", pageable
-        )).willReturn(postPage);
+        given(postRepository.searchMyPosts(userId, "spring", pageable))
+                .willReturn(postPage);
 
         // when
-        Page<PostSummaryResult> result = postService.searchPost(query);
+        Page<PostSummaryResult> result = postService.searchMyPosts(userId, query);
 
         // then
         assertThat(result.getTotalElements()).isEqualTo(1);
-        verify(postRepository).findByTitleContainingIgnoreCaseOrContentContainingIgnoreCase(
-                "spring", "spring", pageable
-        );
+        verify(postRepository).searchMyPosts(userId, "spring", pageable);
         verifyNoMoreInteractions(postRepository);
         verifyNoInteractions(userRepository);
     }
