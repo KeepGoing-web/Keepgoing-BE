@@ -50,5 +50,5 @@ docker compose down
 
 ### 6) 동작 확인 (예시)
 ```
-curl -i "http://localhost:8080/api/posts/search?keyword=spring&page=0&size=10"
+curl -i -H "Authorization: Bearer <ACCESS_TOKEN>" "http://localhost:8080/api/posts/me/search?keyword=spring&page=0&size=10"
 ```
