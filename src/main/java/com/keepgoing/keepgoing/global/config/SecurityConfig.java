@@ -53,7 +53,7 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
-                                "/api/posts/search"
+                                "/api/posts/me/search"
                         ).permitAll()
 
                         // 회원가입/로그인 API 허용

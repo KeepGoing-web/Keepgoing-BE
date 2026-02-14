@@ -32,6 +32,7 @@ build/
 .settings/
 
 .env
+.envrc
 
 # Gradle Wrapper (CI 필수)
 !gradle/wrapper/gradle-wrapper.jar

@@ -4,9 +4,9 @@
   "settings": {
     "width": 20000,
     "height": 20000,
-    "scrollTop": -9138.6667,
-    "scrollLeft": -9951.1732,
-    "zoomLevel": 0.75,
+    "scrollTop": -9160.6652,
+    "scrollLeft": -9806.9515,
+    "zoomLevel": 0.72,
     "show": 495,
     "database": 4,
     "databaseName": "blog_system",
@@ -560,7 +560,7 @@
         "name": "ai_collectable",
         "comment": "AI 학습 허용",
         "dataType": "BOOLEAN",
-        "default": "TRUE",
+        "default": "FALSE",
         "options": 8,
         "ui": {
           "keys": 0,
@@ -570,7 +570,7 @@
           "widthDefault": 60
         },
         "meta": {
-          "updateAt": 1699999999999,
+          "updateAt": 1770291614260,
           "createAt": 1699999999999
         }
       },

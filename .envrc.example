@@ -1,0 +1,10 @@
+# local profile
+export SPRING_PROFILES_ACTIVE=local
+
+# mysql (docker-compose 기준)
+export MYSQL_DATABASE=keepgoing
+export MYSQL_USER=keepgoing
+export MYSQL_PASSWORD=keepgoing
+
+# jwt (최소 32바이트 이상)
+export JWT_SECRET_KEY="CHANGE_ME_TO_AT_LEAST_32_BYTES_SECRET_KEY"
