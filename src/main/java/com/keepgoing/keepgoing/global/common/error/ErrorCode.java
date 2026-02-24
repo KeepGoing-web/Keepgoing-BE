@@ -60,9 +60,9 @@ public enum ErrorCode {
     OAUTH_PROVIDER_ERROR(
             HttpStatus.INTERNAL_SERVER_ERROR,
             "OAUTH_001",
-            "Provider 통신 실패했습니다."
+            "Provider 통신에 실패했습니다."
     ),
-    OAUTH_ACCOUNT_ALREADY_LINK(
+    OAUTH_ACCOUNT_ALREADY_LINKED(
             HttpStatus.CONFLICT,
             "OAUTH_002",
             "이미 다른 User에 연동된 계정입니다."
