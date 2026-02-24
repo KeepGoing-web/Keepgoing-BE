@@ -1,6 +1,13 @@
 spring:
   application:
     name: keepgoing
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${OAUTH_GOOGLE_CLIENT_ID:test-google-client-id}
+            client-secret: ${OAUTH_GOOGLE_CLIENT_SECRET:test-google-client-secret}
 
   datasource:
     url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE

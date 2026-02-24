@@ -1,6 +1,13 @@
 spring:
   application:
     name: keepgoing
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${OAUTH_GOOGLE_CLIENT_ID}
+            client-secret: ${OAUTH_GOOGLE_CLIENT_SECRET}
 
 jwt:
   secret-key: ${JWT_SECRET_KEY}

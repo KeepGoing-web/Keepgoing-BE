@@ -56,6 +56,23 @@ public enum ErrorCode {
             "이메일 인증이 완료되지 않았습니다."
     ),
 
+    // ===== OAuth =====
+    OAUTH_PROVIDER_ERROR(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            "OAUTH_001",
+            "Provider 통신 실패했습니다."
+    ),
+    OAUTH_ACCOUNT_ALREADY_LINK(
+            HttpStatus.CONFLICT,
+            "OAUTH_002",
+            "이미 다른 User에 연동된 계정입니다."
+    ),
+    OAUTH_PROVIDER_NOT_SUPPORTED(
+            HttpStatus.BAD_REQUEST,
+            "OAUTH_003",
+            "지원하지 않은 Provider입니다."
+    ),
+
     // ===== User =====
     USER_NOT_FOUND(
             HttpStatus.NOT_FOUND,
