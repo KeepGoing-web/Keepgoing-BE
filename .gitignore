@@ -37,3 +37,5 @@ build/
 # Gradle Wrapper (CI 필수)
 !gradle/wrapper/gradle-wrapper.jar
 !gradle/wrapper/gradle-wrapper.properties
+
+docs/perf/results/
