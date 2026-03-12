@@ -17,6 +17,19 @@
 
 ---
 
+### 동일 조건 체크리스트(전/후 공정성)
+- 데이터: posts=100,000 / keyword(spring) 포함=10% / author_id=1 / deleted_at IS NULL
+- API: `GET /api/posts/me/search?keyword=spring&page=0&size=10`
+- 정렬: 최신순(`created_at DESC`) + LIMIT 10
+- 부하(k6): warmup 10s → measure 30s, vus=10, sleep=1s
+- 실행: 각 시나리오 3회(run1~run3) 측정 후 평균(mean) 비교
+
+### warm-up을 두는 이유
+- warmup 구간은 DB buffer pool/OS page cache/JIT 워밍업 영향을 줄여, measure 구간의 편차를 낮추기 위함이다.
+- 결과 비교는 measure(30s) 구간만 사용한다.
+
+---
+
 ## 데이터 세팅
 - 기준 사용자(author_id): **1**
   - 근거: `SELECT id, email FROM users ORDER BY id LIMIT 5;` 결과에서 `1 | test@example.com`
@@ -43,7 +56,7 @@
 ```sql
 SELECT
   COUNT(*) AS total,
-  SUM(title LIKE '%spring%' OR content LIKE '%spring%') AS matched
+  SUM((title LIKE '%spring%') OR (content LIKE '%spring%')) AS matched
 FROM posts
 WHERE author_id = 1 AND deleted_at IS NULL;
 ```
@@ -57,7 +70,7 @@ WHERE author_id = 1 AND deleted_at IS NULL;
 쿼리(개념):
 ```sql
 EXPLAIN
-SELECT id, author_id, title, created_at
+SELECT id
 FROM posts
 WHERE author_id = 1
   AND deleted_at IS NULL
@@ -67,26 +80,45 @@ LIMIT 10;
 ```
 - type: ref
 - key: idx_posts_author_deleted_created
-- rows: 49548
+- rows: 49499
 - Extra: Using where; Backward index scan
 
 #### 해석:
 - author_id, deleted_at, created_at 기준으로는 인덱스를 타며 정렬도 인덱스 역방향 스캔으로 처리된다.
 - 하지만 LIKE '%spring%'는 인덱스를 활용하기 어려워, 조건 필터링을 위해 많은 행(rows≈49k)을 스캔하는 비용이 남는다.
+> LIMIT 10이 있어도 비용이 줄지 않을 수 있다. `'%spring%'`(contains) 조건은 인덱스에서 바로 걸러지지 않기 때문에, `author_id=1 AND deleted_at IS NULL`로 좁혀진 후보(≈49k) 내부에서 문자열 비교를 수행하며 “조건을 만족하는 10개”를 찾을 때까지 계속 검사한다. keyword 포함 비율이 낮아질수록(예: 1%) 이 검사 비용은 더 커질 수 있다.
+
 
 <p align="center">
-  <img src="images/explain.png" width="720" alt="EXPLAIN">
+  <img src="images/explain_baseline.png" width="720" alt="EXPLAIN">
 </p>
 
-### EXPLAIN ANALYZE 요약
+### EXPLAIN ANALYZE (측정)
+```sql
+EXPLAIN ANALYZE
+SELECT id
+FROM posts
+WHERE author_id = 1
+  AND deleted_at IS NULL
+  AND (title LIKE '%spring%' OR content LIKE '%spring%')
+ORDER BY created_at DESC
+LIMIT 10;
+```
+
+#### EXPLAIN ANALYZE 원문 일부(캡처와 동일)
+```text
+-> Limit: 10 row(s) ... (actual time=0.0338..0.0546 rows=10 loops=1)
+  -> Filter: ... (actual time=0.0331..0.0535 rows=10 loops=1)
+    -> Index lookup on posts using idx_posts_author_deleted_created ... (actual time=0.03..0.049 rows=10 loops=1)
+```
 
 - Index lookup (reverse) on idx_posts_author_deleted_created (author_id=1, deleted_at=NULL)
-- estimated rows: 49548 
-- actual time (index lookup 단계): ~0.057..0.122s, rows=10, loops=1
-- actual time (LIMIT 10 전체): ~0.066..0.134s
+- estimated rows: 49499
+- actual time (index lookup 단계): ~0.03..0.049s, rows=10, loops=1
+- actual time (LIMIT 10 전체): ~0.0338..0.0546s, rows=10, loops=1
 
 <p align="center">
-  <img src="images/explain_analyze.png" width="720" alt="EXPLAIN ANALYZE">
+  <img src="images/explain_analyze_baseline.png" width="720" alt="EXPLAIN ANALYZE">
 </p>
 
 ## k6 결과(warm-up 10s + measure 30s)
@@ -98,20 +130,20 @@ LIMIT 10;
 - sleep: 1s
 
 ### 실행 커맨드
-```
+```bash
 TOKEN="<ACCESS_TOKEN>" KEYWORD="spring" \
-  k6 run --summary-export "docs/perf/results/baseline_spring_run1.json" perf/search_my_posts.j
+  k6 run --summary-export "docs/perf/results/baseline_spring_run1.json" perf/search_my_posts.js
 ```
 
 ### 측정 결과 (phase=measure) - run3
-- http_req_duration avg: 23.49ms
-- http_req_duration p(95): 29.05ms
+- http_req_duration avg: 15.72ms
+- http_req_duration p(95): 18.89ms
 - http_reqs: 400 (≈ 10.00 req/s)
 - http_req_failed: 0.00%
-- 근거: summary-export JSON (baseline_spring_run3_20260223_184651.json)
+- 근거: summary-export JSON (baseline_spring_run3.json)
 
 <p align="center">
-  <img src="images/k6.png" width="720" alt="k6 결과">
+  <img src="images/k6_baseline.png" width="720" alt="k6 결과">
 </p>
 
 ### k6 3회 측정 결과(phase=measure) 요약
@@ -119,15 +151,15 @@ TOKEN="<ACCESS_TOKEN>" KEYWORD="spring" \
 - 기준: warm-up 10s + measure 30s, vus=10, keyword=spring, size=10, sleep=1s
 - 근거: summary-export JSON (run1~run3)
 
-| run | 결과 파일 | http_req_duration avg (ms) | http_req_duration p95 (ms) | http_reqs (count) | req/s(대략) | http_req_failed |
-|---:|---|---:|---:|---:|---:|---:|
-| 1 | baseline_spring_run1_20260223_184530.json | 25.25 | 28.61 | 400 | 10.00 | 0.00% |
-| 2 | baseline_spring_run2_20260223_184610.json | 23.54 | 29.43 | 400 | 10.00 | 0.00% |
-| 3 | baseline_spring_run3_20260223_184651.json | 23.49 | 29.05 | 400 | 10.00 | 0.00% |
-| **mean** | - | **24.09** | **29.03** | **400** | **10.00** | **0.00%** |
+|      run | http_req_duration avg (ms) | http_req_duration p95 (ms) | http_reqs (count) | req/s(대략) | http_req_failed |
+|---------:|---------------------------:|---------------------------:|---:|---:|---:|
+|        1 |                      16.52 |                      22.03 | 400 | 10.00 | 0.00% |
+|        2 |                      14.94 |                      18.00 | 400 | 10.00 | 0.00% |
+|        3 |                      15.72 |                      18.89 | 400 | 10.00 | 0.00% |
+| **mean** |                  **15.73** |                  **19.73** | **400** | **10.00** | **0.00%** |
 
-- p95≈29ms, avg≈24ms로 3회 편차가 작아(±~1ms 수준) 베이스라인으로 적합
-
+- p95≈19.7ms, avg≈15.7ms로 3회 편차가 작아 베이스라인으로 적합
+- avg 범위(min~max): 14.94~16.52ms / p95 범위(min~max): 18.00~22.30ms
 ---
 
 ### 참고(측정 스코프)
