@@ -63,6 +63,7 @@ WHERE author_id = 1 AND deleted_at IS NULL;
 <p align="center">
   <img src="images/matched=10000.png" width="720" alt="keyword matched=10000">
 </p>
+
 ---
 
 ## 실행 계획(베이스라인 근거)
@@ -160,6 +161,7 @@ TOKEN="<ACCESS_TOKEN>" KEYWORD="spring" \
 
 - p95≈19.7ms, avg≈15.7ms로 3회 편차가 작아 베이스라인으로 적합
 - avg 범위(min~max): 14.94~16.52ms / p95 범위(min~max): 18.00~22.30ms
+
 ---
 
 ### 참고(측정 스코프)
