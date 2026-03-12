@@ -11,6 +11,7 @@ import com.keepgoing.keepgoing.user.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -392,15 +393,19 @@ public class PostServiceTest {
 
         PostSearchQuery query = new PostSearchQuery("spring", pageable);
 
-        given(postRepository.searchMyPosts(userId, "spring", pageable))
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+
+        given(postRepository.searchMyPostsFullText(eq(userId), eq("spring"), any(Pageable.class)))
                 .willReturn(postPage);
 
         // when
         Page<PostSummaryResult> result = postService.searchMyPosts(userId, query);
 
-        // then
+        //then
         assertThat(result.getTotalElements()).isEqualTo(2);
-        verify(postRepository).searchMyPosts(userId, "spring", pageable);
+        assertThat(result.getContent()).hasSize(2);
+        verify(postRepository).searchMyPostsFullText(eq(userId), eq("spring"), pageableCaptor.capture());
+        assertThat(pageableCaptor.getValue()).isEqualTo(pageable);
         verifyNoMoreInteractions(postRepository);
         verifyNoInteractions(userRepository);
     }
@@ -414,13 +419,15 @@ public class PostServiceTest {
         PostSearchQuery query = new PostSearchQuery("   ", pageable);
 
         // when & then
-        assertThatThrownBy(() -> postService.searchMyPosts(userId, query))
+        assertThatThrownBy(() -> postService.searchMyPosts(
+                userId, query))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.POST_SEARCH_KEYWORD_REQUIRED);
 
         // repository 호출되면 안 됨
         verify(postRepository, never())
-                .searchMyPosts(any(), any(), any());
+                .searchMyPostsFullText(
+                        any(), any(), any());
         verifyNoInteractions(userRepository);
     }
 
@@ -438,7 +445,7 @@ public class PostServiceTest {
 
         PostSearchQuery query = new PostSearchQuery("  spring  ", pageable);
 
-        given(postRepository.searchMyPosts(userId, "spring", pageable))
+        given(postRepository.searchMyPostsFullText(eq(userId), eq("spring"), any(Pageable.class)))
                 .willReturn(postPage);
 
         // when
@@ -446,7 +453,13 @@ public class PostServiceTest {
 
         // then
         assertThat(result.getTotalElements()).isEqualTo(1);
-        verify(postRepository).searchMyPosts(userId, "spring", pageable);
+
+        ArgumentCaptor<String> keywordCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+
+        verify(postRepository).searchMyPostsFullText(eq(userId), keywordCaptor.capture(), pageableCaptor.capture());
+        assertThat(keywordCaptor.getValue()).isEqualTo("spring");
+
         verifyNoMoreInteractions(postRepository);
         verifyNoInteractions(userRepository);
     }

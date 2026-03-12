@@ -97,7 +97,7 @@ public class PostService {
             throw new BusinessException(ErrorCode.POST_SEARCH_KEYWORD_REQUIRED);
         }
 
-        Page<Post> page = postRepository.searchMyPosts(
+        Page<Post> page = postRepository.searchMyPostsFullText(
                 userId,
                 query.keyword(),
                 query.pageable()

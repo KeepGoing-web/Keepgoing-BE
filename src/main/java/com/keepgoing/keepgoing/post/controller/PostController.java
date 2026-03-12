@@ -111,11 +111,11 @@ public class PostController {
     @GetMapping("/me/search")
     public ResponseEntity<ApiResponse<PagedResponse<PostSummaryResponse>>> searchMyPosts(
             @RequestParam String keyword,
-            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
+            @PageableDefault(size = 10)
             Pageable pageable,
             @AuthenticationPrincipal Long userId
     ) {
-        Pageable safePageable = safePageable(pageable);
+        Pageable safePageable = safePageableUnsorted(pageable);
 
         Page<PostSummaryResult> page = postService.searchMyPosts(
                 userId,
@@ -135,10 +135,10 @@ public class PostController {
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<PagedResponse<PostSummaryResponse>>> search(
             @RequestParam String keyword,
-            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
+            @PageableDefault(size = 10)
             Pageable pageable
     ) {
-        Pageable safePageable = safePageable(pageable);
+        Pageable safePageable = safePageableUnsorted(pageable);
 
         Page<PostSummaryResult> page = postService.searchPost(
                 new PostSearchQuery(keyword, safePageable)
@@ -157,6 +157,14 @@ public class PostController {
                 pageable.getPageNumber(),
                 safeSize,
                 pageable.getSort()
+        );
+    }
+
+    private Pageable safePageableUnsorted(Pageable pageable) {
+        int safeSize = Math.min(pageable.getPageSize(), MAX_PAGE_SIZE);
+        return PageRequest.of(
+                pageable.getPageNumber(),
+                safeSize
         );
     }
 }
