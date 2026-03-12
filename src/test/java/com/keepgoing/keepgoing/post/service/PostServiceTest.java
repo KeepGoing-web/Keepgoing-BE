@@ -402,7 +402,12 @@ public class PostServiceTest {
         Page<PostSummaryResult> result = postService.searchMyPosts(userId, query);
 
         //then
-        verify(postRepository).searchMyPostsFullText(eq(userId), eq("spring"), any(Pageable.class));
+        assertThat(result.getTotalElements()).isEqualTo(2);
+        assertThat(result.getContent()).hasSize(2);
+        verify(postRepository).searchMyPostsFullText(eq(userId), eq("spring"), pageableCaptor.capture());
+        assertThat(pageableCaptor.getValue()).isEqualTo(pageable);
+        verifyNoMoreInteractions(postRepository);
+        verifyNoInteractions(userRepository);
     }
 
     @Test
