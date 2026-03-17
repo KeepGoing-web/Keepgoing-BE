@@ -5,10 +5,16 @@ import static com.keepgoing.keepgoing.auth.AuthTestFixtures.toJson;
 import static com.keepgoing.keepgoing.auth.AuthTestFixtures.validLoginRequest;
 import static com.keepgoing.keepgoing.global.common.error.ErrorCode.AUTH_INVALID_CREDENTIALS;
 import static com.keepgoing.keepgoing.global.common.error.ErrorCode.USER_ALREADY_EXISTS;
+import static com.keepgoing.keepgoing.global.common.error.ErrorCode.USER_NOT_FOUND;
 import static com.keepgoing.keepgoing.global.common.error.ErrorCode.VALIDATION_FAILED;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willThrow;
+import static org.mockito.Mockito.never;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -22,10 +28,16 @@ import com.keepgoing.keepgoing.auth.controller.dto.SignupResponse;
 import com.keepgoing.keepgoing.auth.service.AuthService;
 import com.keepgoing.keepgoing.auth.service.dto.LoginCommand;
 import com.keepgoing.keepgoing.auth.service.dto.LoginResult;
+import com.keepgoing.keepgoing.auth.service.dto.MyInfoResult;
 import com.keepgoing.keepgoing.auth.service.dto.SignupCommand;
 import com.keepgoing.keepgoing.auth.service.dto.SignupResult;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
+import com.keepgoing.keepgoing.global.security.cookie.AuthCookieManager;
 import com.keepgoing.keepgoing.global.security.jwt.JwtAuthenticationFilter;
+import com.keepgoing.keepgoing.user.domain.UserRole;
+import jakarta.servlet.http.HttpServletResponse;
+import java.util.List;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -35,6 +47,10 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -50,161 +66,236 @@ import org.springframework.test.web.servlet.MockMvc;
 @Import({ObjectMapper.class, AuthMapper.class})
 class AuthControllerTest {
 
-    @Autowired
-    MockMvc mockMvc;
+	private static final String EMAIL = "test@test.com";
+	public static final String NAME = "홍길동";
 
-    @Autowired
-    ObjectMapper objectMapper;
+	@Autowired
+	MockMvc mockMvc;
 
-    @MockitoBean
-    AuthService authService;
+	@Autowired
+	ObjectMapper objectMapper;
 
-    @MockitoBean
-    JwtAuthenticationFilter jwtAuthenticationFilter;
+	@MockitoBean
+	AuthService authService;
 
-    // 계층 구조로 테스트 코드 가독성 증가
-    @Nested
-    @DisplayName("POST /api/auth/signup - 회원가입")
-    class Signup {
+	@MockitoBean
+	JwtAuthenticationFilter jwtAuthenticationFilter;
 
-        @Test
-        @DisplayName("성공 시 201과 SignupResponse를 반환한다.")
-        void success() throws Exception {
-            // given
-            SignupRequest request = AuthTestFixtures.validSignupRequest();
-            SignupResult result = new SignupResult(
-                    1L,
-                    request.email(),
-                    request.name()
-            );
-            SignupResponse response = new SignupResponse(
-                    result.id(),
-                    request.email(),
-                    request.name()
-            );
+	@MockitoBean
+	AuthCookieManager authCookieManager;
 
-            given(authService.signup(any(SignupCommand.class)))
-                    .willReturn(result);
+	@AfterEach
+	void tearDown() {
+		SecurityContextHolder.clearContext();
+	}
 
-            String json = toJson(objectMapper, request);
 
-            // when & then
-            mockMvc.perform(post("/api/auth/signup")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(json))
-                    .andExpect(status().isCreated())
-                    .andExpect(jsonPath("$.success").value(true))
-                    .andExpect(jsonPath("$.data.id").value(1L))
-                    .andExpect(jsonPath("$.data.email").value(request.email()))
-                    .andExpect(jsonPath("$.data.name").value(request.name()));
-        }
+	// 계층 구조로 테스트 코드 가독성 증가
+	@Nested
+	@DisplayName("POST /api/auth/signup - 회원가입")
+	class Signup {
 
-        @Test
-        @DisplayName("이메일이 이미 존재하면 409와 USER_ALREADY_EXISTS 에러를 반환한다.")
-        void email_duplicate() throws Exception {
-            // given
-            SignupRequest request = signupRequestWithEmail("dup@example.com");
-            String json = toJson(objectMapper, request);
+		@Test
+		@DisplayName("성공 시 201과 SignupResponse를 반환한다.")
+		void success() throws Exception {
+			// given
+			SignupRequest request = AuthTestFixtures.validSignupRequest();
+			SignupResult result = new SignupResult(
+					1L,
+					request.email(),
+					request.name()
+			);
+			SignupResponse response = new SignupResponse(
+					result.id(),
+					request.email(),
+					request.name()
+			);
 
-            willThrow(new BusinessException(USER_ALREADY_EXISTS))
-                    .given(authService)
-                    .signup(any(SignupCommand.class));
+			given(authService.signup(any(SignupCommand.class)))
+					.willReturn(result);
 
-            // when & then
-            mockMvc.perform(post("/api/auth/signup")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(json))
-                    .andExpect(status().isConflict())
-                    .andExpect(jsonPath("$.success").value(false))
-                    .andExpect(jsonPath("$.error.code").value(USER_ALREADY_EXISTS.name()));
-        }
+			String json = toJson(objectMapper, request);
 
-        @Test
-        @DisplayName("검증 실패 시 400과 VALIDATION_FAILED, FieldErrors 배열을 반환한다.")
-        void validation_failed() throws Exception {
-            // given
-            var invalid = SignupRequest.builder()
-                    .email("not-an-email")
-                    .password("")
-                    .name("")
-                    .build();
-            var json = toJson(objectMapper, invalid);
+			// when & then
+			mockMvc.perform(post("/api/auth/signup")
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(json))
+					.andExpect(status().isCreated())
+					.andExpect(jsonPath("$.success").value(true))
+					.andExpect(jsonPath("$.data.id").value(1L))
+					.andExpect(jsonPath("$.data.email").value(request.email()))
+					.andExpect(jsonPath("$.data.name").value(request.name()));
+		}
 
-            // when & then
-            mockMvc.perform(post("/api/auth/signup")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(json))
-                    .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.success").value(false))
-                    .andExpect(jsonPath("$.error.code").value(VALIDATION_FAILED.name()))
-                    .andExpect(jsonPath("$.error.fieldErrors").isArray());
-        }
-    }
+		@Test
+		@DisplayName("이메일이 이미 존재하면 409와 USER_ALREADY_EXISTS 에러를 반환한다.")
+		void email_duplicate() throws Exception {
+			// given
+			SignupRequest request = signupRequestWithEmail("dup@example.com");
+			String json = toJson(objectMapper, request);
 
-    @Nested
-    @DisplayName("POST /api/auth/login - 로그인")
-    class Login {
+			willThrow(new BusinessException(USER_ALREADY_EXISTS))
+					.given(authService)
+					.signup(any(SignupCommand.class));
 
-        @Test
-        @DisplayName("성공 시 200과 토큰을 반환한다.")
-        void success() throws Exception {
+			// when & then
+			mockMvc.perform(post("/api/auth/signup")
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(json))
+					.andExpect(status().isConflict())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value(USER_ALREADY_EXISTS.name()));
+		}
 
-            // given
-            LoginRequest request = validLoginRequest();
-            LoginResult result = new LoginResult(
-                    "access-token",
-                    "refresh-token",
-                    1L
-            );
+		@Test
+		@DisplayName("검증 실패 시 400과 VALIDATION_FAILED, FieldErrors 배열을 반환한다.")
+		void validation_failed() throws Exception {
+			// given
+			var invalid = SignupRequest.builder()
+					.email("not-an-email")
+					.password("")
+					.name("")
+					.build();
+			var json = toJson(objectMapper, invalid);
 
-            given(authService.login(any(LoginCommand.class)))
-                    .willReturn(result);
+			// when & then
+			mockMvc.perform(post("/api/auth/signup")
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(json))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value(VALIDATION_FAILED.name()))
+					.andExpect(jsonPath("$.error.fieldErrors").isArray());
+		}
+	}
 
-            String json = toJson(objectMapper, request);
+	@Nested
+	@DisplayName("POST /api/auth/login - 로그인")
+	class Login {
 
-            // when & then
-            mockMvc.perform(post("/api/auth/login")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(json)
-                    ).andExpect(status().isOk())
-                    .andExpect(jsonPath("$.success").value(true))
-                    .andExpect(jsonPath("$.data.accessToken").value("access-token"))
-                    .andExpect(jsonPath("$.data.refreshToken").value("refresh-token"))
-                    .andExpect(jsonPath("$.data.userId").value(1L));
-        }
+		@Test
+		@DisplayName("성공 시 200 응답과 함께 access/refresh 토큰 쿠키를 발급한다.")
+		void success() throws Exception {
+			// given
+			LoginRequest request = validLoginRequest();
+			LoginResult result = new LoginResult(
+					"access-token",
+					"refresh-token",
+					1L,
+					EMAIL
+			);
 
-        @Test
-        @DisplayName("잘못된 자격 증명 시 401과 AUTH_INVALID_CREDENTIALS 에러를 반환한다.")
-        void invalid_credentials() throws Exception {
-            // given
-            LoginRequest request = validLoginRequest();
-            String json = toJson(objectMapper, request);
+			given(authService.login(any(LoginCommand.class)))
+					.willReturn(result);
 
-            willThrow(new BadCredentialsException("Bad credentials"))
-                    .given(authService)
-                    .login(any(LoginCommand.class));
+			String json = toJson(objectMapper, request);
 
-            // when & then
-            mockMvc.perform(post("/api/auth/login")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(json))
-                    .andExpect(jsonPath("$.success").value(false))
-                    .andExpect(jsonPath("$.error.code").value(AUTH_INVALID_CREDENTIALS.name()));
-        }
+			// when & then
+			mockMvc.perform(post("/api/auth/login")
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(json)
+					).andExpect(status().isOk())
+					.andExpect(jsonPath("$.success").value(true))
+					.andExpect(jsonPath("$.data.userId").value(1L))
+					.andExpect(jsonPath("$.data.email").value(EMAIL));
 
-        @Test
-        @DisplayName("검증 실패 시 400과 VALIDATION_FAILED를 반환한다.")
-        void validation_failed() throws Exception {
-            // given
-            LoginRequest invalidRequest = new LoginRequest("", "");
-            String json = toJson(objectMapper, invalidRequest);
+			then(authCookieManager).should().addAccessToken(any(HttpServletResponse.class), eq("access-token"));
+			then(authCookieManager).should().addRefreshToken(any(HttpServletResponse.class), eq("refresh-token"));
+		}
 
-            // when & then
-            mockMvc.perform(post("/api/auth/login")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(json))
-                    .andExpect(jsonPath("$.success").value(false))
-                    .andExpect(jsonPath("$.error.code").value(VALIDATION_FAILED.name()));
-        }
-    }
+		@Test
+		@DisplayName("잘못된 자격 증명 시 401과 AUTH_INVALID_CREDENTIALS 에러를 반환한다.")
+		void invalid_credentials() throws Exception {
+			// given
+			LoginRequest request = validLoginRequest();
+			String json = toJson(objectMapper, request);
+
+			willThrow(new BadCredentialsException("Bad credentials"))
+					.given(authService)
+					.login(any(LoginCommand.class));
+
+			// when & then
+			mockMvc.perform(post("/api/auth/login")
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(json))
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value(AUTH_INVALID_CREDENTIALS.name()));
+
+			then(authCookieManager).should(never()).addAccessToken(any(), anyString());
+			then(authCookieManager).should(never()).addRefreshToken(any(), anyString());
+		}
+
+		@Test
+		@DisplayName("검증 실패 시 400과 VALIDATION_FAILED를 반환한다.")
+		void validation_failed() throws Exception {
+			// given
+			LoginRequest invalidRequest = new LoginRequest("", "");
+			String json = toJson(objectMapper, invalidRequest);
+
+			// when & then
+			mockMvc.perform(post("/api/auth/login")
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(json))
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value(VALIDATION_FAILED.name()));
+		}
+	}
+
+	@Nested
+	@DisplayName("GET /api/auth/me - 정보")
+	class MyInfo {
+
+		@Test
+		@DisplayName("성공 시 200과 사용자 정보를 반환한다.")
+		void success() throws Exception {
+			// given
+			Long userId = 1L;
+			MyInfoResult result = new MyInfoResult(userId, EMAIL, NAME, UserRole.USER);
+
+			given(authService.getMyInfo(any()))
+					.willReturn(result);
+
+			Authentication authenticated = UsernamePasswordAuthenticationToken.authenticated(
+					userId,
+					null,
+					List.of(new SimpleGrantedAuthority(UserRole.USER.toAuthority()))
+			);
+			SecurityContextHolder.getContext().setAuthentication(authenticated);
+
+			// when
+			mockMvc.perform(get("/api/auth/me"))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.success").value(true))
+					.andExpect(jsonPath("$.data.userId").value(1L))
+					.andExpect(jsonPath("$.data.name").value(NAME))
+					.andExpect(jsonPath("$.data.role").value(UserRole.USER.toString()));
+
+			then(authService).should().getMyInfo(userId);
+		}
+
+		@Test
+		@DisplayName("가입된 사용자가 없는 경우 404와 USER_NOT_FOUND 반환한다.")
+		void me_userNotFound() throws Exception {
+			// given
+			Long userId = 1L;
+			Authentication authenticated = UsernamePasswordAuthenticationToken.authenticated(
+					userId,
+					null,
+					List.of(new SimpleGrantedAuthority(UserRole.USER.toAuthority()))
+			);
+			SecurityContextHolder.getContext().setAuthentication(authenticated);
+
+			willThrow(new BusinessException(USER_NOT_FOUND))
+					.given(authService)
+					.getMyInfo(userId);
+
+			// when & then
+			mockMvc.perform(get("/api/auth/me"))
+					.andExpect(status().isNotFound())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value(USER_NOT_FOUND.name()));
+
+			then(authService).should().getMyInfo(userId);
+		}
+	}
 }

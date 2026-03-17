@@ -4,9 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
+import com.keepgoing.keepgoing.auth.OAuthTestFixtures.GoogleUserFixture;
+import com.keepgoing.keepgoing.global.security.cookie.AuthCookieManager;
 import com.keepgoing.keepgoing.global.security.jwt.JwtProvider;
 import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,10 +18,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
-import org.springframework.web.util.UriComponents;
-import org.springframework.web.util.UriComponentsBuilder;
 
 @ExtendWith(MockitoExtension.class)
 class OAuth2AuthenticationSuccessHandlerTest {
@@ -32,23 +30,26 @@ class OAuth2AuthenticationSuccessHandlerTest {
 
 	OAuth2AuthenticationSuccessHandler handler;
 
+	@Mock
+	AuthCookieManager authCookieManager;
+
 	@BeforeEach
 	void setup() {
 		handler = new OAuth2AuthenticationSuccessHandler(
+				OAUTH_CALLBACK,
 				jwtProvider,
-				OAUTH_CALLBACK
+				authCookieManager
 		);
 	}
 
 	@Test
-	@DisplayName("인증 성공 시 access token, refresh token을 포함한 redirect를 수행한다.")
+	@DisplayName("인증 성공 시 인증 쿠키를 설정하고 콜백 URI로 redirect한다.")
 	void success_redirectsWithTokens() throws Exception {
 		// given
-		DefaultOAuth2User delegate = new DefaultOAuth2User(
-				List.of(new SimpleGrantedAuthority("ROLE_USER")),
-				Map.of("sub", "google-123", "email", "user@gmail.com"),
-				"sub"
-		);
+		DefaultOAuth2User delegate = GoogleUserFixture.builder()
+				.name(null)
+				.build()
+				.oauth2User();
 		CustomOAuth2User principal = new CustomOAuth2User(delegate, 1L, "ROLE_USER");
 		Authentication authentication = new UsernamePasswordAuthenticationToken(
 				principal,
@@ -67,19 +68,11 @@ class OAuth2AuthenticationSuccessHandlerTest {
 		handler.onAuthenticationSuccess(request, response, authentication);
 
 		// then
-		String redirectedUrl = response.getRedirectedUrl();
-		assertThat(redirectedUrl).isNotNull();
-
-		UriComponents uri = UriComponentsBuilder.fromUriString(redirectedUrl).build();
-		assertThat(uri.getScheme() + "://" + uri.getHost() + ":" + uri.getPort() + uri.getPath())
-				.isEqualTo(OAUTH_CALLBACK);
-
-		assertThat(uri.getQueryParams().getFirst("token"))
-				.isEqualTo("access-token");
-		assertThat(uri.getQueryParams().getFirst("refresh"))
-				.isEqualTo("refresh-token");
+		assertThat(response.getRedirectedUrl()).isEqualTo(OAUTH_CALLBACK);
 
 		then(jwtProvider).should().generateAccessToken(1L, List.of("ROLE_USER"));
 		then(jwtProvider).should().generateRefreshToken(1L);
+		then(authCookieManager).should().addAccessToken(response, "access-token");
+		then(authCookieManager).should().addRefreshToken(response, "refresh-token");
 	}
 }
