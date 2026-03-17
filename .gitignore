@@ -40,3 +40,4 @@ build/
 
 .omx/
 .agents/
+.claude/
