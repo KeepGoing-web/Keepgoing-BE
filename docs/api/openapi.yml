@@ -10,8 +10,9 @@ info:
     - 사용자 관리 (User): 프로필 관리, 관리자 기능
     
     ## 인증
-    Bearer 토큰을 사용한 JWT 인증을 사용합니다.
-    `Authorization: Bearer <token>` 헤더를 포함하여 요청하세요.
+    브라우저 환경에서는 HttpOnly 쿠키 기반 JWT 인증을 사용합니다.
+    로그인/OAuth 성공 후 서버는 access/refresh 토큰을 쿠키로 설정하며, 클라이언트는 이후 요청에서 쿠키 기반 인증을 사용합니다.
+    비브라우저 클라이언트와 수동 테스트에서는 `Authorization: Bearer <token>` 헤더 기반 접근도 사용할 수 있습니다.
 
   contact:
     name: API Support
@@ -81,7 +82,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthResponse'
+                $ref: '#/components/schemas/SignupResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
         '409':
@@ -110,7 +111,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthResponse'
+                $ref: '#/components/schemas/LoginResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -118,120 +119,20 @@ paths:
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
-  /auth/refresh:
-    post:
+  /auth/me:
+    get:
       tags: [Auth]
-      summary: 액세스 토큰 재발급
-      operationId: refreshToken
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RefreshTokenRequest'
+      summary: 현재 로그인 사용자 조회
+      operationId: getMyInfo
       responses:
         '200':
-          description: 토큰 재발급 성공
+          description: 현재 로그인 사용자 조회 성공
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TokenResponse'
+                $ref: '#/components/schemas/MyInfoResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
-
-  /auth/logout:
-    post:
-      tags: [Auth]
-      summary: 로그아웃
-      operationId: logout
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/LogoutRequest'
-      responses:
-        '200':
-          description: 로그아웃 성공
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-      security:
-        - BearerAuth: []
-
-  /auth/verify-email:
-    post:
-      tags: [Auth]
-      summary: 이메일 인증
-      operationId: verifyEmail
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/VerifyEmailRequest'
-      responses:
-        '200':
-          description: 이메일 인증 성공
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /auth/forgot-password:
-    post:
-      tags: [Auth]
-      summary: 비밀번호 재설정 요청
-      operationId: forgotPassword
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ForgotPasswordRequest'
-      responses:
-        '200':
-          description: 재설정 이메일 발송 완료
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '429':
-          $ref: '#/components/responses/TooManyRequests'
-
-  /auth/reset-password:
-    post:
-      tags: [Auth]
-      summary: 비밀번호 재설정
-      operationId: resetPassword
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ResetPasswordRequest'
-      responses:
-        '200':
-          description: 비밀번호 재설정 성공
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -757,52 +658,7 @@ components:
           format: password
       required: [email, password]
 
-    RefreshTokenRequest:
-      type: object
-      properties:
-        refreshToken:
-          type: string
-          description: 리프레시 토큰
-      required: [refreshToken]
-
-    LogoutRequest:
-      type: object
-      properties:
-        refreshToken:
-          type: string
-          description: 무효화할 리프레시 토큰
-      required: [refreshToken]
-
-    VerifyEmailRequest:
-      type: object
-      properties:
-        token:
-          type: string
-          description: 이메일 인증 토큰
-      required: [token]
-
-    ForgotPasswordRequest:
-      type: object
-      properties:
-        email:
-          type: string
-          format: email
-      required: [email]
-
-    ResetPasswordRequest:
-      type: object
-      properties:
-        token:
-          type: string
-          description: 비밀번호 재설정 토큰
-        newPassword:
-          type: string
-          format: password
-          minLength: 8
-          pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$'
-      required: [token, newPassword]
-
-    AuthResponse:
+    SignupResponse:
       allOf:
         - $ref: '#/components/schemas/ApiResponse'
         - type: object
@@ -810,41 +666,51 @@ components:
             data:
               type: object
               properties:
-                user:
-                  $ref: '#/components/schemas/UserDetail'
-                tokens:
-                  $ref: '#/components/schemas/TokenPair'
-              required: [user, tokens]
+                id:
+                  type: integer
+                  format: int64
+                email:
+                  type: string
+                  format: email
+                name:
+                  type: string
+              required: [id, email, name]
 
-    TokenResponse:
+    LoginResponse:
       allOf:
         - $ref: '#/components/schemas/ApiResponse'
         - type: object
           properties:
             data:
-              $ref: '#/components/schemas/TokenPair'
+              type: object
+              properties:
+                userId:
+                  type: integer
+                  format: int64
+                email:
+                  type: string
+                  format: email
+              required: [userId, email]
 
-    TokenPair:
-      type: object
-      properties:
-        accessToken:
-          type: string
-          description: JWT 액세스 토큰
-        refreshToken:
-          type: string
-          description: JWT 리프레시 토큰
-        tokenType:
-          type: string
-          default: Bearer
-        expiresIn:
-          type: integer
-          description: 액세스 토큰 만료 시간 (초)
-          example: 3600
-        refreshExpiresIn:
-          type: integer
-          description: 리프레시 토큰 만료 시간 (초)
-          example: 604800
-      required: [accessToken, refreshToken, tokenType, expiresIn]
+    MyInfoResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                userId:
+                  type: integer
+                  format: int64
+                email:
+                  type: string
+                  format: email
+                name:
+                  type: string
+                role:
+                  $ref: '#/components/schemas/UserRole'
+              required: [userId, email, name, role]
 
     # ========== User Schemas ==========
     UserRole:
