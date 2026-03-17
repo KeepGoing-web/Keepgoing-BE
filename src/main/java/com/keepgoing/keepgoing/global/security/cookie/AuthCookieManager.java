@@ -3,13 +3,11 @@ package com.keepgoing.keepgoing.global.security.cookie;
 import com.keepgoing.keepgoing.global.security.cookie.TokenCookieProperties.CookieSpec;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
 
 @Component
-@EnableConfigurationProperties(TokenCookieProperties.class)
 @RequiredArgsConstructor
 public class AuthCookieManager {
 
