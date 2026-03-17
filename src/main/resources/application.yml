@@ -19,3 +19,6 @@ cors:
   allowed-origins:
     - http://localhost:5173
   max-age: 3600
+
+oauth:
+  redirect-uri: http://localhost:5173/oauth/callback
