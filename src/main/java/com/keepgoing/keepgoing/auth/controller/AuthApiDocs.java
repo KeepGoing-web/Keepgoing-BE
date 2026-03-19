@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -106,6 +107,39 @@ public interface AuthApiDocs {
     ResponseEntity<ApiResponse<LoginResponse>> login(
             @Valid @RequestBody LoginRequest request,
             HttpServletResponse servletResponse
+    );
+
+    @Operation(summary = "Access Token 재발급")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "재발급 성공"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "리프레시 토큰이 없거나 유효하지 않음",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(
+                                    name = "RefreshTokenInvalid",
+                                    value = """
+                                            {
+                                              "success": false,
+                                              "error": {
+                                                "code": "AUTH_REFRESH_TOKEN_INVALID",
+                                                "message": "유효하지 않은 리프레시 토큰입니다."
+                                              }
+                                            }
+                                            """
+                            )
+                    )
+            )
+    })
+    @PostMapping("/refresh")
+    ResponseEntity<ApiResponse<Void>> refresh(
+            HttpServletRequest request,
+            HttpServletResponse response
     );
 
     @Operation(summary = "내 정보 조회")
