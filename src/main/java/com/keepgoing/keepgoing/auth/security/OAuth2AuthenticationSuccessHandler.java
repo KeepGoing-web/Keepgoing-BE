@@ -35,7 +35,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 			HttpServletResponse response,
 			Authentication authentication
 	) throws IOException, ServletException {
-		CustomOAuth2User principal = (CustomOAuth2User) authentication.getPrincipal();
+		AppOAuthPrincipal principal = (AppOAuthPrincipal) authentication.getPrincipal();
 		Long userId = principal.getUserId();
 		String role = principal.getRole();
 
