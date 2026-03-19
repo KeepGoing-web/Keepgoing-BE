@@ -362,4 +362,21 @@ class AuthControllerTest {
 			then(authCookieManager).should(never()).addAccessToken(any(), anyString());
 		}
 	}
+
+	@Nested
+	@DisplayName("POST /api/auth/logout")
+	class Logout {
+
+		@Test
+		@DisplayName("성공 시 200을 반환하고 토큰 쿠키를 만료시킨다.")
+		void logout_success() throws Exception {
+			// when & then
+			mockMvc.perform(post("/api/auth/logout"))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.success").value(true));
+
+			then(authService).shouldHaveNoInteractions();
+			then(authCookieManager).should().clearAllTokens(any(HttpServletResponse.class));
+		}
+	}
 }
