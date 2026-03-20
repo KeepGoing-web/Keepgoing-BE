@@ -43,3 +43,4 @@ docs/perf/results/
 
 .omx/
 .agents/
+.claude/
