@@ -391,11 +391,11 @@ public class PostServiceTest {
         Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<Post> postPage = new PageImpl<>(java.util.List.of(post1, post2), pageable, 2);
 
-        PostSearchQuery query = new PostSearchQuery("spring", pageable);
+        PostSearchQuery query = new PostSearchQuery("spring", pageable, PostSearchMode.SCORE);
 
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
 
-        given(postRepository.searchMyPostsFullText(eq(userId), eq("spring"), any(Pageable.class)))
+        given(postRepository.searchMyPostsFullTextByScore(eq(userId), eq("spring"), any(Pageable.class)))
                 .willReturn(postPage);
 
         // when
@@ -404,8 +404,41 @@ public class PostServiceTest {
         //then
         assertThat(result.getTotalElements()).isEqualTo(2);
         assertThat(result.getContent()).hasSize(2);
-        verify(postRepository).searchMyPostsFullText(eq(userId), eq("spring"), pageableCaptor.capture());
+        verify(postRepository).searchMyPostsFullTextByScore(eq(userId), eq("spring"), pageableCaptor.capture());
         assertThat(pageableCaptor.getValue()).isEqualTo(pageable);
+        verifyNoMoreInteractions(postRepository);
+        verifyNoInteractions(userRepository);
+    }
+
+    @Test
+    @DisplayName("searchMyPosts: mode=NEWEST이면 최신순 FULLTEXT 쿼리를 호출한다")
+    void searchPost_routesToNewestWhenModeNewest() {
+        // given
+        Long userId = 1L;
+        User user = createUser(userId);
+
+        Post post1 = Post.create(user, "spring 제목", "내용", PostVisibility.PUBLIC, true);
+        Post post2 = Post.create(user, "제목", "spring 내용", PostVisibility.PUBLIC, true);
+
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Post> postPage = new PageImpl<>(java.util.List.of(post1, post2), pageable, 2);
+
+        PostSearchQuery query = new PostSearchQuery("spring", pageable, PostSearchMode.NEWEST);
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+
+        given(postRepository.searchMyPostsFullTextByNewest(eq(userId), eq("spring"), any(Pageable.class)))
+                .willReturn(postPage);
+
+        // when
+        Page<PostSummaryResult> result = postService.searchMyPosts(userId, query);
+
+        // then
+        assertThat(result.getTotalElements()).isEqualTo(2);
+        assertThat(result.getContent()).hasSize(2);
+        verify(postRepository).searchMyPostsFullTextByNewest(eq(userId), eq("spring"), pageableCaptor.capture());
+        assertThat(pageableCaptor.getValue()).isEqualTo(pageable);
+        verify(postRepository, never()).searchMyPostsFullTextByScore(any(), any(), any());
         verifyNoMoreInteractions(postRepository);
         verifyNoInteractions(userRepository);
     }
@@ -416,7 +449,7 @@ public class PostServiceTest {
         // given
         Long userId = 1L;
         Pageable pageable = PageRequest.of(0, 10);
-        PostSearchQuery query = new PostSearchQuery("   ", pageable);
+        PostSearchQuery query = new PostSearchQuery("   ", pageable, PostSearchMode.SCORE);
 
         // when & then
         assertThatThrownBy(() -> postService.searchMyPosts(
@@ -426,8 +459,9 @@ public class PostServiceTest {
 
         // repository 호출되면 안 됨
         verify(postRepository, never())
-                .searchMyPostsFullText(
-                        any(), any(), any());
+                .searchMyPostsFullTextByScore(any(), any(), any());
+        verify(postRepository, never())
+                .searchMyPostsFullTextByNewest(any(), any(), any());
         verifyNoInteractions(userRepository);
     }
 
@@ -443,9 +477,9 @@ public class PostServiceTest {
         Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<Post> postPage = new PageImpl<>(java.util.List.of(post), pageable, 1);
 
-        PostSearchQuery query = new PostSearchQuery("  spring  ", pageable);
+        PostSearchQuery query = new PostSearchQuery("  spring  ", pageable, PostSearchMode.SCORE);
 
-        given(postRepository.searchMyPostsFullText(eq(userId), eq("spring"), any(Pageable.class)))
+        given(postRepository.searchMyPostsFullTextByScore(eq(userId), eq("spring"), any(Pageable.class)))
                 .willReturn(postPage);
 
         // when
@@ -457,7 +491,7 @@ public class PostServiceTest {
         ArgumentCaptor<String> keywordCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
 
-        verify(postRepository).searchMyPostsFullText(eq(userId), keywordCaptor.capture(), pageableCaptor.capture());
+        verify(postRepository).searchMyPostsFullTextByScore(eq(userId), keywordCaptor.capture(), pageableCaptor.capture());
         assertThat(keywordCaptor.getValue()).isEqualTo("spring");
 
         verifyNoMoreInteractions(postRepository);
