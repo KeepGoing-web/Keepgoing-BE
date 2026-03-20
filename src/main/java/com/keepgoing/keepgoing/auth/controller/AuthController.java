@@ -13,7 +13,10 @@ import com.keepgoing.keepgoing.auth.service.dto.MyInfoResult;
 import com.keepgoing.keepgoing.auth.service.dto.SignupCommand;
 import com.keepgoing.keepgoing.auth.service.dto.SignupResult;
 import com.keepgoing.keepgoing.global.api.response.ApiResponse;
+import com.keepgoing.keepgoing.global.common.error.BusinessException;
+import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import com.keepgoing.keepgoing.global.security.cookie.AuthCookieManager;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -74,5 +77,27 @@ public class AuthController implements AuthApiDocs {
 
 		return ResponseEntity.status(HttpStatus.OK)
 				.body(ApiResponse.success(body));
+	}
+
+	@PostMapping("/refresh")
+	public ResponseEntity<ApiResponse<Void>> refresh(
+			HttpServletRequest request,
+			HttpServletResponse response
+	) {
+		// TODO : 에러 처리 아키텍처 수정 검토 필요
+		String refreshToken = authCookieManager.extractRefreshToken(request)
+				.orElseThrow(() -> new BusinessException(ErrorCode.AUTH_REFRESH_TOKEN_INVALID));
+		String accessToken = authService.refresh(refreshToken);
+		authCookieManager.addAccessToken(response, accessToken);
+
+		return ResponseEntity.ok(ApiResponse.success(null));
+	}
+
+	@PostMapping("/logout")
+	public ResponseEntity<ApiResponse<Void>> logout(
+			HttpServletResponse response
+	) {
+		authCookieManager.clearAllTokens(response);
+		return ResponseEntity.ok(ApiResponse.success(null));
 	}
 }

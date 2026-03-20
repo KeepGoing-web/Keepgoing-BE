@@ -82,4 +82,13 @@ public class AuthService {
 
 		return new MyInfoResult(userId, user.getEmail(), user.getName(), user.getRole());
 	}
+
+	@Transactional(readOnly = true)
+	public String refresh(String refreshToken) {
+		Long userId = jwtProvider.validateRefreshTokenAndGetUserId(refreshToken);
+		User user = userRepository.findById(userId)
+				.orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+		return jwtProvider.generateAccessToken(userId, List.of(user.getRole().toAuthority()));
+	}
 }

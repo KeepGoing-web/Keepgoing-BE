@@ -4,6 +4,7 @@ import static com.keepgoing.keepgoing.auth.AuthTestFixtures.signupRequestWithEma
 import static com.keepgoing.keepgoing.auth.AuthTestFixtures.toJson;
 import static com.keepgoing.keepgoing.auth.AuthTestFixtures.validLoginRequest;
 import static com.keepgoing.keepgoing.global.common.error.ErrorCode.AUTH_INVALID_CREDENTIALS;
+import static com.keepgoing.keepgoing.global.common.error.ErrorCode.AUTH_REFRESH_TOKEN_INVALID;
 import static com.keepgoing.keepgoing.global.common.error.ErrorCode.USER_ALREADY_EXISTS;
 import static com.keepgoing.keepgoing.global.common.error.ErrorCode.USER_NOT_FOUND;
 import static com.keepgoing.keepgoing.global.common.error.ErrorCode.VALIDATION_FAILED;
@@ -37,6 +38,7 @@ import com.keepgoing.keepgoing.global.security.jwt.JwtAuthenticationFilter;
 import com.keepgoing.keepgoing.user.domain.UserRole;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -68,6 +70,9 @@ class AuthControllerTest {
 
 	private static final String EMAIL = "test@test.com";
 	public static final String NAME = "홍길동";
+	public static final String ACCESS_TOKEN = "access-token";
+	public static final String REFRESH_TOKEN = "refresh-token";
+	public static final String NEW_ACCESS_TOKEN = "new-access-token";
 
 	@Autowired
 	MockMvc mockMvc;
@@ -179,8 +184,8 @@ class AuthControllerTest {
 			// given
 			LoginRequest request = validLoginRequest();
 			LoginResult result = new LoginResult(
-					"access-token",
-					"refresh-token",
+					ACCESS_TOKEN,
+					REFRESH_TOKEN,
 					1L,
 					EMAIL
 			);
@@ -199,8 +204,8 @@ class AuthControllerTest {
 					.andExpect(jsonPath("$.data.userId").value(1L))
 					.andExpect(jsonPath("$.data.email").value(EMAIL));
 
-			then(authCookieManager).should().addAccessToken(any(HttpServletResponse.class), eq("access-token"));
-			then(authCookieManager).should().addRefreshToken(any(HttpServletResponse.class), eq("refresh-token"));
+			then(authCookieManager).should().addAccessToken(any(HttpServletResponse.class), eq(ACCESS_TOKEN));
+			then(authCookieManager).should().addRefreshToken(any(HttpServletResponse.class), eq(REFRESH_TOKEN));
 		}
 
 		@Test
@@ -296,6 +301,82 @@ class AuthControllerTest {
 					.andExpect(jsonPath("$.error.code").value(USER_NOT_FOUND.name()));
 
 			then(authService).should().getMyInfo(userId);
+		}
+	}
+
+	@Nested
+	@DisplayName("POST /api/auth/refresh")
+	class Refresh {
+
+		@Test
+		@DisplayName("성공 시 200 + access token 재발급")
+		void refresh_success() throws Exception {
+			// given
+			given(authCookieManager.extractRefreshToken(any()))
+					.willReturn(Optional.of(REFRESH_TOKEN));
+			given(authService.refresh(REFRESH_TOKEN))
+					.willReturn(NEW_ACCESS_TOKEN);
+
+			// when & then
+			mockMvc.perform(post("/api/auth/refresh"))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.success").value(true));
+
+			then(authService).should().refresh(REFRESH_TOKEN);
+			then(authCookieManager).should()
+					.addAccessToken(any(HttpServletResponse.class), eq(NEW_ACCESS_TOKEN));
+		}
+
+		@Test
+		@DisplayName("refresh 쿠기가 없으면 401을 반환한다.")
+		void refresh_token_missing() throws Exception {
+			given(authCookieManager.extractRefreshToken(any()))
+					.willReturn(Optional.empty());
+
+			// when & then
+			mockMvc.perform(post("/api/auth/refresh"))
+					.andExpect(status().isUnauthorized())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value(AUTH_REFRESH_TOKEN_INVALID.name()));
+
+			then(authService).shouldHaveNoInteractions();
+			then(authCookieManager).should(never())
+					.addAccessToken(any(HttpServletResponse.class), anyString());
+		}
+
+		@Test
+		@DisplayName("유효하지 않은 refresh token이면 401을 반환한다.")
+		void invalid_refresh_token() throws Exception {
+			// given
+			given(authCookieManager.extractRefreshToken(any()))
+					.willReturn(Optional.of("bad-refresh-token"));
+			willThrow(new BusinessException(AUTH_REFRESH_TOKEN_INVALID))
+					.given(authService).refresh("bad-refresh-token");
+
+			// when & then
+			mockMvc.perform(post("/api/auth/refresh"))
+					.andExpect(status().isUnauthorized())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value(AUTH_REFRESH_TOKEN_INVALID.name()));
+
+			then(authCookieManager).should(never()).addAccessToken(any(), anyString());
+		}
+	}
+
+	@Nested
+	@DisplayName("POST /api/auth/logout")
+	class Logout {
+
+		@Test
+		@DisplayName("성공 시 200을 반환하고 토큰 쿠키를 만료시킨다.")
+		void logout_success() throws Exception {
+			// when & then
+			mockMvc.perform(post("/api/auth/logout"))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.success").value(true));
+
+			then(authService).shouldHaveNoInteractions();
+			then(authCookieManager).should().clearAllTokens(any(HttpServletResponse.class));
 		}
 	}
 }
