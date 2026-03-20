@@ -25,7 +25,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 		return new CustomOAuth2User(oAuth2User, principal.userId(), principal.role());
 	}
 
-	protected OAuth2User loadProviderUser(OAuth2UserRequest  userRequest) {
+	protected OAuth2User loadProviderUser(OAuth2UserRequest userRequest) {
 		return super.loadUser(userRequest);
 	}
 }

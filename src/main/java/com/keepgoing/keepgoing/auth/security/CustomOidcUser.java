@@ -5,18 +5,35 @@ import java.util.Map;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.security.oauth2.core.oidc.OidcIdToken;
+import org.springframework.security.oauth2.core.oidc.OidcUserInfo;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 
 @RequiredArgsConstructor
-public class CustomOAuth2User implements OAuth2User, AppOAuthPrincipal {
+public class CustomOidcUser implements OidcUser, AppOAuthPrincipal {
 
-	private final OAuth2User delegate;
+	private final OidcUser delegate;
 
 	@Getter
 	private final Long userId;
 
 	@Getter
 	private final String role;
+
+	@Override
+	public Map<String, Object> getClaims() {
+		return delegate.getClaims();
+	}
+
+	@Override
+	public OidcUserInfo getUserInfo() {
+		return delegate.getUserInfo();
+	}
+
+	@Override
+	public OidcIdToken getIdToken() {
+		return delegate.getIdToken();
+	}
 
 	@Override
 	public Map<String, Object> getAttributes() {

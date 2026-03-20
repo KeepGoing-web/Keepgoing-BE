@@ -1,6 +1,7 @@
 package com.keepgoing.keepgoing.global.config;
 
 import com.keepgoing.keepgoing.auth.security.CustomOAuth2UserService;
+import com.keepgoing.keepgoing.auth.security.CustomOidcUserService;
 import com.keepgoing.keepgoing.auth.security.OAuth2AuthenticationFailureHandler;
 import com.keepgoing.keepgoing.auth.security.OAuth2AuthenticationSuccessHandler;
 import com.keepgoing.keepgoing.global.security.jwt.JwtAuthenticationFilter;
@@ -27,7 +28,6 @@ public class SecurityConfig {
 	private static final String AUTH_API_PREFIX = "/api/auth";
 
 	private final JwtAuthenticationFilter jwtAuthenticationFilter;
-	private final CustomOAuth2UserService customOAuth2UserService;
 	private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
 	private final OAuth2AuthenticationFailureHandler oAuth2AuthenticationFailureHandler;
 
@@ -44,7 +44,9 @@ public class SecurityConfig {
 	@Bean
 	public SecurityFilterChain securityFilterChain(
 			HttpSecurity http,
-			CorsConfigurationSource corsConfigurationSource
+			CorsConfigurationSource corsConfigurationSource,
+			CustomOAuth2UserService customOAuth2UserService,
+			CustomOidcUserService customOidcUserService
 	) throws Exception {
 
 		http
@@ -66,7 +68,8 @@ public class SecurityConfig {
 						.requestMatchers(
 								AUTH_API_PREFIX + "/signup",
 								AUTH_API_PREFIX + "/login",
-								AUTH_API_PREFIX + "/refresh"
+								AUTH_API_PREFIX + "/refresh",
+								AUTH_API_PREFIX + "/logout"
 						).permitAll()
 						// TODO: 포스트 API는 일단 모두 허용 (개발용)
 						.requestMatchers(
@@ -82,7 +85,8 @@ public class SecurityConfig {
 				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
 				.oauth2Login(oauth2 -> oauth2
 						.userInfoEndpoint(userInfoEndpointConfig -> userInfoEndpointConfig
-								.userService(customOAuth2UserService))
+								.userService(customOAuth2UserService)
+								.oidcUserService(customOidcUserService))
 						.successHandler(oAuth2AuthenticationSuccessHandler)
 						.failureHandler(oAuth2AuthenticationFailureHandler)
 				);
