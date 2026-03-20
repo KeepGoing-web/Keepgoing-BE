@@ -40,3 +40,6 @@ application-oauth.yml
 !gradle/wrapper/gradle-wrapper.properties
 
 docs/perf/results/
+
+.omx/
+.agents/
