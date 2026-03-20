@@ -4,8 +4,8 @@
   "settings": {
     "width": 20000,
     "height": 20000,
-    "scrollTop": -8954.9515,
-    "scrollLeft": -10457.0979,
+    "scrollTop": -8689.9515,
+    "scrollLeft": -9641.0979,
     "zoomLevel": 1,
     "show": 495,
     "database": 4,
@@ -91,8 +91,8 @@
       },
       "blogs_table": {
         "id": "blogs_table",
-        "name": "posts",
-        "comment": "블로그 포스트 - FULLTEXT 검색 지원",
+        "name": "notes",
+        "comment": "노트 - FULLTEXT 검색 지원",
         "columnIds": [
           "blogs_id",
           "blogs_author_id",
@@ -120,17 +120,17 @@
           "y": 8949.2694,
           "zIndex": 3,
           "widthName": 60,
-          "widthComment": 187,
+          "widthComment": 142,
           "color": "#27AE60"
         },
         "meta": {
-          "updateAt": 1763550109541,
+          "updateAt": 1773994151652,
           "createAt": 1699999999999
         }
       },
       "blog_revisions_table": {
         "id": "blog_revisions_table",
-        "name": "post_revisions",
+        "name": "note_revisions",
         "comment": "블로그 수정 이력 - 버전 관리",
         "columnIds": [
           "blog_revisions_id",
@@ -156,7 +156,7 @@
           "color": "#9B59B6"
         },
         "meta": {
-          "updateAt": 1763549959294,
+          "updateAt": 1773994173392,
           "createAt": 1699999999999
         }
       },
@@ -657,20 +657,20 @@
       "blog_revisions_blog_id": {
         "id": "blog_revisions_blog_id",
         "tableId": "blog_revisions_table",
-        "name": "post_id",
-        "comment": "블로그 ID (FK)",
+        "name": "note_id",
+        "comment": "노트 ID (FK)",
         "dataType": "BIGINT",
         "default": "",
         "options": 10,
         "ui": {
           "keys": 2,
           "widthName": 60,
-          "widthComment": 76,
+          "widthComment": 65,
           "widthDataType": 60,
           "widthDefault": 60
         },
         "meta": {
-          "updateAt": 1763551017009,
+          "updateAt": 1773994168693,
           "createAt": 1699999999999
         }
       },
