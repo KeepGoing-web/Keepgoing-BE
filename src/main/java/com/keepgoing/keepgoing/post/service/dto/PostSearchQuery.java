@@ -4,11 +4,15 @@ import org.springframework.data.domain.Pageable;
 
 public record PostSearchQuery(
         String keyword,
-        Pageable pageable
+        Pageable pageable,
+        PostSearchMode mode
 ) {
     public PostSearchQuery {
         if (keyword != null) {
             keyword = keyword.trim();
+        }
+        if (mode == null) {
+            mode = PostSearchMode.SCORE;
         }
     }
 

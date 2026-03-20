@@ -70,7 +70,29 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     """,
             nativeQuery = true
     )
-    Page<Post> searchMyPostsFullText(@Param("authorId") Long authorId,
+    Page<Post> searchMyPostsFullTextByScore(@Param("authorId") Long authorId,
                                      @Param("keyword") String keyword,
                                      Pageable pageable);
+
+    @Query(
+            value = """
+                SELECT p.*
+                FROM posts p
+                WHERE p.author_id = :authorId
+                    AND p.deleted_at IS NULL
+                    AND MATCH(p.title, p.content) AGAINST (:keyword IN BOOLEAN MODE)
+                ORDER BY p.created_at DESC
+                """,
+            countQuery = """
+                SELECT COUNT(*)
+                FROM posts p
+                WHERE p.author_id = :authorId
+                    AND p.deleted_at IS NULL
+                    AND MATCH(p.title, p.content) AGAINST (:keyword IN BOOLEAN MODE)
+                """,
+            nativeQuery = true
+    )
+    Page<Post> searchMyPostsFullTextByNewest(@Param("authorId") Long authorId,
+                                             @Param("keyword") String keyword,
+                                             Pageable pageable);
 }
