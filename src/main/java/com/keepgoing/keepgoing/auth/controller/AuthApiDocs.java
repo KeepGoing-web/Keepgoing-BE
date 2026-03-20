@@ -142,6 +142,18 @@ public interface AuthApiDocs {
             HttpServletResponse response
     );
 
+    @Operation(summary = "로그아웃")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "로그아웃 성공"
+            )
+    })
+    @PostMapping("/logout")
+    ResponseEntity<ApiResponse<Void>> logout(
+            HttpServletResponse response
+    );
+
     @Operation(summary = "내 정보 조회")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(

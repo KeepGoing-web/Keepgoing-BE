@@ -68,7 +68,8 @@ public class SecurityConfig {
 						.requestMatchers(
 								AUTH_API_PREFIX + "/signup",
 								AUTH_API_PREFIX + "/login",
-								AUTH_API_PREFIX + "/refresh"
+								AUTH_API_PREFIX + "/refresh",
+								AUTH_API_PREFIX + "/logout"
 						).permitAll()
 						// TODO: 포스트 API는 일단 모두 허용 (개발용)
 						.requestMatchers(

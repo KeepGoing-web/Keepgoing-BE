@@ -93,4 +93,11 @@ public class AuthController implements AuthApiDocs {
 		return ResponseEntity.ok(ApiResponse.success(null));
 	}
 
+	@PostMapping("/logout")
+	public ResponseEntity<ApiResponse<Void>> logout(
+			HttpServletResponse response
+	) {
+		authCookieManager.clearAllTokens(response);
+		return ResponseEntity.ok(ApiResponse.success(null));
+	}
 }
