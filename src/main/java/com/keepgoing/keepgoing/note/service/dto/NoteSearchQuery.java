@@ -1,12 +1,12 @@
-package com.keepgoing.keepgoing.post.service.dto;
+package com.keepgoing.keepgoing.note.service.dto;
 
 import org.springframework.data.domain.Pageable;
 
-public record PostSearchQuery(
+public record NoteSearchQuery(
         String keyword,
         Pageable pageable
 ) {
-    public PostSearchQuery {
+    public NoteSearchQuery {
         if (keyword != null) {
             keyword = keyword.trim();
         }

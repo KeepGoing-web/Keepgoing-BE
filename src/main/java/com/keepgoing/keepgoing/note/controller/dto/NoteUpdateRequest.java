@@ -1,12 +1,12 @@
-package com.keepgoing.keepgoing.post.controller.dto;
+package com.keepgoing.keepgoing.note.controller.dto;
 
-import com.keepgoing.keepgoing.post.domain.PostVisibility;
-import com.keepgoing.keepgoing.post.service.dto.PostUpdateCommand;
+import com.keepgoing.keepgoing.note.domain.NoteVisibility;
+import com.keepgoing.keepgoing.note.service.dto.NoteUpdateCommand;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-public record PostUpdateRequest (
+public record NoteUpdateRequest(
 
     @NotBlank
     @Size(max = 200)
@@ -16,14 +16,14 @@ public record PostUpdateRequest (
     String content,
 
     @NotNull
-    PostVisibility visibility,
+    NoteVisibility visibility,
 
     @NotNull
     Boolean aiCollectable
 ) {
-    public PostUpdateCommand toCommand(Long postId, Long userId) {
-        return new PostUpdateCommand(
-                postId,
+    public NoteUpdateCommand toCommand(Long noteId, Long userId) {
+        return new NoteUpdateCommand(
+                noteId,
                 userId,
                 title,
                 content,

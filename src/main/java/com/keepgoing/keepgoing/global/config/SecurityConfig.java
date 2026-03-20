@@ -54,15 +54,15 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
-                                "/api/posts/me/search"
+                                "/api/notes/me/search"
                         ).permitAll()
                         // 회원가입/로그인 API 허용
                         .requestMatchers(
                                 "/api/auth/**"
                         ).permitAll()
-                        // TODO: 포스트 API는 일단 모두 허용 (개발용)
+                        // TODO: 노트 API는 일단 모두 허용 (개발용)
                         .requestMatchers(
-                                "/api/v1/posts/**"
+                                "/api/v1/notes/**"
                         ).permitAll()
                         .requestMatchers(
                                 "/oauth2/**",

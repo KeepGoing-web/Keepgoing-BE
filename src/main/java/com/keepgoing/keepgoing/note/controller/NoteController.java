@@ -1,13 +1,13 @@
-package com.keepgoing.keepgoing.post.controller;
+package com.keepgoing.keepgoing.note.controller;
 
 import com.keepgoing.keepgoing.global.api.response.ApiResponse;
 import com.keepgoing.keepgoing.global.api.response.PagedResponse;
-import com.keepgoing.keepgoing.post.controller.dto.PostCreateRequest;
-import com.keepgoing.keepgoing.post.controller.dto.PostDetailResponse;
-import com.keepgoing.keepgoing.post.controller.dto.PostSummaryResponse;
-import com.keepgoing.keepgoing.post.controller.dto.PostUpdateRequest;
-import com.keepgoing.keepgoing.post.service.PostService;
-import com.keepgoing.keepgoing.post.service.dto.*;
+import com.keepgoing.keepgoing.note.controller.dto.NoteCreateRequest;
+import com.keepgoing.keepgoing.note.controller.dto.NoteDetailResponse;
+import com.keepgoing.keepgoing.note.controller.dto.NoteSummaryResponse;
+import com.keepgoing.keepgoing.note.controller.dto.NoteUpdateRequest;
+import com.keepgoing.keepgoing.note.service.NoteService;
+import com.keepgoing.keepgoing.note.service.dto.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -23,93 +23,93 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/posts")
+@RequestMapping("/api/notes")
 @RequiredArgsConstructor
-public class PostController {
+public class NoteController {
 
     private static final int MAX_PAGE_SIZE = 100;
 
-    private final PostService postService;
+    private final NoteService noteService;
 
     /**
-     * 포스트 생성
+     * 노트 생성
      */
     @PostMapping
-    public ResponseEntity<ApiResponse<PostDetailResponse>> createPost(
-            @RequestBody @Valid PostCreateRequest request,
+    public ResponseEntity<ApiResponse<NoteDetailResponse>> createNote(
+            @RequestBody @Valid NoteCreateRequest request,
             @AuthenticationPrincipal Long userId
     ) {
-        PostCreateCommand command = request.toCommand(userId);
+        NoteCreateCommand command = request.toCommand(userId);
 
-        PostDetailResult created = postService.createPost(command);
+        NoteDetailResult created = noteService.createNote(command);
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(PostDetailResponse.from(created)));
+                .body(ApiResponse.success(NoteDetailResponse.from(created)));
     }
 
     /**
-     * 단일 포스트 조회
+     * 단일 노트 조회
      */
-    @GetMapping("/{postId}")
-    public ResponseEntity<ApiResponse<PostDetailResponse>> getPost(@PathVariable Long postId) {
-        PostDetailResult post = postService.getPost(postId);
+    @GetMapping("/{noteId}")
+    public ResponseEntity<ApiResponse<NoteDetailResponse>> getNote(@PathVariable Long noteId) {
+        NoteDetailResult note = noteService.getNote(noteId);
 
-        return ResponseEntity.ok(ApiResponse.success(PostDetailResponse.from(post)));
+        return ResponseEntity.ok(ApiResponse.success(NoteDetailResponse.from(note)));
     }
 
     /**
-     * 포스트 목록 조회
+     * 노트 목록 조회
      */
     @GetMapping("/me")
-    public ResponseEntity<ApiResponse<PagedResponse<PostSummaryResponse>>> getPosts(
+    public ResponseEntity<ApiResponse<PagedResponse<NoteSummaryResponse>>> getNotes(
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable,
             @AuthenticationPrincipal Long userId
     ) {
         Pageable safePageable = safePageable(pageable);
 
-        Page<PostSummaryResult> page = postService.getPosts(userId, safePageable);
+        Page<NoteSummaryResult> page = noteService.getNotes(userId, safePageable);
 
-        List<PostSummaryResponse> contents = page.getContent().stream()
-                .map(PostSummaryResponse::from)
+        List<NoteSummaryResponse> contents = page.getContent().stream()
+                .map(NoteSummaryResponse::from)
                 .toList();
 
         return ResponseEntity.ok(ApiResponse.success(PagedResponse.of(page, contents)));
     }
 
     /**
-     * 포스트 수정
+     * 노트 수정
      */
-    @PutMapping("/{postId}")
-    public ResponseEntity<ApiResponse<PostDetailResponse>> updatePost(
-            @PathVariable Long postId,
-            @RequestBody @Valid PostUpdateRequest request,
+    @PutMapping("/{noteId}")
+    public ResponseEntity<ApiResponse<NoteDetailResponse>> updateNote(
+            @PathVariable Long noteId,
+            @RequestBody @Valid NoteUpdateRequest request,
             @AuthenticationPrincipal Long userId
     ) {
-        PostUpdateCommand command = request.toCommand(postId, userId);
+        NoteUpdateCommand command = request.toCommand(noteId, userId);
 
-        PostDetailResult updated = postService.updatePost(command);
+        NoteDetailResult updated = noteService.updateNote(command);
 
-        return ResponseEntity.ok(ApiResponse.success(PostDetailResponse.from(updated)));
+        return ResponseEntity.ok(ApiResponse.success(NoteDetailResponse.from(updated)));
     }
 
     /**
-     * 포스트 삭제
+     * 노트 삭제
      */
-    @DeleteMapping("/{postId}")
-    public ResponseEntity<Void> deletePost(
+    @DeleteMapping("/{noteId}")
+    public ResponseEntity<Void> deleteNote(
             @AuthenticationPrincipal Long userId,
-            @PathVariable Long postId
+            @PathVariable Long noteId
     ) {
-        postService.deletePost(userId, postId);
+        noteService.deleteNote(userId, noteId);
         return ResponseEntity.noContent().build();
     }
 
     /**
-     * 내 포스트 검색
+     * 내 노트 검색
      */
     @GetMapping("/me/search")
-    public ResponseEntity<ApiResponse<PagedResponse<PostSummaryResponse>>> searchMyPosts(
+    public ResponseEntity<ApiResponse<PagedResponse<NoteSummaryResponse>>> searchMyNotes(
             @RequestParam String keyword,
             @PageableDefault(size = 10)
             Pageable pageable,
@@ -117,35 +117,35 @@ public class PostController {
     ) {
         Pageable safePageable = safePageableUnsorted(pageable);
 
-        Page<PostSummaryResult> page = postService.searchMyPosts(
+        Page<NoteSummaryResult> page = noteService.searchMyNotes(
                 userId,
-                new PostSearchQuery(keyword, safePageable)
+                new NoteSearchQuery(keyword, safePageable)
         );
 
-        List<PostSummaryResponse> contents = page.getContent().stream()
-                .map(PostSummaryResponse::from)
+        List<NoteSummaryResponse> contents = page.getContent().stream()
+                .map(NoteSummaryResponse::from)
                 .toList();
 
         return ResponseEntity.ok(ApiResponse.success(PagedResponse.of(page, contents)));
     }
 
     /**
-     * 포스트 검색
+     * 노트 검색
      */
     @GetMapping("/search")
-    public ResponseEntity<ApiResponse<PagedResponse<PostSummaryResponse>>> search(
+    public ResponseEntity<ApiResponse<PagedResponse<NoteSummaryResponse>>> search(
             @RequestParam String keyword,
             @PageableDefault(size = 10)
             Pageable pageable
     ) {
         Pageable safePageable = safePageableUnsorted(pageable);
 
-        Page<PostSummaryResult> page = postService.searchPost(
-                new PostSearchQuery(keyword, safePageable)
+        Page<NoteSummaryResult> page = noteService.searchNote(
+                new NoteSearchQuery(keyword, safePageable)
         );
 
-        List<PostSummaryResponse> contents = page.getContent().stream()
-                .map(PostSummaryResponse::from)
+        List<NoteSummaryResponse> contents = page.getContent().stream()
+                .map(NoteSummaryResponse::from)
                 .toList();
 
         return ResponseEntity.ok(ApiResponse.success(PagedResponse.of(page, contents)));

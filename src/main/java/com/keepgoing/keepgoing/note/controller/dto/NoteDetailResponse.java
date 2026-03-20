@@ -1,23 +1,23 @@
-package com.keepgoing.keepgoing.post.controller.dto;
+package com.keepgoing.keepgoing.note.controller.dto;
 
-import com.keepgoing.keepgoing.post.domain.PostVisibility;
-import com.keepgoing.keepgoing.post.service.dto.PostDetailResult;
+import com.keepgoing.keepgoing.note.domain.NoteVisibility;
+import com.keepgoing.keepgoing.note.service.dto.NoteDetailResult;
 
 import java.time.LocalDateTime;
 
-public record PostDetailResponse(
-        Long postId,
+public record NoteDetailResponse(
+        Long noteId,
         Long userId,
         String title,
         String content,
-        PostVisibility visibility,
+        NoteVisibility visibility,
         boolean aiCollectable,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
-    public static PostDetailResponse from(PostDetailResult result) {
-        return new PostDetailResponse(
-                result.postId(),
+    public static NoteDetailResponse from(NoteDetailResult result) {
+        return new NoteDetailResponse(
+                result.noteId(),
                 result.userId(),
                 result.title(),
                 result.content(),
