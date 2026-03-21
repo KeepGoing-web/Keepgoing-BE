@@ -36,9 +36,9 @@ class UserPasswordCredentialTest {
             - Hibernate 구현에서는 persist() 시점에 insert 쿼리를 실행해서 곧바로 id를 채워 넣는 동작을 볼 수 있다.
          */
         User user = User.create("test@example.com", "test");
-        log.info("User create userId:{}", user.getId()); // user.id = null
+        log.info("User create providerUserId:{}", user.getId()); // user.id = null
         entityManager.persist(user);
-        log.info("JPA persist userId:{}", user.getId()); // user.id = 1
+        log.info("JPA persist providerUserId:{}", user.getId()); // user.id = 1
         entityManager.flush();
 
         /*

@@ -19,3 +19,19 @@ cors:
   allowed-origins:
     - http://localhost:5173
   max-age: 3600
+
+oauth:
+  redirect-uri: http://localhost:5173/oauth/callback
+
+auth:
+  cookie:
+    secure: false
+    same-site: Lax
+    access-token:
+      name: access_token
+      path: /api
+      max-age: 3600
+    refresh-token:
+      name: refresh_token
+      path: /api/auth
+      max-age: 604800
