@@ -15,17 +15,10 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.DelegatingAuthenticationEntryPoint;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
-import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
-import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.cors.CorsConfigurationSource;
-
-import java.util.LinkedHashMap;
 
 @Configuration
 @EnableWebSecurity
@@ -58,24 +51,8 @@ public class SecurityConfig {
                 .httpBasic(AbstractHttpConfigurer::disable) // 기본 Basic 인증 비활성화
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .exceptionHandling(ex -> {
-                    // API 호출은 302 리다이렉트 대신 401을 내려준다(k6/curl 등)
-                    RequestMatcher apiMatcher = PathPatternRequestMatcher.withDefaults().matcher("/api/**");
-
-                    LinkedHashMap<RequestMatcher, AuthenticationEntryPoint> entryPoints = new LinkedHashMap<>();
-                    entryPoints.put(apiMatcher, new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED));
-
-                    DelegatingAuthenticationEntryPoint delegating =
-                            new DelegatingAuthenticationEntryPoint(entryPoints);
-
-                    // 브라우저 플로우는 기존 OAuth2 로그인으로 리다이렉트
-                    delegating.setDefaultEntryPoint(
-                            new LoginUrlAuthenticationEntryPoint("/oauth2/authorization/google")
-                    );
-
-                    // /api/** -> 401, 그 외(브라우저) -> OAuth2 로그인 리다이렉트
-                    ex.authenticationEntryPoint(delegating);
-                })
+                .exceptionHandling(ex ->
+                        ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .authorizeHttpRequests(auth -> auth
                         // Swagger & OpenAPI 문서 경로 허용
                         .requestMatchers(
