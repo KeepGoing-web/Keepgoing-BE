@@ -1,4 +1,4 @@
-<file name=docs/perf/search_fulltext_newest.md># Improved: 내 글 검색 성능 (MySQL, FULLTEXT by NEWEST)
+# Improved: 내 글 검색 성능 (MySQL, FULLTEXT by SCORE)
 
 ## 목적
 - LIKE 기반 검색의 병목(contains 검색)을 개선하기 위해 MySQL FULLTEXT(MATCH...AGAINST)를 적용한다.
