@@ -16,8 +16,7 @@ import java.util.List;
 @AllArgsConstructor
 public class PagedResponse<T> {
 
-    @Schema(description = "현재 페이지의 데이터 목록")
-    private final List<T> contents;
+    @Schema(description = "현재 페이지의 데이터 목록") private final List<T> contents;
 
     @Schema(description = "현재 페이지 번호 (0부터 시작)")
     private final int page;

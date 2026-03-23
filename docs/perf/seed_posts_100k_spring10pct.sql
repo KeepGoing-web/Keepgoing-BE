@@ -24,7 +24,7 @@ INSERT INTO posts (
     deleted_at
 )
 SELECT
-    1 AS author_id,
+    3 AS author_id,
     CASE
         WHEN (n % 10 = 0) THEN CONCAT('spring 테스트 제목 ', n)
         ELSE CONCAT('일반 제목 ', n)

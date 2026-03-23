@@ -402,11 +402,11 @@ public class NoteServiceTest {
         Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<Note> notePage = new PageImpl<>(java.util.List.of(note1, note2), pageable, 2);
 
-        NoteSearchQuery query = new NoteSearchQuery("spring", pageable);
+        NoteSearchQuery query = new NoteSearchQuery("spring", pageable, com.keepgoing.keepgoing.note.service.dto.NoteSearchMode.SCORE);
 
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
 
-        given(noteRepository.searchMyNotesFullText(eq(userId), eq("spring"), any(Pageable.class)))
+        given(noteRepository.searchMyNotesFullTextByScore(eq(userId), eq("spring"), any(Pageable.class)))
                 .willReturn(notePage);
 
         // when
@@ -415,8 +415,41 @@ public class NoteServiceTest {
         //then
         assertThat(result.getTotalElements()).isEqualTo(2);
         assertThat(result.getContent()).hasSize(2);
-        verify(noteRepository).searchMyNotesFullText(eq(userId), eq("spring"), pageableCaptor.capture());
+        verify(noteRepository).searchMyNotesFullTextByScore(eq(userId), eq("spring"), pageableCaptor.capture());
         assertThat(pageableCaptor.getValue()).isEqualTo(pageable);
+        verifyNoMoreInteractions(noteRepository);
+        verifyNoInteractions(userRepository);
+    }
+
+    @Test
+    @DisplayName("searchMyNotes: mode=NEWEST이면 최신순 FULLTEXT 쿼리를 호출한다")
+    void searchNote_routesToNewestWhenModeNewest() {
+        // given
+        Long userId = 1L;
+        User user = createUser(userId);
+
+        Note note1 = Note.create(user, "spring 제목", "내용", NoteVisibility.PUBLIC, true);
+        Note note2 = Note.create(user, "제목", "spring 내용", NoteVisibility.PUBLIC, true);
+
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Note> notePage = new PageImpl<>(java.util.List.of(note1, note2), pageable, 2);
+
+        NoteSearchQuery query = new NoteSearchQuery("spring", pageable, com.keepgoing.keepgoing.note.service.dto.NoteSearchMode.NEWEST);
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+
+        given(noteRepository.searchMyNotesFullTextByNewest(eq(userId), eq("spring"), any(Pageable.class)))
+                .willReturn(notePage);
+
+        // when
+        Page<NoteSummaryResult> result = noteService.searchMyNotes(userId, query);
+
+        // then
+        assertThat(result.getTotalElements()).isEqualTo(2);
+        assertThat(result.getContent()).hasSize(2);
+        verify(noteRepository).searchMyNotesFullTextByNewest(eq(userId), eq("spring"), pageableCaptor.capture());
+        assertThat(pageableCaptor.getValue()).isEqualTo(pageable);
+        verify(noteRepository, never()).searchMyNotesFullTextByScore(any(), any(), any());
         verifyNoMoreInteractions(noteRepository);
         verifyNoInteractions(userRepository);
     }
@@ -427,7 +460,7 @@ public class NoteServiceTest {
         // given
         Long userId = 1L;
         Pageable pageable = PageRequest.of(0, 10);
-        NoteSearchQuery query = new NoteSearchQuery("   ", pageable);
+        NoteSearchQuery query = new NoteSearchQuery("   ", pageable, com.keepgoing.keepgoing.note.service.dto.NoteSearchMode.SCORE);
 
         // when & then
         assertThatThrownBy(() -> noteService.searchMyNotes(
@@ -437,8 +470,9 @@ public class NoteServiceTest {
 
         // repository 호출되면 안 됨
         verify(noteRepository, never())
-                .searchMyNotesFullText(
-                        any(), any(), any());
+                .searchMyNotesFullTextByScore(any(), any(), any());
+        verify(noteRepository, never())
+                .searchMyNotesFullTextByNewest(any(), any(), any());
         verifyNoInteractions(userRepository);
     }
 
@@ -454,9 +488,9 @@ public class NoteServiceTest {
         Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<Note> notePage = new PageImpl<>(java.util.List.of(note), pageable, 1);
 
-        NoteSearchQuery query = new NoteSearchQuery("  spring  ", pageable);
+        NoteSearchQuery query = new NoteSearchQuery("  spring  ", pageable, com.keepgoing.keepgoing.note.service.dto.NoteSearchMode.SCORE);
 
-        given(noteRepository.searchMyNotesFullText(eq(userId), eq("spring"), any(Pageable.class)))
+        given(noteRepository.searchMyNotesFullTextByScore(eq(userId), eq("spring"), any(Pageable.class)))
                 .willReturn(notePage);
 
         // when
@@ -468,10 +502,64 @@ public class NoteServiceTest {
         ArgumentCaptor<String> keywordCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
 
-        verify(noteRepository).searchMyNotesFullText(eq(userId), keywordCaptor.capture(), pageableCaptor.capture());
+        verify(noteRepository).searchMyNotesFullTextByScore(eq(userId), keywordCaptor.capture(), pageableCaptor.capture());
         assertThat(keywordCaptor.getValue()).isEqualTo("spring");
 
         verifyNoMoreInteractions(noteRepository);
         verifyNoInteractions(userRepository);
     }
+
+    // ========== searchMyNotesLike (LIKE baseline) ==========
+
+    @Test
+    @DisplayName("searchMyNotesLike: keyword 앞뒤 공백은 trim되어 검색된다")
+    void searchMyNotesLike_trimsKeywordBeforeSearching() {
+        // given
+        Long userId = 1L;
+        User user = createUser(userId);
+        Note note = Note.create(user, "spring 제목", "내용", NoteVisibility.PUBLIC, true);
+
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Note> notePage = new PageImpl<>(java.util.List.of(note), pageable, 1);
+
+        NoteSearchQuery query = new NoteSearchQuery("  spring  ", pageable);
+
+        given(noteRepository.searchMyNotesLike(eq(userId), eq("spring"), any(Pageable.class)))
+                .willReturn(notePage);
+
+        // when
+        Page<NoteSummaryResult> result = noteService.searchMyNotesLike(userId, query);
+
+        // then
+        assertThat(result.getTotalElements()).isEqualTo(1);
+
+        ArgumentCaptor<String> keywordCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+
+        verify(noteRepository).searchMyNotesLike(eq(userId), keywordCaptor.capture(), pageableCaptor.capture());
+        assertThat(keywordCaptor.getValue()).isEqualTo("spring");
+        assertThat(pageableCaptor.getValue()).isEqualTo(pageable);
+
+        verifyNoMoreInteractions(noteRepository);
+        verifyNoInteractions(userRepository);
+    }
+
+    @Test
+    @DisplayName("searchMyNotesLike: keyword가 비어있으면 NOTE_SEARCH_KEYWORD_REQUIRED 예외")
+    void searchMyNotesLike_throwsWhenKeywordBlank() {
+        // given
+        Long userId = 1L;
+        Pageable pageable = PageRequest.of(0, 10);
+        NoteSearchQuery query = new NoteSearchQuery("   ", pageable);
+
+        // when & then
+        assertThatThrownBy(() -> noteService.searchMyNotesLike(userId, query))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_SEARCH_KEYWORD_REQUIRED);
+
+        verifyNoInteractions(noteRepository);
+        verifyNoInteractions(userRepository);
+    }
+
+
 }

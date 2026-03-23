@@ -8,6 +8,8 @@ import com.keepgoing.keepgoing.global.security.jwt.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -17,6 +19,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfigurationSource;
 
@@ -56,29 +59,35 @@ public class SecurityConfig {
 				.httpBasic(AbstractHttpConfigurer::disable) // 기본 Basic 인증 비활성화
 				.sessionManagement(session ->
 						session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(ex ->
+                        ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
 				.authorizeHttpRequests(auth -> auth
 						// Swagger & OpenAPI 문서 경로 허용
 						.requestMatchers(
 								"/v3/api-docs/**",
 								"/swagger-ui/**",
-								"/swagger-ui.html",
-								"/api/posts/me/search"
+								"/swagger-ui.html"
 						).permitAll()
-						// 회원가입/로그인 API 용
+						// 회원가입/로그인 API 허용
 						.requestMatchers(
 								AUTH_API_PREFIX + "/signup",
 								AUTH_API_PREFIX + "/login",
 								AUTH_API_PREFIX + "/refresh",
 								AUTH_API_PREFIX + "/logout"
 						).permitAll()
-						// TODO: 포스트 API는 일단 모두 허용 (개발용)
+                        .requestMatchers(
+                                "/oauth2/**",
+                                "/login/oauth2/**"
+                        ).permitAll()
 						.requestMatchers(
-								"/api/v1/posts/**"
-						).permitAll()
-						.requestMatchers(
-								"/oauth2/**",
-								"/login/oauth2/**"
-						).permitAll()
+								"/api/posts/me/**"
+						).authenticated()
+                        // 게시글 조회는 공개(개발/일반 사용자 접근), 쓰기(생성/수정/삭제)는 인증 필요
+                        .requestMatchers(HttpMethod.GET, "/api/posts/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/posts/**").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/posts/**").authenticated()
+                        .requestMatchers(HttpMethod.PATCH, "/api/posts/**").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/posts/**").authenticated()
 						// 나머지는 인증 필요
 						.anyRequest().authenticated()
 				)
