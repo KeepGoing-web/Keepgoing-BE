@@ -44,3 +44,7 @@ docs/perf/results/
 .omx/
 .agents/
 .claude/
+.omc/
+
+.classpath
+bin/
