@@ -150,23 +150,43 @@ public enum ErrorCode {
 			"요청한 리소스를 찾을 수 없습니다."
 	),
 
-
 	// ===== NOTE =====
 	NOTE_NOT_FOUND(
 			HttpStatus.NOT_FOUND,
-			"NOTE_01",
+			"NOTE_001",
 			"글을 찾을 수 없습니다."
 	),
 	NOTE_ACCESS_DENIED(
 			HttpStatus.FORBIDDEN,
-			"NOTE_02",
+			"NOTE_002",
 			"해당 게시글에 대한 권한이 없습니다."
 	),
 	NOTE_SEARCH_KEYWORD_REQUIRED(
 			HttpStatus.BAD_REQUEST,
-			"NOTE_03",
+			"NOTE_003",
 			"검색어(keyword)는 필수입니다."
-	);
+	),
+
+	// ===== Folder =====
+	FOLDER_ACCESS_DENIED(
+			HttpStatus.FORBIDDEN,
+			"FOLDER_001",
+			"해당 폴더에 접근 권한이 없습니다."
+	),
+	FOLDER_NOT_FOUND(
+			HttpStatus.NOT_FOUND,
+			"FOLDER_002",
+			"폴더를 찾을 수 없습니다."
+	),
+	FOLDER_NAME_DUPLICATED(
+			HttpStatus.CONFLICT,
+			"FOLDER_003",
+			"이미 존재하는 폴더 이름입니다."
+	),
+	FOLDER_INVALID_NAME(
+			HttpStatus.BAD_REQUEST,
+			"FOLDER_004",
+			"허용되지 않는 폴더 이름입니다.");
 
 	private final HttpStatus httpStatus;
 	private final String code;        // 시스템 내부/프론트에서 쓰는 에러 코드

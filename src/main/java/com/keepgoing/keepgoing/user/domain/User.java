@@ -1,5 +1,6 @@
 package com.keepgoing.keepgoing.user.domain;
 
+import com.keepgoing.keepgoing.global.common.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -30,12 +31,11 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
                 )
         }
 )
-@EntityListeners(AuditingEntityListener.class)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
-public class User {
+public class User extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -60,14 +60,6 @@ public class User {
 
     @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;
-
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @LastModifiedDate
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
 
     // === 비즈니스 로직 메서드 ===
 

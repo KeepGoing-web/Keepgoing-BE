@@ -4,8 +4,8 @@
   "settings": {
     "width": 20000,
     "height": 20000,
-    "scrollTop": -8689.9515,
-    "scrollLeft": -9641.0979,
+    "scrollTop": -8238.1667,
+    "scrollLeft": -9022.3333,
     "zoomLevel": 1,
     "show": 495,
     "database": 4,
@@ -37,7 +37,8 @@
       "rag_queries_table",
       "resume_jobs_table",
       "user_oauth_accounts_table",
-      "user_password_credentials_table"
+      "user_password_credentials_table",
+      "folders_table"
     ],
     "relationshipIds": [
       "rel_users_blogs",
@@ -45,7 +46,10 @@
       "rel_users_rag_queries",
       "rel_users_resume_jobs",
       "rel_uoa_user",
-      "rel_upc_user"
+      "rel_upc_user",
+      "rel_users_folders",
+      "rel_folders_parent",
+      "rel_folders_blogs"
     ],
     "indexIds": [],
     "memoIds": []
@@ -77,15 +81,15 @@
           "users_updated_at"
         ],
         "ui": {
-          "x": 10587.1935,
-          "y": 9353.5367,
+          "x": 9669.06651224878,
+          "y": 9062.226063345455,
           "zIndex": 1,
           "widthName": 60,
           "widthComment": 170,
           "color": "#4A90E2"
         },
         "meta": {
-          "updateAt": 1763464598004,
+          "updateAt": 1774010812916,
           "createAt": 1699999999999
         }
       },
@@ -96,6 +100,7 @@
         "columnIds": [
           "blogs_id",
           "blogs_author_id",
+          "blogs_folder_id",
           "blogs_title",
           "blogs_content",
           "blogs_visibility",
@@ -107,6 +112,7 @@
         "seqColumnIds": [
           "blogs_id",
           "blogs_author_id",
+          "blogs_folder_id",
           "blogs_title",
           "blogs_content",
           "blogs_visibility",
@@ -116,15 +122,15 @@
           "blogs_deleted_at"
         ],
         "ui": {
-          "x": 10202.5333,
-          "y": 8949.2694,
+          "x": 9055.065,
+          "y": 8695.7145,
           "zIndex": 3,
           "widthName": 60,
           "widthComment": 142,
           "color": "#27AE60"
         },
         "meta": {
-          "updateAt": 1773994151652,
+          "updateAt": 1774010851196,
           "createAt": 1699999999999
         }
       },
@@ -148,15 +154,15 @@
           "uV0x_vb1mF-4bLjCtLiwQ"
         ],
         "ui": {
-          "x": 9609.5463,
-          "y": 8997.7936,
+          "x": 8728.58706632632,
+          "y": 9263.323484958277,
           "zIndex": 4,
           "widthName": 84,
           "widthComment": 139,
           "color": "#9B59B6"
         },
         "meta": {
-          "updateAt": 1773994173392,
+          "updateAt": 1774010812916,
           "createAt": 1699999999999
         }
       },
@@ -181,15 +187,15 @@
           "rag_queries_created_at"
         ],
         "ui": {
-          "x": 9993.9573,
-          "y": 9439.6758,
+          "x": 10215.473595916268,
+          "y": 8772.512806723209,
           "zIndex": 5,
           "widthName": 69,
           "widthComment": 153,
           "color": "#F39C12"
         },
         "meta": {
-          "updateAt": 1763464589460,
+          "updateAt": 1774010812916,
           "createAt": 1699999999999
         }
       },
@@ -214,15 +220,15 @@
           "resume_jobs_generated_at"
         ],
         "ui": {
-          "x": 10961.2452,
-          "y": 9676.4935,
+          "x": 10516.4905,
+          "y": 9239.5943,
           "zIndex": 6,
           "widthName": 75,
           "widthComment": 149,
           "color": "#3498DB"
         },
         "meta": {
-          "updateAt": 1763464772436,
+          "updateAt": 1774010828832,
           "createAt": 1699999999999
         }
       },
@@ -251,15 +257,15 @@
           "uoa_updated_at"
         ],
         "ui": {
-          "x": 11335,
-          "y": 9075,
+          "x": 9212.49352041948,
+          "y": 9494.32822127397,
           "zIndex": 10,
           "widthName": 124,
           "widthComment": 109,
           "color": ""
         },
         "meta": {
-          "updateAt": 1763464849913,
+          "updateAt": 1774010812916,
           "createAt": 0
         }
       },
@@ -280,16 +286,51 @@
           "upc_password_changed_at"
         ],
         "ui": {
-          "x": 11319,
-          "y": 9464,
+          "x": 9806.2686,
+          "y": 9500.1276,
           "zIndex": 10,
           "widthName": 157,
           "widthComment": 117,
           "color": ""
         },
         "meta": {
-          "updateAt": 1763464645398,
+          "updateAt": 1774010835731,
           "createAt": 0
+        }
+      },
+      "folders_table": {
+        "id": "folders_table",
+        "name": "folders",
+        "comment": "노트 정리를 위한 계층형 폴더",
+        "columnIds": [
+          "folders_id",
+          "folders_owner_id",
+          "folders_parent_id",
+          "folders_name",
+          "folders_created_at",
+          "folders_updated_at",
+          "folders_deleted_at"
+        ],
+        "seqColumnIds": [
+          "folders_id",
+          "folders_owner_id",
+          "folders_parent_id",
+          "folders_name",
+          "folders_created_at",
+          "folders_updated_at",
+          "folders_deleted_at"
+        ],
+        "ui": {
+          "x": 9717.3003,
+          "y": 8407.987,
+          "zIndex": 5,
+          "widthName": 60,
+          "widthComment": 140,
+          "color": "#F5A623"
+        },
+        "meta": {
+          "updateAt": 1774010847147,
+          "createAt": 1774010688368
         }
       }
     },
@@ -1233,6 +1274,166 @@
           "updateAt": 0,
           "createAt": 0
         }
+      },
+      "folders_id": {
+        "id": "folders_id",
+        "tableId": "folders_table",
+        "name": "id",
+        "comment": "폴더 고유 ID",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 11,
+        "ui": {
+          "keys": 1,
+          "widthName": 60,
+          "widthComment": 62,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1774010688368,
+          "createAt": 1774010688368
+        }
+      },
+      "folders_owner_id": {
+        "id": "folders_owner_id",
+        "tableId": "folders_table",
+        "name": "owner_id",
+        "comment": "소유자 ID (FK)",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 10,
+        "ui": {
+          "keys": 2,
+          "widthName": 60,
+          "widthComment": 76,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1774010688368,
+          "createAt": 1774010688368
+        }
+      },
+      "folders_parent_id": {
+        "id": "folders_parent_id",
+        "tableId": "folders_table",
+        "name": "parent_id",
+        "comment": "부모 폴더 ID (FK, nullable)",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 2,
+        "ui": {
+          "keys": 2,
+          "widthName": 60,
+          "widthComment": 140,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1774010688368,
+          "createAt": 1774010688368
+        }
+      },
+      "folders_name": {
+        "id": "folders_name",
+        "tableId": "folders_table",
+        "name": "name",
+        "comment": "폴더 이름",
+        "dataType": "VARCHAR(120)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 88,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1774010688368,
+          "createAt": 1774010688368
+        }
+      },
+      "folders_created_at": {
+        "id": "folders_created_at",
+        "tableId": "folders_table",
+        "name": "created_at",
+        "comment": "생성일시",
+        "dataType": "DATETIME",
+        "default": "CURRENT_TIMESTAMP",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 63,
+          "widthComment": 60,
+          "widthDataType": 61,
+          "widthDefault": 133
+        },
+        "meta": {
+          "updateAt": 1774010688368,
+          "createAt": 1774010688368
+        }
+      },
+      "folders_updated_at": {
+        "id": "folders_updated_at",
+        "tableId": "folders_table",
+        "name": "updated_at",
+        "comment": "수정일시",
+        "dataType": "DATETIME",
+        "default": "CURRENT_TIMESTAMP",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 67,
+          "widthComment": 60,
+          "widthDataType": 61,
+          "widthDefault": 133
+        },
+        "meta": {
+          "updateAt": 1774010688368,
+          "createAt": 1774010688368
+        }
+      },
+      "folders_deleted_at": {
+        "id": "folders_deleted_at",
+        "tableId": "folders_table",
+        "name": "deleted_at",
+        "comment": "삭제일시 (소프트 삭제)",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 62,
+          "widthComment": 111,
+          "widthDataType": 61,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1774010688368,
+          "createAt": 1774010688368
+        }
+      },
+      "blogs_folder_id": {
+        "id": "blogs_folder_id",
+        "tableId": "blogs_table",
+        "name": "folder_id",
+        "comment": "소속 폴더 ID (FK, nullable)",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 2,
+        "ui": {
+          "keys": 2,
+          "widthName": 60,
+          "widthComment": 140,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1774010688368,
+          "createAt": 1774010688368
+        }
       }
     },
     "relationshipEntities": {
@@ -1246,18 +1447,18 @@
           "columnIds": [
             "users_id"
           ],
-          "x": 10587.1935,
-          "y": 9415.5367,
-          "direction": 1
+          "x": 9831.06651224878,
+          "y": 9062.226063345455,
+          "direction": 4
         },
         "end": {
           "tableId": "blogs_table",
           "columnIds": [
             "blogs_author_id"
           ],
-          "x": 10552.0333,
-          "y": 9221.2694,
-          "direction": 8
+          "x": 9783.065,
+          "y": 8917.7145,
+          "direction": 2
         },
         "meta": {
           "updateAt": 1699999999999,
@@ -1274,17 +1475,17 @@
           "columnIds": [
             "blogs_id"
           ],
-          "x": 10202.5333,
-          "y": 9085.2694,
-          "direction": 1
+          "x": 9419.065,
+          "y": 8991.7145,
+          "direction": 8
         },
         "end": {
           "tableId": "blog_revisions_table",
           "columnIds": [
             "blog_revisions_blog_id"
           ],
-          "x": 10128.5463,
-          "y": 9085.7936,
+          "x": 9247.58706632632,
+          "y": 9351.323484958277,
           "direction": 2
         },
         "meta": {
@@ -1302,18 +1503,18 @@
           "columnIds": [
             "users_id"
           ],
-          "x": 10587.1935,
-          "y": 9539.5367,
-          "direction": 1
+          "x": 10317.06651224878,
+          "y": 9124.226063345455,
+          "direction": 2
         },
         "end": {
           "tableId": "rag_queries_table",
           "columnIds": [
             "rag_queries_user_id"
           ],
-          "x": 10510.9573,
-          "y": 9539.6758,
-          "direction": 2
+          "x": 10473.973595916268,
+          "y": 8972.512806723209,
+          "direction": 8
         },
         "meta": {
           "updateAt": 1699999999999,
@@ -1330,17 +1531,17 @@
           "columnIds": [
             "users_id"
           ],
-          "x": 10911.1935,
-          "y": 9601.5367,
-          "direction": 8
+          "x": 10317.06651224878,
+          "y": 9248.226063345455,
+          "direction": 2
         },
         "end": {
           "tableId": "resume_jobs_table",
           "columnIds": [
             "resume_jobs_user_id"
           ],
-          "x": 10961.2452,
-          "y": 9776.4935,
+          "x": 10516.4905,
+          "y": 9339.5943,
           "direction": 1
         },
         "meta": {
@@ -1358,18 +1559,18 @@
           "columnIds": [
             "users_id"
           ],
-          "x": 11235.1935,
-          "y": 9415.5367,
-          "direction": 2
+          "x": 9669.06651224878,
+          "y": 9186.226063345455,
+          "direction": 1
         },
         "end": {
           "tableId": "user_oauth_accounts_table",
           "columnIds": [
             "uoa_user_id"
           ],
-          "x": 11335,
-          "y": 9199,
-          "direction": 1
+          "x": 9500.99352041948,
+          "y": 9494.32822127397,
+          "direction": 4
         },
         "meta": {
           "updateAt": 0,
@@ -1386,22 +1587,106 @@
           "columnIds": [
             "users_id"
           ],
-          "x": 11235.1935,
-          "y": 9539.5367,
-          "direction": 2
+          "x": 9993.06651224878,
+          "y": 9310.226063345455,
+          "direction": 8
         },
         "end": {
           "tableId": "user_password_credentials_table",
           "columnIds": [
             "upc_user_id"
           ],
-          "x": 11319,
-          "y": 9540,
-          "direction": 1
+          "x": 10138.2686,
+          "y": 9500.1276,
+          "direction": 4
         },
         "meta": {
           "updateAt": 0,
           "createAt": 0
+        }
+      },
+      "rel_users_folders": {
+        "id": "rel_users_folders",
+        "identification": true,
+        "relationshipType": 4,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "users_table",
+          "columnIds": [
+            "users_id"
+          ],
+          "x": 10155.06651224878,
+          "y": 9062.226063345455,
+          "direction": 4
+        },
+        "end": {
+          "tableId": "folders_table",
+          "columnIds": [
+            "folders_owner_id"
+          ],
+          "x": 10154.5503,
+          "y": 8631.987,
+          "direction": 8
+        },
+        "meta": {
+          "updateAt": 1774010688368,
+          "createAt": 1774010688368
+        }
+      },
+      "rel_folders_parent": {
+        "id": "rel_folders_parent",
+        "identification": true,
+        "relationshipType": 4,
+        "startRelationshipType": 1,
+        "start": {
+          "tableId": "folders_table",
+          "columnIds": [
+            "folders_id"
+          ],
+          "x": 10280.3003,
+          "y": 8407.987,
+          "direction": 4
+        },
+        "end": {
+          "tableId": "folders_table",
+          "columnIds": [
+            "folders_parent_id"
+          ],
+          "x": 10300.3003,
+          "y": 8427.987,
+          "direction": 2
+        },
+        "meta": {
+          "updateAt": 1774010688368,
+          "createAt": 1774010688368
+        }
+      },
+      "rel_folders_blogs": {
+        "id": "rel_folders_blogs",
+        "identification": true,
+        "relationshipType": 4,
+        "startRelationshipType": 1,
+        "start": {
+          "tableId": "folders_table",
+          "columnIds": [
+            "folders_id"
+          ],
+          "x": 9863.0503,
+          "y": 8631.987,
+          "direction": 8
+        },
+        "end": {
+          "tableId": "blogs_table",
+          "columnIds": [
+            "blogs_folder_id"
+          ],
+          "x": 9783.065,
+          "y": 8769.7145,
+          "direction": 2
+        },
+        "meta": {
+          "updateAt": 1774010688368,
+          "createAt": 1774010688368
         }
       }
     },
