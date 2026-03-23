@@ -1,4 +1,4 @@
-package com.keepgoing.keepgoing.post.domain;
+package com.keepgoing.keepgoing.note.domain;
 
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
-class PostTest {
+class NoteTest {
 
     // ========== create ==========
     @Test
@@ -24,7 +24,7 @@ class PostTest {
         String content = "내용";
 
         // when
-        Post post = Post.create(
+        Note note = Note.create(
                 author,
                 title,
                 content,
@@ -33,11 +33,11 @@ class PostTest {
         );
 
         // then
-        assertThat(post.getAuthor()).isEqualTo(author);
-        assertThat(post.getTitle()).isEqualTo(title);
-        assertThat(post.getContent()).isEqualTo(content);
-        assertThat(post.getVisibility()).isEqualTo(PostVisibility.PRIVATE); // null일 때 기본값
-        assertThat(post.isAiCollectable()).isTrue();
+        assertThat(note.getAuthor()).isEqualTo(author);
+        assertThat(note.getTitle()).isEqualTo(title);
+        assertThat(note.getContent()).isEqualTo(content);
+        assertThat(note.getVisibility()).isEqualTo(NoteVisibility.PRIVATE); // null일 때 기본값
+        assertThat(note.isAiCollectable()).isTrue();
     }
 
     @Test
@@ -52,11 +52,11 @@ class PostTest {
 
         String title = "제목";
         String content = "내용";
-        PostVisibility visibility = null;
+        NoteVisibility visibility = null;
         boolean aiCollectable = false;
 
         //when
-        Post post = Post.create(
+        Note note = Note.create(
                 author,
                 title,
                 content,
@@ -65,11 +65,11 @@ class PostTest {
         );
 
         //then
-        assertThat(post.getAuthorId()).isEqualTo(1L);
-        assertThat(post.getTitle()).isEqualTo(title);
-        assertThat(post.getContent()).isEqualTo(content);
-        assertThat(post.getVisibility()).isEqualTo(PostVisibility.PRIVATE);
-        assertThat(post.isAiCollectable()).isFalse();
+        assertThat(note.getAuthorId()).isEqualTo(1L);
+        assertThat(note.getTitle()).isEqualTo(title);
+        assertThat(note.getContent()).isEqualTo(content);
+        assertThat(note.getVisibility()).isEqualTo(NoteVisibility.PRIVATE);
+        assertThat(note.isAiCollectable()).isFalse();
     }
 
     @Test
@@ -84,15 +84,15 @@ class PostTest {
 
         String title = "제목";
         String content = "내용";
-        PostVisibility visibility = PostVisibility.PUBLIC;
+        NoteVisibility visibility = NoteVisibility.PUBLIC;
         boolean aiCollectable = false;
 
         //when
-        Post post = Post.create(author, title, content, visibility, aiCollectable);
+        Note note = Note.create(author, title, content, visibility, aiCollectable);
 
         //then
-        assertThat(post.getVisibility()).isEqualTo(PostVisibility.PUBLIC);
-        assertThat(post.isAiCollectable()).isFalse();
+        assertThat(note.getVisibility()).isEqualTo(NoteVisibility.PUBLIC);
+        assertThat(note.isAiCollectable()).isFalse();
     }
 
     // ========== update ==========
@@ -104,26 +104,26 @@ class PostTest {
                 .id(1L)
                 .build();
 
-        Post post = Post.create(
+        Note note = Note.create(
                 author,
                 "old title",
                 "old content",
-                PostVisibility.PRIVATE,
+                NoteVisibility.PRIVATE,
                 true
         );
 
         // when
-        post.update(
+        note.update(
                 "new title",
                 "new content",
-                PostVisibility.PUBLIC,
+                NoteVisibility.PUBLIC,
                 false);
 
         // then
-        assertThat(post.getTitle()).isEqualTo("new title");
-        assertThat(post.getContent()).isEqualTo("new content");
-        assertThat(post.getVisibility()).isEqualTo(PostVisibility.PUBLIC);
-        assertThat(post.isAiCollectable()).isFalse();
+        assertThat(note.getTitle()).isEqualTo("new title");
+        assertThat(note.getContent()).isEqualTo("new content");
+        assertThat(note.getVisibility()).isEqualTo(NoteVisibility.PUBLIC);
+        assertThat(note.isAiCollectable()).isFalse();
     }
 
     // ========== softDelete ==========
@@ -137,20 +137,20 @@ class PostTest {
                 .name("테스트유저")
                 .build();
 
-        Post post = Post.create(
+        Note note = Note.create(
                 author,
                 "title",
                 "content",
-                PostVisibility.PRIVATE,
+                NoteVisibility.PRIVATE,
                 true
         );
 
         // when
-        post.softDelete();
+        note.softDelete();
 
         // then
-        assertThat(post.isDeleted()).isTrue();
-        assertThat(post.getDeletedAt()).isNotNull();
+        assertThat(note.isDeleted()).isTrue();
+        assertThat(note.getDeletedAt()).isNotNull();
     }
 
     // ========== validateAuthor ==========
@@ -164,18 +164,18 @@ class PostTest {
                 .name("작성자")
                 .build();
 
-        Post post = Post.create(
+        Note note = Note.create(
                 author,
                 "title",
                 "content",
-                PostVisibility.PRIVATE,
+                NoteVisibility.PRIVATE,
                 true
         );
 
         // when & then
-        assertThatThrownBy(() -> post.validateAuthor(2L))
+        assertThatThrownBy(() -> note.validateAuthor(2L))
                 .isInstanceOf(BusinessException.class)
-                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.POST_ACCESS_DENIED);
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_ACCESS_DENIED);
     }
 
     // ========== isAuthor ==========
@@ -189,17 +189,17 @@ class PostTest {
                 .name("작성자")
                 .build();
 
-        Post post = Post.create(
+        Note note = Note.create(
                 author,
                 "title",
                 "content",
-                PostVisibility.PRIVATE,
+                NoteVisibility.PRIVATE,
                 true
         );
 
         // expect
-        assertThat(post.isAuthor(1L)).isTrue();
-        assertThat(post.isAuthor(2L)).isFalse();
+        assertThat(note.isAuthor(1L)).isTrue();
+        assertThat(note.isAuthor(2L)).isFalse();
     }
 
     // ========== getAuthorId ==========
@@ -211,14 +211,14 @@ class PostTest {
                 .id(1L)
                 .build();
 
-        Post post = Post.create(
+        Note note = Note.create(
                 author,
                 "title",
                 "content",
-                PostVisibility.PRIVATE,
+                NoteVisibility.PRIVATE,
                 true);
 
         // when & then
-        assertThat(post.getAuthorId()).isEqualTo(1L);
+        assertThat(note.getAuthorId()).isEqualTo(1L);
     }
 }

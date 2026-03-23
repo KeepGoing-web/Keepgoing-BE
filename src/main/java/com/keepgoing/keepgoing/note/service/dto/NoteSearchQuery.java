@@ -1,24 +1,24 @@
-package com.keepgoing.keepgoing.post.service.dto;
+package com.keepgoing.keepgoing.note.service.dto;
 
 import org.springframework.data.domain.Pageable;
 
-public record PostSearchQuery(
+public record NoteSearchQuery(
         String keyword,
         Pageable pageable,
-        PostSearchMode mode
+        NoteSearchMode mode
 ) {
-    public PostSearchQuery {
+    public NoteSearchQuery {
         if (keyword != null) {
             keyword = keyword.trim();
         }
 
         if (mode == null) {
-            mode = PostSearchMode.SCORE;
+            mode = NoteSearchMode.SCORE;
         }
     }
 
     // search LIKE 편의 생성자
-    public PostSearchQuery(String keyword, Pageable pageable) {
+    public NoteSearchQuery(String keyword, Pageable pageable) {
         this(keyword, pageable, null);
     }
 

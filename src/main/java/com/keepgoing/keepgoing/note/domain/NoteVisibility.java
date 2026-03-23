@@ -1,4 +1,4 @@
-package com.keepgoing.keepgoing.post.domain;
+package com.keepgoing.keepgoing.note.domain;
 
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -12,7 +12,7 @@ import lombok.RequiredArgsConstructor;
  */
 @Getter
 @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
-public enum PostVisibility {
+public enum NoteVisibility {
 
     PUBLIC("모두에게 공개"),
     PRIVATE("작성자만"),

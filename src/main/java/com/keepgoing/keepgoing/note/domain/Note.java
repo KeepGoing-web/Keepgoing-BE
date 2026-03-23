@@ -1,4 +1,4 @@
-package com.keepgoing.keepgoing.post.domain;
+package com.keepgoing.keepgoing.note.domain;
 
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
@@ -12,14 +12,14 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "posts")
+@Table(name = "notes")
 @EntityListeners(AuditingEntityListener.class)
 @SQLRestriction("deleted_at IS NULL")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
-public class Post {
+public class Note {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -40,7 +40,7 @@ public class Post {
     @Enumerated(EnumType.STRING)
     @Column(name = "visibility", nullable = false, length = 20)
     @Builder.Default
-    private PostVisibility visibility = PostVisibility.PRIVATE;
+    private NoteVisibility visibility = NoteVisibility.PRIVATE;
 
     @Column(name = "ai_collectable", nullable = false)
     @Builder.Default
@@ -62,10 +62,10 @@ public class Post {
      * 글 생성 팩토리 메서드
      * - visibility가 null이면 기본값 PRIVATE 사용
      */
-    public static Post create(User author,
+    public static Note create(User author,
                               String title,
                               String content,
-                              PostVisibility visibility,
+                              NoteVisibility visibility,
                               Boolean aiCollectable) {
 
         if (author == null || author.getId() == null) {
@@ -78,13 +78,13 @@ public class Post {
             throw new BusinessException(ErrorCode.INVALID_INPUT);
         }
 
-        PostVisibility finalVisibility =
-                (visibility != null) ? visibility : PostVisibility.PRIVATE;
+        NoteVisibility finalVisibility =
+                (visibility != null) ? visibility : NoteVisibility.PRIVATE;
 
         boolean finalAiCollectable =
                 (aiCollectable != null) && aiCollectable;
 
-        return Post.builder()
+        return Note.builder()
                 .author(author)
                 .title(title)
                 .content(content)
@@ -98,7 +98,7 @@ public class Post {
      */
     public void update(String title,
                        String content,
-                       PostVisibility visibility,
+                       NoteVisibility visibility,
                        boolean aiCollectable) {
         this.title = title;
         this.content = content;
@@ -127,7 +127,7 @@ public class Post {
      */
     public void validateAuthor(Long authorId) {
         if (!isAuthor(authorId)) {
-            throw new BusinessException(ErrorCode.POST_ACCESS_DENIED);
+            throw new BusinessException(ErrorCode.NOTE_ACCESS_DENIED);
         }
     }
 

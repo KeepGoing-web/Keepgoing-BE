@@ -1,11 +1,11 @@
-package com.keepgoing.keepgoing.post.controller.dto;
+package com.keepgoing.keepgoing.note.controller.dto;
 
-import com.keepgoing.keepgoing.post.domain.PostVisibility;
-import com.keepgoing.keepgoing.post.service.dto.PostCreateCommand;
+import com.keepgoing.keepgoing.note.domain.NoteVisibility;
+import com.keepgoing.keepgoing.note.service.dto.NoteCreateCommand;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-public record PostCreateRequest(
+public record NoteCreateRequest(
 
         @NotBlank
         @Size(max = 200)
@@ -14,14 +14,14 @@ public record PostCreateRequest(
         @NotBlank
         String content,
 
-        PostVisibility visibility,
+        NoteVisibility visibility,
 
         Boolean aiCollectable
 ) {
-    public PostCreateRequest {
+    public NoteCreateRequest {
         // visibility가 요청에 없거나 null이면 기본값 PRIVATE
         if (visibility == null) {
-            visibility = PostVisibility.PRIVATE;
+            visibility = NoteVisibility.PRIVATE;
         }
         // aiCollectable이 요청에 없거나 null이면 기본값 false
         if (aiCollectable == null) {
@@ -29,8 +29,8 @@ public record PostCreateRequest(
         }
     }
 
-    public PostCreateCommand toCommand(Long userId) {
-        return new PostCreateCommand(
+    public NoteCreateCommand toCommand(Long userId) {
+        return new NoteCreateCommand(
                 userId,
                 this.title,
                 this.content,
