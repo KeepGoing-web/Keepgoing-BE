@@ -110,7 +110,9 @@ public class PostController {
     /**
      * 내 포스트 검색 (LIKE baseline)
      * - FULLTEXT와 비교 측정을 위해 별도 endpoint로 유지
-     * - 정렬은 JPQL ORDER BY(createdAt DESC)로 고정(외부 sort 주입 방지)
+     * - 정렬/페이지는 Controller에서 safePageableUnsorted로 고정한다.
+     * - 따라서 Repository 쿼리 자체에 ORDER BY(createdAt DESC)를 명시해 결과 정렬을 보장한다.
+     * - keyword는 앞/뒤 공백을 제거(trim)하여 FULLTEXT와 입력 정규화 정책을 일치시킨다.
      */
     @GetMapping("/me/search-like")
     public ResponseEntity<ApiResponse<PagedResponse<PostSummaryResponse>>> searchMyPostsLike(
@@ -123,8 +125,7 @@ public class PostController {
 
         Page<PostSummaryResult> page = postService.searchMyPostsLike(
                 userId,
-                keyword,
-                safePageable
+                new PostSearchQuery(keyword, safePageable)
         );
 
         List<PostSummaryResponse> contents = page.getContent().stream()
@@ -147,8 +148,6 @@ public class PostController {
     ) {
         Pageable safePageable = safePageableUnsorted(pageable);
 
-        log.info("searchMyPosts userId={}", userId);
-
         Page<PostSummaryResult> page = postService.searchMyPosts(
                 userId,
                 new PostSearchQuery(keyword, safePageable, mode)
@@ -161,7 +160,7 @@ public class PostController {
     }
 
     /**
-     * 포스트 검색
+     * 전체 포스트 검색
      */
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<PagedResponse<PostSummaryResponse>>> search(

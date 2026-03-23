@@ -497,4 +497,58 @@ public class PostServiceTest {
         verifyNoMoreInteractions(postRepository);
         verifyNoInteractions(userRepository);
     }
+
+    // ========== searchMyPostsLike (LIKE baseline) ==========
+
+    @Test
+    @DisplayName("searchMyPostsLike: keyword 앞뒤 공백은 trim되어 검색된다")
+    void searchMyPostsLike_trimsKeywordBeforeSearching() {
+        // given
+        Long userId = 1L;
+        User user = createUser(userId);
+        Post post = Post.create(user, "spring 제목", "내용", PostVisibility.PUBLIC, true);
+
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Post> postPage = new PageImpl<>(java.util.List.of(post), pageable, 1);
+
+        PostSearchQuery query = new PostSearchQuery("  spring  ", pageable);
+
+        given(postRepository.searchMyPostsLike(eq(userId), eq("spring"), any(Pageable.class)))
+                .willReturn(postPage);
+
+        // when
+        Page<PostSummaryResult> result = postService.searchMyPostsLike(userId, query);
+
+        // then
+        assertThat(result.getTotalElements()).isEqualTo(1);
+
+        ArgumentCaptor<String> keywordCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+
+        verify(postRepository).searchMyPostsLike(eq(userId), keywordCaptor.capture(), pageableCaptor.capture());
+        assertThat(keywordCaptor.getValue()).isEqualTo("spring");
+        assertThat(pageableCaptor.getValue()).isEqualTo(pageable);
+
+        verifyNoMoreInteractions(postRepository);
+        verifyNoInteractions(userRepository);
+    }
+
+    @Test
+    @DisplayName("searchMyPostsLike: keyword가 비어있으면 POST_SEARCH_KEYWORD_REQUIRED 예외")
+    void searchMyPostsLike_throwsWhenKeywordBlank() {
+        // given
+        Long userId = 1L;
+        Pageable pageable = PageRequest.of(0, 10);
+        PostSearchQuery query = new PostSearchQuery("   ", pageable);
+
+        // when & then
+        assertThatThrownBy(() -> postService.searchMyPostsLike(userId, query))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.POST_SEARCH_KEYWORD_REQUIRED);
+
+        verifyNoInteractions(postRepository);
+        verifyNoInteractions(userRepository);
+    }
+
+
 }

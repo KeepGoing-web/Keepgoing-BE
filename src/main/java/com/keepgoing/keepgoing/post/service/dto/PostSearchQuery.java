@@ -11,9 +11,15 @@ public record PostSearchQuery(
         if (keyword != null) {
             keyword = keyword.trim();
         }
+
         if (mode == null) {
             mode = PostSearchMode.SCORE;
         }
+    }
+
+    // search LIKE 편의 생성자
+    public PostSearchQuery(String keyword, Pageable pageable) {
+        this(keyword, pageable, null);
     }
 
     public boolean hasKeyword() {

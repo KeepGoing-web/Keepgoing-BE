@@ -91,21 +91,22 @@ public class PostService {
     /**
      * 내 글 검색 (LIKE baseline)
      * - FULLTEXT와 성능 비교를 위한 baseline
-     * - 정렬/페이지는 Controller에서 safePageableUnsorted로 고정하고,
-     *   Repository JPQL의 ORDER BY(createdAt DESC)로 결과 정렬을 보장한다.
+     * - 정렬/페이지는 Controller에서 safePageableUnsorted로 고정한다.
+     * - 따라서 Repository 쿼리 자체에 ORDER BY(createdAt DESC)를 명시해 결과 정렬을 보장한다.
+     * - keyword는 앞/뒤 공백을 제거(trim)하여 FULLTEXT와 입력 정규화 정책을 일치시킨다.
      */
     @Transactional(readOnly = true)
-    public Page<PostSummaryResult> searchMyPostsLike(Long userId, String keyword, Pageable pageable) {
-        if (keyword == null || keyword.isBlank()) {
+    public Page<PostSummaryResult> searchMyPostsLike(Long userId, PostSearchQuery query) {
+        if (query == null || !query.hasKeyword()) {
             throw new BusinessException(ErrorCode.POST_SEARCH_KEYWORD_REQUIRED);
         }
 
-        return postRepository.searchMyPostsLike(userId, keyword, pageable)
+        return postRepository.searchMyPostsLike(userId, query.keyword(), query.pageable())
                 .map(this::toSummaryResult);
     }
 
     /**
-     * 내 글 검색
+     * 내 글 검색(FULLTEXT SCORE/NEWEST)
      */
     @Transactional(readOnly = true)
     public Page<PostSummaryResult> searchMyPosts(Long userId, PostSearchQuery query) {

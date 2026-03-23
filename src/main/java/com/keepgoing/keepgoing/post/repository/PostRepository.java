@@ -45,6 +45,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             WHERE p.author.id = :authorId
               AND (p.title LIKE CONCAT('%', :keyword, '%')
                    OR p.content LIKE CONCAT('%', :keyword, '%'))
+              ORDER BY p.createdAt DESC, p.id DESC
             """)
     Page<Post> searchMyPostsLike(@Param("authorId") Long authorId,
                                  @Param("keyword") String keyword,
@@ -59,15 +60,16 @@ public interface PostRepository extends JpaRepository<Post, Long> {
                     AND p.deleted_at IS NULL
                     AND MATCH(p.title, p.content) AGAINST (:keyword IN BOOLEAN MODE)
                 ORDER BY MATCH(p.title, p.content) AGAINST (:keyword IN BOOLEAN MODE) DESC,
-                        p.created_at DESC
-    """,
+                        p.created_at DESC,
+                        p.id DESC
+                """,
             countQuery = """
                 SELECT COUNT(*)
                 FROM posts p
                 WHERE p.author_id = :authorId
                     AND p.deleted_at IS NULL
                     AND MATCH(p.title, p.content) AGAINST (:keyword IN BOOLEAN MODE)
-    """,
+                """,
             nativeQuery = true
     )
     Page<Post> searchMyPostsFullTextByScore(@Param("authorId") Long authorId,
@@ -81,7 +83,8 @@ public interface PostRepository extends JpaRepository<Post, Long> {
                 WHERE p.author_id = :authorId
                     AND p.deleted_at IS NULL
                     AND MATCH(p.title, p.content) AGAINST (:keyword IN BOOLEAN MODE)
-                ORDER BY p.created_at DESC
+                ORDER BY p.created_at DESC,
+                        p.id DESC
                 """,
             countQuery = """
                 SELECT COUNT(*)
