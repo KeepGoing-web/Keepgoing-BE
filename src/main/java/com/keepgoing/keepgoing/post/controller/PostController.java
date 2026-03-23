@@ -10,6 +10,7 @@ import com.keepgoing.keepgoing.post.service.PostService;
 import com.keepgoing.keepgoing.post.service.dto.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -25,6 +26,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/posts")
 @RequiredArgsConstructor
+@Slf4j
 public class PostController {
 
     private static final int MAX_PAGE_SIZE = 100;
@@ -106,10 +108,14 @@ public class PostController {
     }
 
     /**
-     * 내 포스트 검색
+     * 내 포스트 검색 (LIKE baseline)
+     * - FULLTEXT와 비교 측정을 위해 별도 endpoint로 유지
+     * - 정렬/페이지는 Controller에서 safePageableUnsorted로 고정한다.
+     * - 따라서 Repository 쿼리 자체에 ORDER BY(createdAt DESC)를 명시해 결과 정렬을 보장한다.
+     * - keyword는 앞/뒤 공백을 제거(trim)하여 FULLTEXT와 입력 정규화 정책을 일치시킨다.
      */
-    @GetMapping("/me/search")
-    public ResponseEntity<ApiResponse<PagedResponse<PostSummaryResponse>>> searchMyPosts(
+    @GetMapping("/me/search-like")
+    public ResponseEntity<ApiResponse<PagedResponse<PostSummaryResponse>>> searchMyPostsLike(
             @RequestParam String keyword,
             @PageableDefault(size = 10)
             Pageable pageable,
@@ -117,7 +123,7 @@ public class PostController {
     ) {
         Pageable safePageable = safePageableUnsorted(pageable);
 
-        Page<PostSummaryResult> page = postService.searchMyPosts(
+        Page<PostSummaryResult> page = postService.searchMyPostsLike(
                 userId,
                 new PostSearchQuery(keyword, safePageable)
         );
@@ -130,18 +136,43 @@ public class PostController {
     }
 
     /**
-     * 포스트 검색
+     * 내 포스트 검색(FULLTEXT)
+     */
+    @GetMapping("/me/search")
+    public ResponseEntity<ApiResponse<PagedResponse<PostSummaryResponse>>> searchMyPosts(
+            @RequestParam String keyword,
+            @RequestParam(defaultValue = "SCORE") PostSearchMode mode,
+            @PageableDefault(size = 10)
+            Pageable pageable,
+            @AuthenticationPrincipal Long userId
+    ) {
+        Pageable safePageable = safePageableUnsorted(pageable);
+
+        Page<PostSummaryResult> page = postService.searchMyPosts(
+                userId,
+                new PostSearchQuery(keyword, safePageable, mode)
+        );
+
+        List<PostSummaryResponse> contents = page.getContent().stream()
+                .map(PostSummaryResponse::from)
+                .toList();
+        return ResponseEntity.ok(ApiResponse.success(PagedResponse.of(page, contents)));
+    }
+
+    /**
+     * 전체 포스트 검색
      */
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<PagedResponse<PostSummaryResponse>>> search(
             @RequestParam String keyword,
+            @RequestParam(defaultValue = "SCORE") PostSearchMode mode,
             @PageableDefault(size = 10)
             Pageable pageable
     ) {
         Pageable safePageable = safePageableUnsorted(pageable);
 
         Page<PostSummaryResult> page = postService.searchPost(
-                new PostSearchQuery(keyword, safePageable)
+                new PostSearchQuery(keyword, safePageable, mode)
         );
 
         List<PostSummaryResponse> contents = page.getContent().stream()
