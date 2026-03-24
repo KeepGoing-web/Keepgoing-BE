@@ -1,5 +1,6 @@
 package com.keepgoing.keepgoing.user.domain;
 
+import com.keepgoing.keepgoing.global.common.entity.BaseEntity;
 import com.keepgoing.keepgoing.user.domain.OAuthProvider;
 import jakarta.persistence.*;
 import lombok.*;
@@ -24,12 +25,11 @@ import java.time.LocalDateTime;
                 )
         }
 )
-@EntityListeners(AuditingEntityListener.class)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
-public class UserOAuthAccount {
+public class UserOAuthAccount extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -73,14 +73,6 @@ public class UserOAuthAccount {
      */
     @Column(name = "avatar_url", length = 500)
     private String avatarUrl;
-
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @LastModifiedDate
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
 
     // == 연관관계 편의 메서드 ==
 
