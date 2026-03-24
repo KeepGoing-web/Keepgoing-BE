@@ -30,72 +30,25 @@ public interface NoteRepository extends JpaRepository<Note, Long> {
     @EntityGraph(attributePaths = {"author"})
     List<Note> findByVisibilityOrderByCreatedAtDesc(NoteVisibility visibility);
 
+	// TODO: 기존 성능 최적화(Mysql 기반)을 단순 검색으로 전환했으므로 이를 Postgres에 맞게 전환하는 작업 필요
     // 전체 검색(derived query)
     @EntityGraph(attributePaths = {"author"})
-    Page<Note> findByTitleContainingOrContentContaining(
+    Page<Note> findByTitleContainingIgnoreCaseOrContentContainingIgnoreCase(
             String titleKeyword,
             String contentKeyword,
             Pageable pageable
     );
 
-    // 내 글 검색(작성자 조건 포함) Before: LIKE 검색
+    // 내 글 검색(작성자 조건 포함)
     @Query("""
-            SELECT p
-            FROM Note p
-            WHERE p.author.id = :authorId
-              AND (p.title LIKE CONCAT('%', :keyword, '%')
-                   OR p.content LIKE CONCAT('%', :keyword, '%'))
-              ORDER BY p.createdAt DESC, p.id DESC
+            SELECT n
+            FROM Note n
+            WHERE n.author.id = :authorId
+              AND (LOWER(n.title) LIKE CONCAT('%', LOWER(:keyword), '%')
+                   OR LOWER(n.content) LIKE CONCAT('%', LOWER(:keyword), '%'))
+              ORDER BY n.createdAt DESC, n.id DESC
             """)
-    Page<Note> searchMyNotesLike(@Param("authorId") Long authorId,
-                                 @Param("keyword") String keyword,
-                                 Pageable pageable);
-
-    // 내 글 검색(작성자 조건 포함) After: Fulltext 검색
-    @Query(
-            value = """
-                SELECT n.*
-                FROM notes n
-                WHERE n.author_id = :authorId
-                    AND n.deleted_at IS NULL
-                    AND MATCH(n.title, n.content) AGAINST (:keyword IN BOOLEAN MODE)
-                ORDER BY MATCH(n.title, n.content) AGAINST (:keyword IN BOOLEAN MODE) DESC,
-                        n.created_at DESC,
-                        n.id DESC
-                """,
-            countQuery = """
-                SELECT COUNT(*)
-                FROM notes n
-                WHERE n.author_id = :authorId
-                    AND n.deleted_at IS NULL
-                    AND MATCH(n.title, n.content) AGAINST (:keyword IN BOOLEAN MODE)
-                """,
-            nativeQuery = true
-    )
-    Page<Note> searchMyNotesFullTextByScore(@Param("authorId") Long authorId,
-                                     @Param("keyword") String keyword,
-                                     Pageable pageable);
-
-    @Query(
-            value = """
-                SELECT n.*
-                FROM notes n
-                WHERE n.author_id = :authorId
-                    AND n.deleted_at IS NULL
-                    AND MATCH(n.title, n.content) AGAINST (:keyword IN BOOLEAN MODE)
-                ORDER BY n.created_at DESC,
-                        n.id DESC
-                """,
-            countQuery = """
-                SELECT COUNT(*)
-                FROM notes n
-                WHERE n.author_id = :authorId
-                    AND n.deleted_at IS NULL
-                    AND MATCH(n.title, n.content) AGAINST (:keyword IN BOOLEAN MODE)
-                """,
-            nativeQuery = true
-    )
-    Page<Note> searchMyNotesFullTextByNewest(@Param("authorId") Long authorId,
-                                             @Param("keyword") String keyword,
-                                             Pageable pageable);
+    Page<Note> searchMyNotes(@Param("authorId") Long authorId,
+                             @Param("keyword") String keyword,
+                             Pageable pageable);
 }

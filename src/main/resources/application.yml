@@ -1,6 +1,8 @@
 spring:
   application:
     name: keepgoing
+  flyway:
+    enabled: false
   security:
     oauth2:
       client:
