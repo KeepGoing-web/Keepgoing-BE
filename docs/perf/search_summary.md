@@ -1,3 +1,5 @@
+> **[Archive]** 이 문서는 MySQL 8.0 FULLTEXT 기반 벤치마크입니다. PostgreSQL 전환(#55) 이후 FULLTEXT 검색이 제거되어 현재 API와 일치하지 않습니다. 벤치마크 방법론은 추후 PostgreSQL 성능 측정 시 참고할 수 있습니다.
+
 # 결론: 내 글 검색 성능 개선 요약 (LIKE vs FULLTEXT/SCORE vs FULLTEXT/NEWEST)
 
 ## 한 줄 결론
