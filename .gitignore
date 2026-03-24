@@ -42,9 +42,10 @@ application-oauth.yml
 docs/perf/results/
 
 .omx/
+.omc/
 .agents/
 .claude/
-.omc/
 
-.classpath
 bin/
+.classpath
+.factorypath

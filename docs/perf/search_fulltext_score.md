@@ -1,3 +1,5 @@
+> **[Archive]** MySQL 8.0 FULLTEXT 기반 벤치마크. PostgreSQL 전환(#55) 이후 현재 API와 일치하지 않음.
+
 # Improved: 내 글 검색 성능 (MySQL, FULLTEXT by SCORE)
 
 ## 목적

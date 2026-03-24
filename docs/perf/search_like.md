@@ -1,3 +1,5 @@
+> **[Archive]** MySQL 8.0 LIKE 기반 벤치마크. PostgreSQL 전환(#55) 이후 검색 방식이 변경됨.
+
 # Baseline: 내 글 검색 성능 (MySQL, LIKE baseline)
 
 ## 목적

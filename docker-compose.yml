@@ -1,21 +1,17 @@
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: keepgoing-mysql
+  postgres:
+    image: postgres:17-alpine
+    container_name: keepgoing-postgres
     restart: unless-stopped
     ports:
-      - "3306:3306"
+      - "5432:5432"
     environment:
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       TZ: Asia/Seoul
-    command: >
-      --character-set-server=utf8mb4
-      --collation-server=utf8mb4_0900_ai_ci
     volumes:
-      - keepgoing-mysql-data:/var/lib/mysql
+      - keepgoing-postgres-data:/var/lib/postgresql/data
 
 volumes:
-  keepgoing-mysql-data:
+  keepgoing-postgres-data:

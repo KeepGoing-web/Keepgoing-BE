@@ -9,7 +9,6 @@ import com.keepgoing.keepgoing.note.controller.dto.NoteUpdateRequest;
 import com.keepgoing.keepgoing.note.service.NoteService;
 import com.keepgoing.keepgoing.note.service.dto.NoteCreateCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteDetailResult;
-import com.keepgoing.keepgoing.note.service.dto.NoteSearchMode;
 import com.keepgoing.keepgoing.note.service.dto.NoteSearchQuery;
 import com.keepgoing.keepgoing.note.service.dto.NoteSummaryResult;
 import com.keepgoing.keepgoing.note.service.dto.NoteUpdateCommand;
@@ -121,14 +120,9 @@ public class NoteController {
 
     /**
      * 내 노트 검색
-     * 내 포스트 검색 (LIKE baseline)
-     * - FULLTEXT와 비교 측정을 위해 별도 endpoint로 유지
-     * - 정렬/페이지는 Controller에서 safePageableUnsorted로 고정한다.
-     * - 따라서 Repository 쿼리 자체에 ORDER BY(createdAt DESC)를 명시해 결과 정렬을 보장한다.
-     * - keyword는 앞/뒤 공백을 제거(trim)하여 FULLTEXT와 입력 정규화 정책을 일치시킨다.
      */
-    @GetMapping("/me/search-like")
-    public ResponseEntity<ApiResponse<PagedResponse<NoteSummaryResponse>>> searchMyNotesLike(
+    @GetMapping("/me/search")
+    public ResponseEntity<ApiResponse<PagedResponse<NoteSummaryResponse>>> searchMyNotes(
             @RequestParam String keyword,
             @PageableDefault(size = 10)
             Pageable pageable,
@@ -136,7 +130,7 @@ public class NoteController {
     ) {
         Pageable safePageable = safePageableUnsorted(pageable);
 
-        Page<NoteSummaryResult> page = noteService.searchMyNotesLike(
+        Page<NoteSummaryResult> page = noteService.searchMyNotes(
                 userId,
                 new NoteSearchQuery(keyword, safePageable)
         );
@@ -149,43 +143,18 @@ public class NoteController {
     }
 
     /**
-     * 내 포스트 검색(FULLTEXT)
-     */
-    @GetMapping("/me/search")
-    public ResponseEntity<ApiResponse<PagedResponse<NoteSummaryResponse>>> searchMyNotes(
-            @RequestParam String keyword,
-            @RequestParam(defaultValue = "SCORE") NoteSearchMode mode,
-            @PageableDefault(size = 10)
-            Pageable pageable,
-            @AuthenticationPrincipal Long userId
-    ) {
-        Pageable safePageable = safePageableUnsorted(pageable);
-
-        Page<NoteSummaryResult> page = noteService.searchMyNotes(
-                userId,
-                new NoteSearchQuery(keyword, safePageable, mode)
-        );
-
-        List<NoteSummaryResponse> contents = page.getContent().stream()
-                .map(NoteSummaryResponse::from)
-                .toList();
-        return ResponseEntity.ok(ApiResponse.success(PagedResponse.of(page, contents)));
-    }
-
-    /**
      * 전체 노트 검색
      */
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<PagedResponse<NoteSummaryResponse>>> search(
             @RequestParam String keyword,
-            @RequestParam(defaultValue = "SCORE") NoteSearchMode mode,
             @PageableDefault(size = 10)
             Pageable pageable
     ) {
         Pageable safePageable = safePageableUnsorted(pageable);
 
         Page<NoteSummaryResult> page = noteService.searchNote(
-                new NoteSearchQuery(keyword, safePageable, mode)
+                new NoteSearchQuery(keyword, safePageable)
         );
 
         List<NoteSummaryResponse> contents = page.getContent().stream()
