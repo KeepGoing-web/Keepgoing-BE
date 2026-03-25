@@ -2,16 +2,16 @@ package com.keepgoing.keepgoing.folder.controller.dto;
 
 import com.keepgoing.keepgoing.folder.service.dto.FolderSummaryResult;
 
-public record CreateFolderResponse(
+public record FolderCreateResponse(
 		Long folderId,
-		Long parentFolderId,
+		Long parentId,
 		String name
 ) {
 
-	public static CreateFolderResponse from(FolderSummaryResult result) {
-		return new CreateFolderResponse(
+	public static FolderCreateResponse from(FolderSummaryResult result) {
+		return new FolderCreateResponse(
 				result.folderId(),
-				result.parentFolderId(),
+				result.parentId(),
 				result.name()
 		);
 	}

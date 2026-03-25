@@ -1,8 +1,9 @@
 package com.keepgoing.keepgoing.folder.service.dto;
 
-public record FolderResult(
+public record FolderSummaryResult(
 		Long folderId,
-		Long parentFolderId,
+		Long parentId,
 		String name
 ) {
+
 }

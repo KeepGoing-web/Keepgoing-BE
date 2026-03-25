@@ -1,10 +1,12 @@
 package com.keepgoing.keepgoing.folder.repository;
 
 import com.keepgoing.keepgoing.folder.domain.Folder;
-import java.util.List;
-import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import java.util.List;
+import java.util.Optional;
 
 public interface FolderRepository extends JpaRepository<Folder, Long> {
 
@@ -18,7 +20,7 @@ public interface FolderRepository extends JpaRepository<Folder, Long> {
 			 and f.deletedAt is NULL
 			order by f.name ASC
 			""")
-	List<Folder> findRootFolders(Long ownerId);
+	List<Folder> findRootFolders(@Param("ownerId") Long ownerId);
 
 	@Query("""
 			select f
@@ -28,7 +30,8 @@ public interface FolderRepository extends JpaRepository<Folder, Long> {
 			 and f.deletedAt is NULL
 			order by f.name ASC
 			""")
-	List<Folder> findChildFolders(Long ownerId, Long parentId);
+	List<Folder> findChildFolders(@Param("ownerId") Long ownerId,
+								  @Param("parentId") Long parentId);
 
 	@Query("""
 			select count(f) > 0
@@ -38,7 +41,8 @@ public interface FolderRepository extends JpaRepository<Folder, Long> {
 			 and f.name = :name
 			 and f.deletedAt is null
 			""")
-	boolean existsRootFolder(Long userId, String name);
+	boolean existsRootFolder(@Param("userId") Long userId,
+							 @Param("name") String name);
 
 	@Query("""
 			select count(f) > 0
@@ -48,5 +52,7 @@ public interface FolderRepository extends JpaRepository<Folder, Long> {
 			 and f.name = :name
 			 and f.deletedAt is null
 			""")
-	boolean existsChildFolder(Long userId, Long parentId, String name);
+	boolean existsChildFolder(@Param("userId") Long userId,
+							  @Param("parentId") Long parentId,
+							  @Param("name") String name);
 }
