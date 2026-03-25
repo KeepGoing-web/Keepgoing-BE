@@ -1,17 +1,20 @@
 package com.keepgoing.keepgoing.folder.controller;
 
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.keepgoing.keepgoing.folder.controller.dto.CreateFolderRequest;
+import com.keepgoing.keepgoing.folder.controller.dto.FolderCreateRequest;
 import com.keepgoing.keepgoing.folder.service.FolderService;
-import com.keepgoing.keepgoing.folder.service.dto.CreateFolderCommand;
-import com.keepgoing.keepgoing.folder.service.dto.FolderResult;
+import com.keepgoing.keepgoing.folder.service.dto.FolderCreateCommand;
+import com.keepgoing.keepgoing.folder.service.dto.FolderSummaryResult;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import com.keepgoing.keepgoing.global.security.jwt.JwtAuthenticationFilter;
@@ -63,12 +66,12 @@ class FolderControllerTest {
 		void createFolder_returnsCreated() throws Exception {
 			// given
 			Long userId = 1L;
-			var request = new CreateFolderRequest(null, DIRECTORY_NAME);
-			var result = new FolderResult(10L, null, DIRECTORY_NAME);
+			var request = new FolderCreateRequest(null, DIRECTORY_NAME);
+			var result = new FolderSummaryResult(10L, null, DIRECTORY_NAME);
 
 			mockLoginUser(userId);
 
-			given(folderService.createFolder(any(CreateFolderCommand.class)))
+			given(folderService.createFolder(any(FolderCreateCommand.class)))
 					.willReturn(result);
 
 			// when & then
@@ -77,7 +80,7 @@ class FolderControllerTest {
 							.content(objectMapper.writeValueAsString(request)))
 					.andExpect(status().isCreated())
 					.andExpect(jsonPath("$.data.folderId").value(10L))
-					.andExpect(jsonPath("$.data.parentFolderId").doesNotExist())
+					.andExpect(jsonPath("$.data.parentId").value(nullValue()))
 					.andExpect(jsonPath("$.data.name").value(DIRECTORY_NAME));
 		}
 
@@ -86,7 +89,7 @@ class FolderControllerTest {
 		void createFolder_returnsBadRequestWhenNameIsBlank() throws Exception {
 			// given
 			Long userId = 1L;
-			var request = new CreateFolderRequest(null, "   ");
+			var request = new FolderCreateRequest(null, "   ");
 			mockLoginUser(userId);
 
 			// when & then
@@ -103,7 +106,7 @@ class FolderControllerTest {
 			// given
 			Long userId = 1L;
 			String tooLongName = "A".repeat(121);
-			var request = new CreateFolderRequest(null, tooLongName);
+			var request = new FolderCreateRequest(null, tooLongName);
 			mockLoginUser(userId);
 
 			// when & then
@@ -119,10 +122,10 @@ class FolderControllerTest {
 		void createFolder_returnsConflictWhenFolderNameDuplicated() throws Exception {
 			// given
 			Long userId = 1L;
-			var request = new CreateFolderRequest(null, DIRECTORY_NAME);
+			var request = new FolderCreateRequest(null, DIRECTORY_NAME);
 			mockLoginUser(userId);
 
-			given(folderService.createFolder(any(CreateFolderCommand.class)))
+			given(folderService.createFolder(any(FolderCreateCommand.class)))
 					.willThrow(new BusinessException(ErrorCode.FOLDER_NAME_DUPLICATED));
 
 			// when & then
@@ -139,10 +142,10 @@ class FolderControllerTest {
 		void createFolder_returnsBadRequestWhenNameContainsSlash() throws Exception {
 			// given
 			Long userId = 1L;
-			var request = new CreateFolderRequest(null, "back/end");
+			var request = new FolderCreateRequest(null, "back/end");
 			mockLoginUser(userId);
 
-			given(folderService.createFolder(any(CreateFolderCommand.class)))
+			given(folderService.createFolder(any(FolderCreateCommand.class)))
 					.willThrow(new BusinessException(ErrorCode.FOLDER_INVALID_NAME));
 
 			// when & then
@@ -156,7 +159,70 @@ class FolderControllerTest {
 
 	}
 
+	@Nested
+	@DisplayName("GET /api/folders")
+	class GetFolders {
+
+		@Test
+		@DisplayName("parentId가 없으면 루트 폴더 목록을 200 OK로 반환한다.")
+		void getFolders_returnsOkForRoot() throws Exception {
+			// given
+			Long userId = 1L;
+			mockLoginUser(userId);
+
+			given(folderService.getFolders(userId, null))
+					.willReturn(List.of(
+							new FolderSummaryResult(10L, null, "a"),
+							new FolderSummaryResult(11L, null, "b")
+					));
+
+			// when & then
+			mockMvc.perform(get("/api/folders"))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.success").value(true))
+					.andExpect(jsonPath("$.data[0].folderId").value(10L))
+					.andExpect(jsonPath("$.data[0].parentId").value(nullValue()))
+					.andExpect(jsonPath("$.data[0].name").value("a"))
+					.andExpect(jsonPath("$.data[1].folderId").value(11L))
+					.andExpect(jsonPath("$.data[1].parentId").value(nullValue()))
+					.andExpect(jsonPath("$.data[1].name").value("b"));
+
+			verify(folderService).getFolders(userId, null);
+		}
+
+		@Test
+		@DisplayName("parentId가 있으면 자식 폴더 목록을 200 OK로 반환한다.")
+		void getFolders_returnsOkForChildren() throws Exception {
+			// given
+			Long userId = 1L;
+			Long parentId = 100L;
+			mockLoginUser(userId);
+
+			given(folderService.getFolders(userId, parentId))
+					.willReturn(List.of(
+							new FolderSummaryResult(20L, parentId, "backend"),
+							new FolderSummaryResult(21L, parentId, "frontend")
+					));
+
+			// when & then
+			mockMvc.perform(get("/api/folders")
+							.param("parentId", String.valueOf(parentId)))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.success").value(true))
+					.andExpect(jsonPath("$.data[0].folderId").value(20L))
+					.andExpect(jsonPath("$.data[0].parentId").value(parentId))
+					.andExpect(jsonPath("$.data[0].name").value("backend"))
+					.andExpect(jsonPath("$.data[1].folderId").value(21L))
+					.andExpect(jsonPath("$.data[1].parentId").value(parentId))
+					.andExpect(jsonPath("$.data[1].name").value("frontend"));
+
+			verify(folderService).getFolders(userId, parentId);
+		}
+	}
+
+
 	private void mockLoginUser(Long userId) {
+
 		Authentication authenticated = UsernamePasswordAuthenticationToken.authenticated(
 				userId,
 				null,
