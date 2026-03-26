@@ -313,8 +313,10 @@ public class NoteServiceTest {
 		// given
 		Long userId = 1L;
 		User user = createUser(userId);
+		Folder folder = Folder.create(user, null, DIRECTORY_NAME);
+		ReflectionTestUtils.setField(folder, "id", 10L);
 
-		Note note1 = Note.create(user, null, "제목1", "내용1", NoteVisibility.PRIVATE, true);
+		Note note1 = Note.create(user, folder, "제목1", "내용1", NoteVisibility.PRIVATE, true);
 		Note note2 = Note.create(user, null, "제목2", "내용2", NoteVisibility.PUBLIC, true);
 		var notes = java.util.List.of(note1, note2);
 
@@ -343,8 +345,14 @@ public class NoteServiceTest {
 				.get(0)
 				.title()).isEqualTo("제목1");
 		assertThat(result.getContent()
+				.get(0)
+				.folderId()).isEqualTo(10L);
+		assertThat(result.getContent()
 				.get(1)
 				.title()).isEqualTo("제목2");
+		assertThat(result.getContent()
+				.get(1)
+				.folderId()).isNull();
 		verify(noteRepository).findByAuthor_Id(userId, pageable);
 		verifyNoMoreInteractions(noteRepository);
 		verifyNoInteractions(userRepository);
@@ -531,8 +539,10 @@ public class NoteServiceTest {
 		// given
 		Long userId = 1L;
 		User user = createUser(userId);
+		Folder folder = Folder.create(user, null, DIRECTORY_NAME);
+		ReflectionTestUtils.setField(folder, "id", 10L);
 
-		Note note1 = Note.create(user, null, "spring 제목", "내용", NoteVisibility.PUBLIC, true);
+		Note note1 = Note.create(user, folder, "spring 제목", "내용", NoteVisibility.PUBLIC, true);
 		Note note2 = Note.create(user, null, "제목", "spring 내용", NoteVisibility.PUBLIC, true);
 
 		Pageable pageable = PageRequest.of(0, 10);
@@ -549,6 +559,8 @@ public class NoteServiceTest {
 		// then
 		assertThat(result.getTotalElements()).isEqualTo(2);
 		assertThat(result.getContent()).hasSize(2);
+		assertThat(result.getContent().get(0).folderId()).isEqualTo(10L);
+		assertThat(result.getContent().get(1).folderId()).isNull();
 		verify(noteRepository).searchMyNotes(eq(userId), eq("spring"), any(Pageable.class));
 		verifyNoMoreInteractions(noteRepository);
 		verifyNoInteractions(userRepository);

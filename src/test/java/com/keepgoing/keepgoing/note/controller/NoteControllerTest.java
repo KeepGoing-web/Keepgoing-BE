@@ -344,7 +344,7 @@ public class NoteControllerTest {
 			Long userId = 1L;
 
 			var notes = List.of(
-					new NoteSummaryResult(1L, null, "제목1", NoteVisibility.PRIVATE, true, null),
+					new NoteSummaryResult(1L, 10L, "제목1", NoteVisibility.PRIVATE, true, null),
 					new NoteSummaryResult(2L, null, "제목2", NoteVisibility.PUBLIC, true, null)
 			);
 
@@ -370,6 +370,8 @@ public class NoteControllerTest {
 					.andExpect(jsonPath("$.data.page").value(0))
 					.andExpect(jsonPath("$.data.size").value(10))
 					.andExpect(jsonPath("$.data.contents[0].title").value("제목1"))
+					.andExpect(jsonPath("$.data.contents[0].folderId").value(10L))
+					.andExpect(jsonPath("$.data.contents[1].folderId").isEmpty())
 					.andExpect(jsonPath("$.data.totalElements").value(2))
 					.andExpect(jsonPath("$.data.totalPages").value(1))
 					.andExpect(jsonPath("$.data.last").value(true));
@@ -555,7 +557,7 @@ public class NoteControllerTest {
 			Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
 
 			List<NoteSummaryResult> results = List.of(
-					new NoteSummaryResult(1L, null, "spring 제목", NoteVisibility.PUBLIC, true, null),
+					new NoteSummaryResult(1L, 10L, "spring 제목", NoteVisibility.PUBLIC, true, null),
 					new NoteSummaryResult(2L, null, "기타 제목", NoteVisibility.PRIVATE, false, null)
 			);
 
@@ -573,7 +575,9 @@ public class NoteControllerTest {
 					.andExpect(jsonPath("$.success").value(true))
 					.andExpect(jsonPath("$.data.contents").isArray())
 					.andExpect(jsonPath("$.data.contents.length()").value(2))
-					.andExpect(jsonPath("$.data.contents[0].title").value("spring 제목"));
+					.andExpect(jsonPath("$.data.contents[0].title").value("spring 제목"))
+					.andExpect(jsonPath("$.data.contents[0].folderId").value(10L))
+					.andExpect(jsonPath("$.data.contents[1].folderId").isEmpty());
 
 			verify(noteService).searchMyNotes(eq(userId), any(NoteSearchQuery.class));
 		}
