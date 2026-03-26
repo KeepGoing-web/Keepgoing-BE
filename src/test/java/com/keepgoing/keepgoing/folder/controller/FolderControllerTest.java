@@ -15,6 +15,7 @@ import com.keepgoing.keepgoing.folder.controller.dto.FolderCreateRequest;
 import com.keepgoing.keepgoing.folder.service.FolderService;
 import com.keepgoing.keepgoing.folder.service.dto.FolderCreateCommand;
 import com.keepgoing.keepgoing.folder.service.dto.FolderSummaryResult;
+import com.keepgoing.keepgoing.folder.service.dto.FolderTreeNodeResult;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import com.keepgoing.keepgoing.global.security.jwt.JwtAuthenticationFilter;
@@ -220,6 +221,35 @@ class FolderControllerTest {
 		}
 	}
 
+	@Nested
+	@DisplayName("GET /api/folders/tree")
+	class GetFolderTree {
+
+		@Test
+		@DisplayName("전체 트리 조회를 200 OK로 반환한다.")
+		void getFolderTree_returnOk() throws Exception {
+			//given
+			Long userId = 1L;
+			mockLoginUser(userId);
+
+			FolderTreeNodeResult spring = new FolderTreeNodeResult(2L, 1L, "spring", List.of());
+			FolderTreeNodeResult study = new FolderTreeNodeResult(1L, null, "공부", List.of(spring));
+
+			given(folderService.getFolderTree(userId)).willReturn(List.of(study));
+
+			//when & then
+			mockMvc.perform(get("/api/folders/tree"))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.success").value(true))
+					.andExpect(jsonPath("$.data[0].folderId").value(1L))
+					.andExpect(jsonPath("$.data[0].name").value("공부"))
+					.andExpect(jsonPath("$.data[0].children[0].folderId").value(2L))
+					.andExpect(jsonPath("$.data[0].children[0].parentId").value(1L))
+					.andExpect(jsonPath("$.data[0].children[0].name").value("spring"));
+
+			verify(folderService).getFolderTree(userId);
+		}
+	}
 
 	private void mockLoginUser(Long userId) {
 

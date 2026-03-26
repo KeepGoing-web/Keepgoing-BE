@@ -5,6 +5,8 @@ import com.keepgoing.keepgoing.folder.domain.Folder;
 import com.keepgoing.keepgoing.folder.repository.FolderRepository;
 import com.keepgoing.keepgoing.folder.service.dto.FolderCreateCommand;
 import com.keepgoing.keepgoing.folder.service.dto.FolderSummaryResult;
+import com.keepgoing.keepgoing.folder.service.dto.FolderTreeNodeResult;
+import com.keepgoing.keepgoing.folder.service.dto.FolderTreeRow;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import com.keepgoing.keepgoing.user.domain.User;
@@ -341,6 +343,87 @@ class FolderServiceTest {
 
 			verify(folderRepository).findByIdAndDeletedAtIsNull(parentId);
 			verifyNoMoreInteractions(folderRepository);
+		}
+	}
+	@Nested
+	@DisplayName("getFolderTree()")
+	class GetFolderTree {
+
+		@Test
+		@DisplayName("전체 폴더를 1번 조회해서 parentId 기반 트리 구조로 조립한다.")
+		void getFolderTree_buildsTreeFromRows() {
+			// given
+			Long userId = 1L;
+
+			given(folderRepository.findTreeRows(userId)).willReturn(List.of(
+					new FolderTreeRow(1L, null, "공부"),
+					new FolderTreeRow(2L, 1L, "Spring"),
+					new FolderTreeRow(3L, 1L, "DB"),
+					new FolderTreeRow(4L, null, "개인"),
+					new FolderTreeRow(5L, 4L, "일기")
+			));
+
+			// when
+			var roots = folderService.getFolderTree(userId);
+
+			// then
+			assertThat(roots).hasSize(2);
+
+			assertThat(roots).extracting(FolderTreeNodeResult::folderId)
+					.containsExactlyInAnyOrder(1L, 4L);
+
+			FolderTreeNodeResult study = roots.stream()
+					.filter(r -> r.folderId().equals(1L))
+					.findFirst()
+					.orElseThrow();
+			assertThat(study.children()).extracting(FolderTreeNodeResult::folderId)
+					.containsExactly(3L, 2L);
+
+			FolderTreeNodeResult personal = roots.stream()
+					.filter(r -> r.folderId().equals(4L))
+					.findFirst()
+					.orElseThrow();
+			assertThat(personal.children()).extracting(FolderTreeNodeResult::folderId)
+					.containsExactly(5L);
+
+			verify(folderRepository).findTreeRows(userId);
+		}
+
+		@Test
+		@DisplayName("폴더가 없으면 빈 트리를 반환한다.")
+		void getFolderTree_returnsEmptyWhenNoFolders() {
+			// given
+			Long userId = 1L;
+			given(folderRepository.findTreeRows(userId)).willReturn(List.of());
+
+			// when
+			var roots = folderService.getFolderTree(userId);
+
+			// then
+			assertThat(roots).isEmpty();
+			verify(folderRepository).findTreeRows(userId);
+		}
+
+		@Test
+		@DisplayName("부모가 조회 대상에 없으면(데이터 불일치) 해당 노드를 루트로 취급한다.")
+		void getFolderTree_treatsOrphanAsRootWhenParentMissing() {
+			// given
+			Long userId = 1L;
+			// parentId=999는 rows에 없음
+			given(folderRepository.findTreeRows(userId)).willReturn(List.of(
+					new FolderTreeRow(1L, null, "A"),
+					new FolderTreeRow(2L, 999L, "Orphan")
+			));
+
+			// when
+			var roots = folderService.getFolderTree(userId);
+
+			// then
+			assertThat(roots).hasSize(2);
+			assertThat(roots).extracting(FolderTreeNodeResult::folderId).containsExactly(1L, 2L);
+			assertThat(roots.get(1).parentId()).isEqualTo(999L);
+			assertThat(roots.get(1).children()).isEmpty();
+			verify(folderRepository).findTreeRows(userId);
 		}
 	}
 }
