@@ -196,6 +196,142 @@ paths:
       security:
         - BearerAuth: []
 
+  /api/notes/{noteId}:
+    get:
+      tags: [Notes]
+      summary: 노트 단건 조회
+      operationId: getNote
+      parameters:
+        - in: path
+          name: noteId
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: 조회할 노트 ID
+      responses:
+        '200':
+          description: 노트 상세 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoteDetailApiResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - BearerAuth: []
+
+  /api/notes/me:
+    get:
+      tags: [Notes]
+      summary: 내 노트 목록 조회
+      operationId: getMyNotes
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: 페이지 번호 (0부터 시작)
+        - in: query
+          name: size
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: 페이지 크기
+      responses:
+        '200':
+          description: 내 노트 목록 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotePageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - BearerAuth: []
+
+  /api/notes/me/search:
+    get:
+      tags: [Notes]
+      summary: 내 노트 검색
+      operationId: searchMyNotes
+      parameters:
+        - in: query
+          name: keyword
+          required: true
+          schema:
+            type: string
+          description: 검색 키워드
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: 페이지 번호 (0부터 시작)
+        - in: query
+          name: size
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: 페이지 크기
+      responses:
+        '200':
+          description: 내 노트 검색 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotePageResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      security:
+        - BearerAuth: []
+
+  /api/notes/search:
+    get:
+      tags: [Notes]
+      summary: 전체 공개 노트 검색
+      operationId: searchNotes
+      parameters:
+        - in: query
+          name: keyword
+          required: true
+          schema:
+            type: string
+          description: 검색 키워드
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: 페이지 번호 (0부터 시작)
+        - in: query
+          name: size
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: 페이지 크기
+      responses:
+        '200':
+          description: 전체 공개 노트 검색 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotePageResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
   # ========== User Endpoints ==========
   /users/me:
     get:
@@ -837,6 +973,54 @@ components:
           nullable: true
       required: [noteId, userId, title, content, visibility, aiCollectable]
 
+    NoteSummaryData:
+      type: object
+      properties:
+        noteId:
+          type: integer
+          format: int64
+        folderId:
+          type: integer
+          format: int64
+          nullable: true
+          description: 노트가 속한 폴더 ID. 루트 노트면 null입니다.
+        title:
+          type: string
+        visibility:
+          $ref: '#/components/schemas/NoteVisibility'
+        aiCollectable:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+      required: [noteId, title, visibility, aiCollectable]
+
+    NotePageData:
+      type: object
+      properties:
+        contents:
+          type: array
+          items:
+            $ref: '#/components/schemas/NoteSummaryData'
+        page:
+          type: integer
+          description: 현재 페이지 번호 (0부터 시작)
+        size:
+          type: integer
+          description: 페이지 크기
+        totalElements:
+          type: integer
+          format: int64
+          description: 전체 요소 개수
+        totalPages:
+          type: integer
+          description: 전체 페이지 수
+        last:
+          type: boolean
+          description: 마지막 페이지 여부
+      required: [contents, page, size, totalElements, totalPages, last]
+
     NoteCreateResponse:
       allOf:
         - $ref: '#/components/schemas/ApiResponse'
@@ -844,6 +1028,22 @@ components:
           properties:
             data:
               $ref: '#/components/schemas/NoteDetailData'
+
+    NoteDetailApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/NoteDetailData'
+
+    NotePageResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/NotePageData'
 
     # ========== User Schemas ==========
     UserRole:
