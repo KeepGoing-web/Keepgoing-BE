@@ -80,7 +80,8 @@ public class SecurityConfig {
                                 "/login/oauth2/**"
                         ).permitAll()
 						.requestMatchers(
-								"/api/posts/me/**"
+								"/api/posts/me/**",
+								"/api/folders"
 						).authenticated()
                         // 게시글 조회는 공개(개발/일반 사용자 접근), 쓰기(생성/수정/삭제)는 인증 필요
                         .requestMatchers(HttpMethod.GET, "/api/posts/**").permitAll()
