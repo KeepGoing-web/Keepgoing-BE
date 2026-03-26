@@ -1,5 +1,7 @@
 package com.keepgoing.keepgoing.note.service;
 
+import com.keepgoing.keepgoing.folder.domain.Folder;
+import com.keepgoing.keepgoing.folder.repository.FolderRepository;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import com.keepgoing.keepgoing.note.domain.Note;
@@ -18,29 +20,37 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@Transactional
 @RequiredArgsConstructor
 public class NoteService {
 
 	private final NoteRepository noteRepository;
 	private final UserRepository userRepository;
+	private final FolderRepository folderRepository;
 
 	/**
-	 * 포스트 생성
+	 * 노트 생성
 	 */
+	@Transactional
 	public NoteDetailResult createNote(NoteCreateCommand command) {
 		User author = userRepository.findById(command.userId())
 				.orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
+		Folder folder = null;
+		if (command.folderId() != null) {
+			folder = folderRepository.findByIdAndDeletedAtIsNull(command.folderId())
+					.orElseThrow(() -> new BusinessException(ErrorCode.FOLDER_NOT_FOUND));
+		}
+
 		Note note = Note.create(
 				author,
+				folder,
 				command.title(),
 				command.content(),
 				command.visibility(),
 				command.aiCollectable()
 		);
 		Note saved = noteRepository.save(note);
-		return toDetailResult(saved);
+		return NoteDetailResult.from(saved);
 	}
 
 	/**
@@ -50,7 +60,7 @@ public class NoteService {
 	public NoteDetailResult getNote(Long noteId) {
 		Note note = noteRepository.findById(noteId)
 				.orElseThrow(() -> new BusinessException(ErrorCode.NOTE_NOT_FOUND));
-		return toDetailResult(note);
+		return NoteDetailResult.from(note);
 	}
 
 	/**
@@ -63,8 +73,9 @@ public class NoteService {
 	}
 
 	/**
-	 * 포스트 수정
+	 * 노트 수정
 	 */
+	@Transactional
 	public NoteDetailResult updateNote(NoteUpdateCommand command) {
 		Note note = noteRepository.findById(command.noteId())
 				.orElseThrow(() -> new BusinessException(ErrorCode.NOTE_NOT_FOUND));
@@ -78,12 +89,13 @@ public class NoteService {
 				command.aiCollectable()
 		);
 
-		return toDetailResult(note);
+		return NoteDetailResult.from(note);
 	}
 
 	/**
 	 * 포스트 삭제 (soft delete)
 	 */
+	@Transactional
 	public void deleteNote(Long userId, Long noteId) {
 		Note note = noteRepository.findById(noteId)
 				.orElseThrow(() -> new BusinessException(ErrorCode.NOTE_NOT_FOUND));
@@ -121,19 +133,6 @@ public class NoteService {
 		);
 
 		return page.map(this::toSummaryResult);
-	}
-
-	private NoteDetailResult toDetailResult(Note note) {
-		return new NoteDetailResult(
-				note.getId(),
-				note.getAuthor().getId(),
-				note.getTitle(),
-				note.getContent(),
-				note.getVisibility(),
-				note.isAiCollectable(),
-				note.getCreatedAt(),
-				note.getUpdatedAt()
-		);
 	}
 
 	private NoteSummaryResult toSummaryResult(Note note) {

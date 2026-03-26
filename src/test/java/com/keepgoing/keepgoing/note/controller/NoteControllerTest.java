@@ -78,10 +78,12 @@ public class NoteControllerTest {
 	// ========== Note ==========
 
 	@Test
-	@DisplayName("POST /api/notes - 글 생성 성공 시 201 Created 반환")
-	void createNote_success() throws Exception {
+	@DisplayName("POST /api/notes - folderId가 null이면 루트 노트 생성 요청이 서비스로 전달된다")
+	void createNote_successWhenFolderIdIsNull() throws Exception {
 		//given
+		Long userId = 1L;
 		NoteCreateRequest request = new NoteCreateRequest(
+				null,
 				"테스트 제목",
 				"테스트 내용",
 				NoteVisibility.PRIVATE,
@@ -90,7 +92,8 @@ public class NoteControllerTest {
 
 		NoteDetailResult result = new NoteDetailResult(
 				1L,
-				1L,
+				null,
+				userId,
 				"테스트 제목",
 				"테스트 내용",
 				NoteVisibility.PRIVATE,
@@ -102,6 +105,10 @@ public class NoteControllerTest {
 		given(noteService.createNote(any(NoteCreateCommand.class)))
 				.willReturn(result);
 
+		SecurityContextHolder.getContext().setAuthentication(
+				new UsernamePasswordAuthenticationToken(userId, null, List.of())
+		);
+
 		String json = objectMapper.writeValueAsString(request);
 
 		//when & then
@@ -110,7 +117,68 @@ public class NoteControllerTest {
 						.content(json))
 				.andExpect(status().isCreated())
 				.andExpect(jsonPath("$.success").value(true))
+				.andExpect(jsonPath("$.data.noteId").value(1L))
+				.andExpect(jsonPath("$.data.title").value("테스트 제목"))
+				.andExpect(jsonPath("$.data.folderId").isEmpty())
+				.andExpect(jsonPath("$.data.userId").value(1L));
+
+		ArgumentCaptor<NoteCreateCommand> captor = ArgumentCaptor.forClass(NoteCreateCommand.class);
+		verify(noteService).createNote(captor.capture());
+		assertThat(captor.getValue().userId()).isEqualTo(userId);
+		assertThat(captor.getValue().folderId()).isNull();
+		assertThat(captor.getValue().title()).isEqualTo("테스트 제목");
+	}
+
+	@Test
+	@DisplayName("POST /api/notes - folderId가 있으면 해당 값이 서비스와 응답에 반영된다")
+	void createNote_successWhenFolderIdIsProvided() throws Exception {
+		//given
+		Long userId = 1L;
+		Long folderId = 10L;
+		NoteCreateRequest request = new NoteCreateRequest(
+				folderId,
+				"테스트 제목",
+				"테스트 내용",
+				NoteVisibility.PRIVATE,
+				true
+		);
+
+		NoteDetailResult result = new NoteDetailResult(
+				1L,
+				folderId,
+				userId,
+				"테스트 제목",
+				"테스트 내용",
+				NoteVisibility.PRIVATE,
+				true,
+				null,
+				null
+		);
+
+		given(noteService.createNote(any(NoteCreateCommand.class)))
+				.willReturn(result);
+
+		SecurityContextHolder.getContext().setAuthentication(
+				new UsernamePasswordAuthenticationToken(userId, null, List.of())
+		);
+
+		String json = objectMapper.writeValueAsString(request);
+
+		//when & then
+		mockMvc.perform(post("/api/notes")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(json))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.success").value(true))
+				.andExpect(jsonPath("$.data.noteId").value(1L))
+				.andExpect(jsonPath("$.data.folderId").value(folderId))
+				.andExpect(jsonPath("$.data.userId").value(userId))
 				.andExpect(jsonPath("$.data.title").value("테스트 제목"));
+
+		ArgumentCaptor<NoteCreateCommand> captor = ArgumentCaptor.forClass(NoteCreateCommand.class);
+		verify(noteService).createNote(captor.capture());
+		assertThat(captor.getValue().userId()).isEqualTo(userId);
+		assertThat(captor.getValue().folderId()).isEqualTo(folderId);
 	}
 
 	@Test
@@ -118,6 +186,7 @@ public class NoteControllerTest {
 	void createNote_failsWithEmptyTitle() throws Exception {
 		//given
 		NoteCreateRequest request = new NoteCreateRequest(
+				null,
 				"",
 				"테스트 내용",
 				NoteVisibility.PRIVATE,
@@ -133,6 +202,68 @@ public class NoteControllerTest {
 				.andExpect(status().isBadRequest()); // HTTP 400 Bad Request를 기대
 	}
 
+	@Test
+	@DisplayName("POST /api/notes - 존재하지 않는 폴더면 404 에러 응답")
+	void createNote_returnsNotFoundWhenFolderDoesNotExist() throws Exception {
+		// given
+		Long userId = 1L;
+		NoteCreateRequest request = new NoteCreateRequest(
+				10L,
+				"테스트 제목",
+				"테스트 내용",
+				NoteVisibility.PRIVATE,
+				true
+		);
+
+		given(noteService.createNote(any(NoteCreateCommand.class)))
+				.willThrow(new BusinessException(ErrorCode.FOLDER_NOT_FOUND));
+
+		SecurityContextHolder.getContext().setAuthentication(
+				new UsernamePasswordAuthenticationToken(userId, null, List.of())
+		);
+
+		String json = objectMapper.writeValueAsString(request);
+
+		// when & then
+		mockMvc.perform(post("/api/notes")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(json))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.success").value(false))
+				.andExpect(jsonPath("$.error.code").value("FOLDER_NOT_FOUND"));
+	}
+
+	@Test
+	@DisplayName("POST /api/notes - 다른 사용자의 폴더면 403 에러 응답")
+	void createNote_returnsForbiddenWhenFolderOwnedByAnotherUser() throws Exception {
+		// given
+		Long userId = 1L;
+		NoteCreateRequest request = new NoteCreateRequest(
+				10L,
+				"테스트 제목",
+				"테스트 내용",
+				NoteVisibility.PRIVATE,
+				true
+		);
+
+		given(noteService.createNote(any(NoteCreateCommand.class)))
+				.willThrow(new BusinessException(ErrorCode.FOLDER_ACCESS_DENIED));
+
+		SecurityContextHolder.getContext().setAuthentication(
+				new UsernamePasswordAuthenticationToken(userId, null, List.of())
+		);
+
+		String json = objectMapper.writeValueAsString(request);
+
+		// when & then
+		mockMvc.perform(post("/api/notes")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(json))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.success").value(false))
+				.andExpect(jsonPath("$.error.code").value("FOLDER_ACCESS_DENIED"));
+	}
+
 	// ========== GET ==========
 
 	@Test
@@ -142,8 +273,9 @@ public class NoteControllerTest {
 		Long noteId = 1L;
 
 		NoteDetailResult result = new NoteDetailResult(
-				1L,
 				noteId,
+				1L,
+				null,
 				"테스트 제목",
 				"테스트 내용",
 				NoteVisibility.PRIVATE,
@@ -264,6 +396,7 @@ public class NoteControllerTest {
 		NoteDetailResult result = new NoteDetailResult(
 				userId,
 				noteId,
+				null,
 				"수정된 제목",
 				"수정된 내용",
 				NoteVisibility.PUBLIC,
