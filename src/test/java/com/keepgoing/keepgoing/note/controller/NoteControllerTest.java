@@ -316,8 +316,8 @@ public class NoteControllerTest {
 		Long userId = 1L; // TODO: Security 붙으면 현재 로그인 유저로 교체
 
 		var notes = List.of(
-				new NoteSummaryResult(1L, "제목1", NoteVisibility.PRIVATE, true, null),
-				new NoteSummaryResult(2L, "제목2", NoteVisibility.PUBLIC, true, null)
+				new NoteSummaryResult(1L, null, "제목1", NoteVisibility.PRIVATE, true, null),
+				new NoteSummaryResult(2L, null, "제목2", NoteVisibility.PUBLIC, true, null)
 		);
 
 		// 페이지 정보 (0페이지, size=10, createdAt DESC 정렬)
@@ -506,8 +506,8 @@ public class NoteControllerTest {
 		Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
 
 		List<NoteSummaryResult> results = List.of(
-				new NoteSummaryResult(1L, "spring 제목", NoteVisibility.PUBLIC, true, null),
-				new NoteSummaryResult(2L, "기타 제목", NoteVisibility.PRIVATE, false, null)
+				new NoteSummaryResult(1L, null, "spring 제목", NoteVisibility.PUBLIC, true, null),
+				new NoteSummaryResult(2L, null, "기타 제목", NoteVisibility.PRIVATE, false, null)
 		);
 
 		Page<NoteSummaryResult> page = new PageImpl<>(results, pageable, results.size());

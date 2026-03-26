@@ -69,7 +69,7 @@ public class NoteService {
 	@Transactional(readOnly = true)
 	public Page<NoteSummaryResult> getNotes(Long userId, Pageable pageable) {
 		return noteRepository.findByAuthor_Id(userId, pageable)
-				.map(this::toSummaryResult);
+				.map(NoteSummaryResult::from);
 	}
 
 	/**
@@ -114,7 +114,7 @@ public class NoteService {
 		}
 
 		return noteRepository.searchMyNotes(userId, query.keyword(), query.pageable())
-				.map(this::toSummaryResult);
+				.map(NoteSummaryResult::from);
 	}
 
 	/**
@@ -132,16 +132,6 @@ public class NoteService {
 				query.pageable()
 		);
 
-		return page.map(this::toSummaryResult);
-	}
-
-	private NoteSummaryResult toSummaryResult(Note note) {
-		return new NoteSummaryResult(
-				note.getId(),
-				note.getTitle(),
-				note.getVisibility(),
-				note.isAiCollectable(),
-				note.getCreatedAt()
-		);
+		return page.map(NoteSummaryResult::from);
 	}
 }

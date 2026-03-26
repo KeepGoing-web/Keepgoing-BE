@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 
 public record NoteSummaryResponse(
         Long noteId,
+        Long folderId,
         String title,
         NoteVisibility visibility,
         boolean aiCollectable,
@@ -15,6 +16,7 @@ public record NoteSummaryResponse(
     public static NoteSummaryResponse from(NoteSummaryResult result) {
         return new NoteSummaryResponse(
                 result.noteId(),
+                result.folderId(),
                 result.title(),
                 result.visibility(),
                 result.aiCollectable(),
