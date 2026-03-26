@@ -27,8 +27,8 @@ public class FolderService {
 				.orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
 		Folder parent = null;
-		if (command.parentFolderId() != null) {
-			parent = folderRepository.findByIdAndDeletedAtIsNull(command.parentFolderId())
+		if (command.parentId() != null) {
+			parent = folderRepository.findByIdAndDeletedAtIsNull(command.parentId())
 					.orElseThrow(() -> new BusinessException(ErrorCode.FOLDER_NOT_FOUND));
 			parent.validateOwner(user.getId());
 		}
