@@ -55,4 +55,14 @@ public interface FolderRepository extends JpaRepository<Folder, Long> {
 	boolean existsChildFolder(@Param("userId") Long userId,
 							  @Param("parentId") Long parentId,
 							  @Param("name") String name);
+
+	@Query("""
+    select new com.keepgoing.keepgoing.folder.service.dto.FolderTreeRow(f.id, p.id, f.name)
+    from Folder f
+    left join f.parent p
+    where f.owner.id = :ownerId
+      and f.deletedAt is null
+    order by f.name asc
+    """)
+	List<com.keepgoing.keepgoing.folder.service.dto.FolderTreeRow> findTreeRows(@Param("ownerId") Long ownerId);
 }

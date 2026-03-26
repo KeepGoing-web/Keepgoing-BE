@@ -4,6 +4,8 @@ import com.keepgoing.keepgoing.folder.domain.Folder;
 import com.keepgoing.keepgoing.folder.repository.FolderRepository;
 import com.keepgoing.keepgoing.folder.service.dto.FolderCreateCommand;
 import com.keepgoing.keepgoing.folder.service.dto.FolderSummaryResult;
+import com.keepgoing.keepgoing.folder.service.dto.FolderTreeNodeResult;
+import com.keepgoing.keepgoing.folder.service.dto.FolderTreeRow;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import com.keepgoing.keepgoing.user.domain.User;
@@ -12,7 +14,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -71,5 +76,51 @@ public class FolderService {
 						f.getName()
 				))
 				.toList();
+	}
+
+	@Transactional(readOnly = true)
+	public List<FolderTreeNodeResult> getFolderTree(Long userId) {
+		List<FolderTreeRow> rows = folderRepository.findTreeRows(userId);
+
+		Map<Long, FolderTreeNodeResult> nodes = new LinkedHashMap<>();
+		for (FolderTreeRow r : rows) {
+			nodes.put(r.folderId(), new FolderTreeNodeResult(
+					r.folderId(),
+					r.parentId(),
+					r.name(),
+					new ArrayList<>()
+			));
+		}
+
+		List<FolderTreeNodeResult> roots = new ArrayList<>();
+		for (FolderTreeNodeResult node : nodes.values()) {
+			Long parentId = node.parentId();
+			if (parentId == null) {
+				roots.add(node);
+				continue;
+			}
+
+			FolderTreeNodeResult parent = nodes.get(parentId);
+			// 부모가 soft delete 등으로 조회 대상에서 빠졌다면(데이터 불일치), 루트로 취급
+			if (parent == null) {
+				roots.add(node);
+				continue;
+			}
+
+			parent.children().add(node);
+		}
+
+		// 4) 정렬 보장: Repository 정렬에 의존하지 않고, 각 레벨에서 name ASC로 정렬
+		sortTreeByName(roots);
+
+		return roots;
+	}
+
+
+	private void sortTreeByName(List<FolderTreeNodeResult> nodes) {
+		nodes.sort(java.util.Comparator.comparing(FolderTreeNodeResult::name));
+		for (FolderTreeNodeResult n : nodes) {
+			sortTreeByName(n.children());
+		}
 	}
 }
