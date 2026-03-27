@@ -1,12 +1,12 @@
 package com.keepgoing.keepgoing.folder.repository;
 
 import com.keepgoing.keepgoing.folder.domain.Folder;
+import com.keepgoing.keepgoing.folder.service.dto.FolderTreeRow;
+import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-
-import java.util.List;
-import java.util.Optional;
 
 public interface FolderRepository extends JpaRepository<Folder, Long> {
 
@@ -57,12 +57,12 @@ public interface FolderRepository extends JpaRepository<Folder, Long> {
 							  @Param("name") String name);
 
 	@Query("""
-    select new com.keepgoing.keepgoing.folder.service.dto.FolderTreeRow(f.id, p.id, f.name)
+    select new com.keepgoing.keepgoing.folder.repository.dto.FolderTreeRow(f.id, p.id, f.name)
     from Folder f
     left join f.parent p
     where f.owner.id = :ownerId
       and f.deletedAt is null
     order by f.name asc
     """)
-	List<com.keepgoing.keepgoing.folder.service.dto.FolderTreeRow> findTreeRows(@Param("ownerId") Long ownerId);
+	List<FolderTreeRow> findTreeRows(@Param("ownerId") Long ownerId);
 }
