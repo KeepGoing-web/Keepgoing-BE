@@ -43,8 +43,8 @@ public class FolderRepositoryTest {
 	}
 
 	@Nested
-	@DisplayName("findFolders")
-	class findFolders {
+	@DisplayName("FindFolders")
+	class FindFolders {
 
 		@Test
 		@DisplayName("findRootFolders: 내 루트 폴더를 name ASC로 조회하고 soft delete는 제외한다")
