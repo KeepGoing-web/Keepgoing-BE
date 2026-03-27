@@ -15,9 +15,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -82,45 +85,67 @@ public class FolderService {
 	public List<FolderTreeNodeResult> getFolderTree(Long userId) {
 		List<FolderTreeRow> rows = folderRepository.findTreeRows(userId);
 
-		Map<Long, FolderTreeNodeResult> nodes = new LinkedHashMap<>();
+		if (rows == null || rows.isEmpty()) {
+			return List.of();
+		}
+		Map<Long, Node> nodes = new LinkedHashMap<>();
 		for (FolderTreeRow r : rows) {
-			nodes.put(r.folderId(), new FolderTreeNodeResult(
-					r.folderId(),
-					r.parentId(),
-					r.name(),
-					new ArrayList<>()
-			));
+			nodes.put(r.folderId(), new Node(r.folderId(), r.parentId(), r.name()));
 		}
 
-		List<FolderTreeNodeResult> roots = new ArrayList<>();
-		for (FolderTreeNodeResult node : nodes.values()) {
-			Long parentId = node.parentId();
+		// 2) parentId 기반으로 children 연결
+		List<Node> roots = new ArrayList<>();
+		for (Node node : nodes.values()) {
+			Long parentId = node.parentId;
+
 			if (parentId == null) {
 				roots.add(node);
 				continue;
 			}
+			Node parent = nodes.get(parentId);
 
-			FolderTreeNodeResult parent = nodes.get(parentId);
 			// 부모가 soft delete 등으로 조회 대상에서 빠졌다면(데이터 불일치), 루트로 취급
 			if (parent == null) {
 				roots.add(node);
 				continue;
 			}
 
-			parent.children().add(node);
+			parent.children.add(node);
 		}
 
-		// 4) 정렬 보장: Repository 정렬에 의존하지 않고, 각 레벨에서 name ASC로 정렬
-		sortTreeByName(roots);
+		roots.sort(Comparator.comparing(n -> n.name));
+		List<FolderTreeNodeResult> results = roots.stream()
+				.map(r -> toResult(r, new HashSet<>()))
+				.toList();
 
-		return roots;
+		return List.copyOf(results);
+	}
+
+	private static class Node {
+		final Long id;
+		final Long parentId;
+		final String name;
+		final List<Node> children = new ArrayList<>();
+
+		Node(Long id, Long parentId, String name) {
+			this.id = id;
+			this.parentId = parentId;
+			this.name = name;
+		}
 	}
 
 
-	private void sortTreeByName(List<FolderTreeNodeResult> nodes) {
-		nodes.sort(java.util.Comparator.comparing(FolderTreeNodeResult::name));
-		for (FolderTreeNodeResult n : nodes) {
-			sortTreeByName(n.children());
+	private FolderTreeNodeResult toResult(Node node, Set<Long> visiting) {
+		if (!visiting.add(node.id)) {
+			return new FolderTreeNodeResult(node.id, node.parentId, node.name, List.of());
 		}
+
+		node.children.sort(Comparator.comparing(n -> n.name));
+		List<FolderTreeNodeResult> children = node.children.stream()
+				.map(c -> toResult(c, visiting))
+				.toList();
+
+		visiting.remove(node.id);
+		return new FolderTreeNodeResult(node.id, node.parentId, node.name, List.copyOf(children));
 	}
 }
