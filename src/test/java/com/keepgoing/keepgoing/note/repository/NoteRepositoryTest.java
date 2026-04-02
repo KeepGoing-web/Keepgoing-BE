@@ -2,12 +2,20 @@ package com.keepgoing.keepgoing.note.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.keepgoing.keepgoing.folder.domain.Folder;
+import com.keepgoing.keepgoing.folder.repository.FolderRepository;
 import com.keepgoing.keepgoing.global.config.JpaAuditingConfig;
 import com.keepgoing.keepgoing.note.domain.Note;
 import com.keepgoing.keepgoing.note.domain.NoteVisibility;
+import com.keepgoing.keepgoing.note.service.dto.NoteDetailResult;
+import com.keepgoing.keepgoing.note.service.dto.NoteSummaryResult;
 import com.keepgoing.keepgoing.user.domain.User;
 import com.keepgoing.keepgoing.user.repository.UserRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
 import java.util.List;
+import org.hibernate.SessionFactory;
+import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -23,146 +31,224 @@ import org.springframework.data.domain.Sort;
 @Import(JpaAuditingConfig.class)
 class NoteRepositoryTest {
 
-    @Autowired
-    private NoteRepository noteRepository;
+	@Autowired
+	private NoteRepository noteRepository;
 
-    @Autowired
-    private UserRepository userRepository;
+	@Autowired
+	private UserRepository userRepository;
 
-    private User user1;
-    private User user2;
+	@Autowired
+	private FolderRepository folderRepository;
 
-    @BeforeEach
-    void setUp() {
-        // 각 테스트 전에 데이터 초기화 및 설정
-        user1 = userRepository.save(User.builder().email("user1@test.com").name("유저1").build());
-        user2 = userRepository.save(User.builder().email("user2@test.com").name("유저2").build());
-    }
+	@Autowired
+	private EntityManager em;
 
-    private Pageable sortedByCreatedAtDesc(int size) {
-        return PageRequest.of(0, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-    }
+	@Autowired
+	private EntityManagerFactory entityManagerFactory;
 
-    // ========== findByAuthor_Id ==========
+	private User user1;
+	private User user2;
 
-    @Test
-    @DisplayName("findByAuthor_Id: 특정 작성자의 게시글을 createdAt 내림차순으로 페이징 조회한다")
-    void findByAuthorId_returnsNotesSortedByCreatedAtDesc() {
-        // given
-        noteRepository.save(Note.create(user1, "제목1-1", "내용", NoteVisibility.PUBLIC, true));
+	@BeforeEach
+	void setUp() {
+		// 각 테스트 전에 데이터 초기화 및 설정
+		user1 = userRepository.save(User.builder().email("user1@test.com").name("유저1").build());
+		user2 = userRepository.save(User.builder().email("user2@test.com").name("유저2").build());
+	}
 
-        // NOTE: createdAt 정렬 보장용 (나중에 id 정렬 등으로 리팩터링 후보)
-        try { Thread.sleep(10); } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-        noteRepository.save(Note.create(user2, "제목2-1", "내용", NoteVisibility.PUBLIC, true)); // 다른 유저의 글
-        try { Thread.sleep(10); } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-        noteRepository.save(Note.create(user1, "제목1-2", "내용", NoteVisibility.PUBLIC, true));
+	private Pageable sortedByCreatedAtDesc(int size) {
+		return PageRequest.of(0, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+	}
 
-        Pageable pageable = sortedByCreatedAtDesc(10);
+	// ========== findByAuthor_Id ==========
 
-        // when
-        Page<Note> page = noteRepository.findByAuthor_Id(user1.getId(), pageable);
-        List<Note> result = page.getContent();
+	@Test
+	@DisplayName("findByAuthor_Id: 특정 작성자의 게시글을 createdAt 내림차순으로 페이징 조회한다")
+	void findByAuthorId_returnsNotesSortedByCreatedAtDesc() {
+		// given
+		noteRepository.save(Note.create(user1, null, "제목1-1", "내용", NoteVisibility.PUBLIC, true));
 
-        // then
-        assertThat(page.getTotalElements()).isEqualTo(2);
-        assertThat(result).hasSize(2);
-        assertThat(result.get(0).getTitle()).isEqualTo("제목1-2"); // 최신
-        assertThat(result.get(1).getTitle()).isEqualTo("제목1-1");
-    }
+		// NOTE: createdAt 정렬 보장용 (나중에 id 정렬 등으로 리팩터링 후보)
+		try {
+			Thread.sleep(10);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+		}
+		noteRepository.save(Note.create(user2, null, "제목2-1", "내용", NoteVisibility.PUBLIC, true)); // 다른 유저의 글
+		try {
+			Thread.sleep(10);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+		}
+		noteRepository.save(Note.create(user1, null, "제목1-2", "내용", NoteVisibility.PUBLIC, true));
 
-    @Test
-    @DisplayName("findByAuthor_Id: 작성자의 게시글이 없으면 빈 리스트를 반환한다")
-    void findByAuthorId_returnsEmptyList_WhenNoPNote() {
-        // given
-        // user1이 작성한 글 없음
+		Pageable pageable = sortedByCreatedAtDesc(10);
 
-        Pageable pageable = sortedByCreatedAtDesc(10);
+		// when
+		Page<Note> page = noteRepository.findByAuthor_Id(user1.getId(), pageable);
+		List<Note> result = page.getContent();
 
-        // when
-        List<Note> result = noteRepository.findByAuthor_Id(user1.getId(), pageable)
-                .getContent();
+		// then
+		assertThat(page.getTotalElements()).isEqualTo(2);
+		assertThat(result).hasSize(2);
+		assertThat(result.get(0).getTitle()).isEqualTo("제목1-2"); // 최신
+		assertThat(result.get(1).getTitle()).isEqualTo("제목1-1");
+	}
 
-        // then
-        assertThat(result).isEmpty();
-    }
+	@Test
+	@DisplayName("findByAuthor_Id: 작성자의 게시글이 없으면 빈 리스트를 반환한다")
+	void findByAuthorId_returnsEmptyList_WhenNoPNote() {
+		// given
+		// user1이 작성한 글 없음
 
-    @Test
-    @DisplayName("findByAuthor_Id: soft delete 된 게시글은 조회되지 않는다")
-    void findByAuthorId_excludesSoftDeletedNotes() {
-        // given
-        Note note1 = noteRepository.save(Note.create(user1, "살아있는 글", "내용", NoteVisibility.PUBLIC, true));
-        Note note2 = noteRepository.save(Note.create(user1, "삭제된 글", "내용", NoteVisibility.PUBLIC, true));
+		Pageable pageable = sortedByCreatedAtDesc(10);
 
-        // soft delete
-        note2.softDelete();
-        noteRepository.save(note2); // 변경사항 반영
+		// when
+		List<Note> result = noteRepository.findByAuthor_Id(user1.getId(), pageable)
+				.getContent();
 
-        Pageable pageable = sortedByCreatedAtDesc(10);
+		// then
+		assertThat(result).isEmpty();
+	}
 
-        // when
-        List<Note> result = noteRepository.findByAuthor_Id(user1.getId(), pageable)
-                .getContent();
+	@Test
+	@DisplayName("findByAuthor_Id: soft delete 된 게시글은 조회되지 않는다")
+	void findByAuthorId_excludesSoftDeletedNotes() {
+		// given
+		Note note1 = noteRepository.save(Note.create(user1, null, "살아있는 글", "내용", NoteVisibility.PUBLIC, true));
+		Note note2 = noteRepository.save(Note.create(user1, null, "삭제된 글", "내용", NoteVisibility.PUBLIC, true));
 
-        // then
-        assertThat(result)
-                .hasSize(1)
-                .extracting(Note::getTitle)
-                .containsExactly("살아있는 글");
-    }
+		// soft delete
+		note2.softDelete();
+		noteRepository.save(note2); // 변경사항 반영
 
-    // ========== findById ==========
+		Pageable pageable = sortedByCreatedAtDesc(10);
 
-    @Test
-    @DisplayName("findById: findById는 author를 함께 로딩한다(@EntityGraph)")
-    void findById_loadsAuthorWithEntityGraph() {
-        // given
-        User author = user1;
+		// when
+		List<Note> result = noteRepository.findByAuthor_Id(user1.getId(), pageable)
+				.getContent();
 
-        Note saved = noteRepository.save(Note.create(author, "title", "content", NoteVisibility.PRIVATE, true));
+		// then
+		assertThat(result)
+				.hasSize(1)
+				.extracting(Note::getTitle)
+				.containsExactly("살아있는 글");
+	}
 
-        // when
-        Note found = noteRepository.findById(saved.getId())
-                .orElseThrow();
+	@Test
+	@DisplayName("findByAuthor_Id: 조회 결과를 NoteSummaryResult로 매핑할 때 folder id 접근으로 추가 쿼리가 발생하지 않는다")
+	void findByAuthorId_doesNotTriggerExtraQueryWhenMappingFolderId() {
+		// given
+		Folder folder = folderRepository.save(Folder.create(user1, null, "업무"));
+		noteRepository.save(Note.create(user1, folder, "제목1", "내용1", NoteVisibility.PUBLIC, true));
+		noteRepository.save(Note.create(user1, null, "제목2", "내용2", NoteVisibility.PUBLIC, true));
 
-        // then
-        assertThat(found.getAuthor().getId()).isEqualTo(author.getId());
-    }
+		em.flush();
+		em.clear();
 
-    // ========== findByVisibilityOrderByCreatedAtDesc ==========
+		Statistics statistics = statistics();
+		statistics.clear();
 
-    @Test
-    @DisplayName("findByVisibilityOrderByCreatedAtDesc: 공개 범위에 따라 필터링하고 최신순으로 정렬한다")
-    void findByVisibilityOrderByCreatedAtDesc() {
-        // given
-        noteRepository.save(Note.create(user1, "비공개글1", "내용", NoteVisibility.PRIVATE, true));
-        noteRepository.save(Note.create(user1, "비공개글2", "내용", NoteVisibility.PRIVATE, true));
-        noteRepository.save(Note.create(user1, "공개글1", "내용", NoteVisibility.PUBLIC, true));
-        noteRepository.save(Note.create(user2, "공개글2", "내용", NoteVisibility.PUBLIC, true));
+		Pageable pageable = sortedByCreatedAtDesc(10);
 
-        // when
-        List<Note> result = noteRepository.findByVisibilityOrderByCreatedAtDesc(NoteVisibility.PUBLIC);
+		// when
+		Page<Note> page = noteRepository.findByAuthor_Id(user1.getId(), pageable);
+		long queryCountAfterFetch = statistics.getPrepareStatementCount();
 
-        // then
-        assertThat(result).hasSize(2);
-        // 최신순 보장 (생성 순서의 역순)
-        assertThat(result.get(0).getTitle()).isEqualTo("공개글2");
-        assertThat(result.get(1).getTitle()).isEqualTo("공개글1");
-    }
+		List<NoteSummaryResult> results = page.getContent().stream()
+				.map(NoteSummaryResult::from)
+				.toList();
+		long queryCountAfterMapping = statistics.getPrepareStatementCount();
 
-    @Test
-    @DisplayName("findByVisibilityOrderByCreatedAtDesc: 해당 공개 범위의 게시글이 없으면 빈 리스트를 반환한다")
-    void findByVisibilityOrderByCreatedAtDesc_returnsEmptyListWhenNoNotes() {
-        // given
-        // PUBLIC 글 없음
+		// then
+		assertThat(results).hasSize(2);
+		assertThat(results)
+				.extracting(NoteSummaryResult::folderId)
+				.containsExactlyInAnyOrder(folder.getId(), null);
 
-        // when
-        List<Note> result = noteRepository.findByVisibilityOrderByCreatedAtDesc(NoteVisibility.PUBLIC);
+		assertThat(queryCountAfterMapping).isEqualTo(queryCountAfterFetch);
+	}
 
-        // then
-        assertThat(result).isEmpty();
-    }
+	// ========== findById ==========
+
+	@Test
+	@DisplayName("findById: findById는 author를 함께 로딩한다(@EntityGraph)")
+	void findById_loadsAuthorWithEntityGraph() {
+		// given
+		User author = user1;
+
+		Note saved = noteRepository.save(Note.create(author, null, "title", "content", NoteVisibility.PRIVATE, true));
+
+		// when
+		Note found = noteRepository.findById(saved.getId())
+				.orElseThrow();
+
+		// then
+		assertThat(found.getAuthor().getId()).isEqualTo(author.getId());
+	}
+
+	@Test
+	@DisplayName("findById: 조회 결과를 NoteDetailResult로 매핑할 때 folder id 접근으로 추가 쿼리가 발생하지 않는다")
+	void findById_doesNotTriggerExtraQueryWhenMappingFolderId() {
+		// given
+		Folder folder = folderRepository.save(Folder.create(user1, null, "업무"));
+		Note saved = noteRepository.save(
+				Note.create(user1, folder, "제목", "내용", NoteVisibility.PRIVATE, true)
+		);
+
+		em.flush();
+		em.clear();
+
+		Statistics statistics = statistics();
+		statistics.clear();
+
+		// when
+		Note found = noteRepository.findById(saved.getId()).orElseThrow();
+		long queryCountAfterFetch = statistics.getPrepareStatementCount();
+
+		NoteDetailResult result = NoteDetailResult.from(found);
+		long queryCountAfterMapping = statistics.getPrepareStatementCount();
+
+		// then
+		assertThat(result.folderId()).isEqualTo(folder.getId());
+		assertThat(queryCountAfterMapping).isEqualTo(queryCountAfterFetch);
+	}
+
+	// ========== findByVisibilityOrderByCreatedAtDesc ==========
+
+	@Test
+	@DisplayName("findByVisibilityOrderByCreatedAtDesc: 공개 범위에 따라 필터링하고 최신순으로 정렬한다")
+	void findByVisibilityOrderByCreatedAtDesc() {
+		// given
+		noteRepository.save(Note.create(user1, null, "비공개글1", "내용", NoteVisibility.PRIVATE, true));
+		noteRepository.save(Note.create(user1, null, "비공개글2", "내용", NoteVisibility.PRIVATE, true));
+		noteRepository.save(Note.create(user1, null, "공개글1", "내용", NoteVisibility.PUBLIC, true));
+		noteRepository.save(Note.create(user2, null, "공개글2", "내용", NoteVisibility.PUBLIC, true));
+
+		// when
+		List<Note> result = noteRepository.findByVisibilityOrderByCreatedAtDesc(NoteVisibility.PUBLIC);
+
+		// then
+		assertThat(result).hasSize(2);
+		// 최신순 보장 (생성 순서의 역순)
+		assertThat(result.get(0).getTitle()).isEqualTo("공개글2");
+		assertThat(result.get(1).getTitle()).isEqualTo("공개글1");
+	}
+
+	@Test
+	@DisplayName("findByVisibilityOrderByCreatedAtDesc: 해당 공개 범위의 게시글이 없으면 빈 리스트를 반환한다")
+	void findByVisibilityOrderByCreatedAtDesc_returnsEmptyListWhenNoNotes() {
+		// given
+		// PUBLIC 글 없음
+
+		// when
+		List<Note> result = noteRepository.findByVisibilityOrderByCreatedAtDesc(NoteVisibility.PUBLIC);
+
+		// then
+		assertThat(result).isEmpty();
+	}
+
+	private Statistics statistics() {
+		return entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
+	}
 }
