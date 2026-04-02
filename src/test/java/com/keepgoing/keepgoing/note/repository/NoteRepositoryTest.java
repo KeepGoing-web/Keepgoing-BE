@@ -2,12 +2,20 @@ package com.keepgoing.keepgoing.note.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.keepgoing.keepgoing.folder.domain.Folder;
+import com.keepgoing.keepgoing.folder.repository.FolderRepository;
 import com.keepgoing.keepgoing.global.config.JpaAuditingConfig;
 import com.keepgoing.keepgoing.note.domain.Note;
 import com.keepgoing.keepgoing.note.domain.NoteVisibility;
+import com.keepgoing.keepgoing.note.service.dto.NoteDetailResult;
+import com.keepgoing.keepgoing.note.service.dto.NoteSummaryResult;
 import com.keepgoing.keepgoing.user.domain.User;
 import com.keepgoing.keepgoing.user.repository.UserRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
 import java.util.List;
+import org.hibernate.SessionFactory;
+import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -28,6 +36,15 @@ class NoteRepositoryTest {
 
 	@Autowired
 	private UserRepository userRepository;
+
+	@Autowired
+	private FolderRepository folderRepository;
+
+	@Autowired
+	private EntityManager em;
+
+	@Autowired
+	private EntityManagerFactory entityManagerFactory;
 
 	private User user1;
 	private User user2;
@@ -118,6 +135,40 @@ class NoteRepositoryTest {
 				.containsExactly("살아있는 글");
 	}
 
+	@Test
+	@DisplayName("findByAuthor_Id: 조회 결과를 NoteSummaryResult로 매핑할 때 folder id 접근으로 추가 쿼리가 발생하지 않는다")
+	void findByAuthorId_doesNotTriggerExtraQueryWhenMappingFolderId() {
+		// given
+		Folder folder = folderRepository.save(Folder.create(user1, null, "업무"));
+		noteRepository.save(Note.create(user1, folder, "제목1", "내용1", NoteVisibility.PUBLIC, true));
+		noteRepository.save(Note.create(user1, null, "제목2", "내용2", NoteVisibility.PUBLIC, true));
+
+		em.flush();
+		em.clear();
+
+		Statistics statistics = statistics();
+		statistics.clear();
+
+		Pageable pageable = sortedByCreatedAtDesc(10);
+
+		// when
+		Page<Note> page = noteRepository.findByAuthor_Id(user1.getId(), pageable);
+		long queryCountAfterFetch = statistics.getPrepareStatementCount();
+
+		List<NoteSummaryResult> results = page.getContent().stream()
+				.map(NoteSummaryResult::from)
+				.toList();
+		long queryCountAfterMapping = statistics.getPrepareStatementCount();
+
+		// then
+		assertThat(results).hasSize(2);
+		assertThat(results)
+				.extracting(NoteSummaryResult::folderId)
+				.containsExactlyInAnyOrder(folder.getId(), null);
+
+		assertThat(queryCountAfterMapping).isEqualTo(queryCountAfterFetch);
+	}
+
 	// ========== findById ==========
 
 	@Test
@@ -134,6 +185,33 @@ class NoteRepositoryTest {
 
 		// then
 		assertThat(found.getAuthor().getId()).isEqualTo(author.getId());
+	}
+
+	@Test
+	@DisplayName("findById: 조회 결과를 NoteDetailResult로 매핑할 때 folder id 접근으로 추가 쿼리가 발생하지 않는다")
+	void findById_doesNotTriggerExtraQueryWhenMappingFolderId() {
+		// given
+		Folder folder = folderRepository.save(Folder.create(user1, null, "업무"));
+		Note saved = noteRepository.save(
+				Note.create(user1, folder, "제목", "내용", NoteVisibility.PRIVATE, true)
+		);
+
+		em.flush();
+		em.clear();
+
+		Statistics statistics = statistics();
+		statistics.clear();
+
+		// when
+		Note found = noteRepository.findById(saved.getId()).orElseThrow();
+		long queryCountAfterFetch = statistics.getPrepareStatementCount();
+
+		NoteDetailResult result = NoteDetailResult.from(found);
+		long queryCountAfterMapping = statistics.getPrepareStatementCount();
+
+		// then
+		assertThat(result.folderId()).isEqualTo(folder.getId());
+		assertThat(queryCountAfterMapping).isEqualTo(queryCountAfterFetch);
 	}
 
 	// ========== findByVisibilityOrderByCreatedAtDesc ==========
@@ -168,5 +246,9 @@ class NoteRepositoryTest {
 
 		// then
 		assertThat(result).isEmpty();
+	}
+
+	private Statistics statistics() {
+		return entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
 	}
 }

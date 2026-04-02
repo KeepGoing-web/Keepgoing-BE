@@ -41,7 +41,7 @@ public interface NoteRepository extends JpaRepository<Note, Long> {
 
     // 내 글 검색(작성자 조건 포함)
     @Query("""
-            SELECT n
+             SELECT n
             FROM Note n
             WHERE n.author.id = :authorId
               AND (LOWER(n.title) LIKE CONCAT('%', LOWER(:keyword), '%')

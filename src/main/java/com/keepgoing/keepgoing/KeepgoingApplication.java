@@ -9,5 +9,4 @@ public class KeepgoingApplication {
     public static void main(String[] args) {
         SpringApplication.run(KeepgoingApplication.class, args);
     }
-
 }
