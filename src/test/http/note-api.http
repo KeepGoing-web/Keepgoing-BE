@@ -78,6 +78,50 @@ Cookie: {{cookies}}
   "aiCollectable": false
 }
 
+### 4-1) 이동용 루트 폴더 생성
+POST {{host}}/api/folders
+Content-Type: application/json
+Cookie: {{cookies}}
+
+{
+  "parentId": null,
+  "name": "Move Target Folder"
+}
+
+> {%
+    const body = response.body;
+    const folderId = body?.data?.folderId;
+    if (!folderId) {
+        throw new Error("folder 생성 응답에서 folderId를 찾지 못했습니다. (body.data.folderId)");
+    }
+    client.global.set("moveFolderId", folderId);
+%}
+
+### 4-2) PATCH /api/notes/{id}/folder – 특정 폴더로 이동
+PATCH {{host}}/api/notes/{{noteId}}/folder
+Content-Type: application/json
+Cookie: {{cookies}}
+
+{
+  "folderId": {{moveFolderId}}
+}
+
+### 4-3) PATCH /api/notes/{id}/folder – 루트로 이동
+PATCH {{host}}/api/notes/{{noteId}}/folder
+Content-Type: application/json
+Cookie: {{cookies}}
+
+{
+  "folderId": null
+}
+
+### 4-4) PATCH /api/notes/{id}/folder – 필드 미전달 시 validation 실패 확인
+# PATCH {{host}}/api/notes/{{noteId}}/folder
+# Content-Type: application/json
+# Cookie: {{cookies}}
+#
+# {}
+
 
 ### 5) DELETE /api/notes/{id} – 글 삭제
 DELETE {{host}}/api/notes/{{noteId}}

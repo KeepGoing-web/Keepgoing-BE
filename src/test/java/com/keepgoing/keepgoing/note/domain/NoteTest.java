@@ -84,13 +84,11 @@ class NoteTest {
 			// given
 			User author = user(1L, "test@example.com", "테스트유저");
 
-			String title = TITLE;
-			String content = CONTENT;
 			NoteVisibility visibility = NoteVisibility.PUBLIC;
 			boolean aiCollectable = false;
 
 			// when
-			Note note = Note.create(author, null, title, content, visibility, aiCollectable);
+			Note note = Note.create(author, null, TITLE, CONTENT, visibility, aiCollectable);
 
 			// then
 			assertThat(note.getVisibility()).isEqualTo(NoteVisibility.PUBLIC);
@@ -320,5 +318,65 @@ class NoteTest {
 
 		// when & then
 		assertThat(note.getAuthorId()).isEqualTo(1L);
+	}
+
+	// ========== changeFolder ==========
+	@Test
+	@DisplayName("changeFolder: 작성자가 요청하고 같은 소유자의 폴더면 이동한다")
+	void changeFolder_movesWhenRequesterIsAuthorAndFolderOwnerMatches() {
+		// given
+		User author = user(1L, "author@test.com", "author");
+		Folder targetFolder = Folder.create(author, null, DIR_NAME);
+		Note note = Note.create(author, null, TITLE, CONTENT, NoteVisibility.PRIVATE, false);
+
+		// when
+		note.changeFolder(author.getId(), targetFolder);
+
+		// then
+		assertThat(note.getFolder()).isEqualTo(targetFolder);
+	}
+
+	@Test
+	@DisplayName("changeFolder: 작성자가 요청하면 루트로 이동할 수 있다")
+	void changeFolder_movesToRootWhenTargetFolderIsNull() {
+		// given
+		User author = user(1L, "author@test.com", "author");
+		Folder currentFolder = Folder.create(author, null, DIR_NAME);
+		Note note = Note.create(author, currentFolder, TITLE, CONTENT, NoteVisibility.PRIVATE, false);
+
+		// when
+		note.changeFolder(author.getId(), null);
+
+		// then
+		assertThat(note.getFolder()).isNull();
+	}
+
+	@Test
+	@DisplayName("changeFolder: 작성자가 아니면 NOTE_ACCESS_DENIED 예외가 발생한다")
+	void changeFolder_throwsWhenRequesterIsNotAuthor() {
+		// given
+		User author = user(1L, "author@test.com", "author");
+		Folder targetFolder = Folder.create(author, null, DIR_NAME);
+		Note note = Note.create(author, null, TITLE, CONTENT, NoteVisibility.PRIVATE, false);
+
+		// when & then
+		assertThatThrownBy(() -> note.changeFolder(2L, targetFolder))
+				.isInstanceOf(BusinessException.class)
+				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_ACCESS_DENIED);
+	}
+
+	@Test
+	@DisplayName("changeFolder: 다른 사용자의 폴더면 FOLDER_ACCESS_DENIED 예외가 발생한다")
+	void changeFolder_throwsWhenTargetFolderOwnedByAnotherUser() {
+		// given
+		User author = user(1L, "author@test.com", "author");
+		User otherAuthor = user(2L, "other@test.com", "other");
+		Folder otherFolder = Folder.create(otherAuthor, null, DIR_NAME);
+		Note note = Note.create(author, null, TITLE, CONTENT, NoteVisibility.PRIVATE, false);
+
+		// when & then
+		assertThatThrownBy(() -> note.changeFolder(author.getId(), otherFolder))
+				.isInstanceOf(BusinessException.class)
+				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_ACCESS_DENIED);
 	}
 }

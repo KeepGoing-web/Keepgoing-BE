@@ -5,5 +5,4 @@ public record FolderSummaryResult(
 		Long parentId,
 		String name
 ) {
-
 }

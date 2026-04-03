@@ -3,9 +3,11 @@ package com.keepgoing.keepgoing.folder.controller;
 import com.keepgoing.keepgoing.folder.controller.dto.FolderCreateRequest;
 import com.keepgoing.keepgoing.folder.controller.dto.FolderCreateResponse;
 import com.keepgoing.keepgoing.folder.controller.dto.FolderSummaryResponse;
+import com.keepgoing.keepgoing.folder.controller.dto.FolderTreeNodeResponse;
 import com.keepgoing.keepgoing.folder.service.FolderService;
 import com.keepgoing.keepgoing.folder.service.dto.FolderCreateCommand;
 import com.keepgoing.keepgoing.folder.service.dto.FolderSummaryResult;
+import com.keepgoing.keepgoing.folder.service.dto.FolderTreeNodeResult;
 import com.keepgoing.keepgoing.global.api.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -45,6 +47,19 @@ public class FolderController {
 
 		List<FolderSummaryResponse> responses = results.stream()
 				.map(FolderSummaryResponse::from)
+				.toList();
+
+		return ResponseEntity.ok(ApiResponse.success(responses));
+	}
+
+	@GetMapping("/tree")
+	public ResponseEntity<ApiResponse<List<FolderTreeNodeResponse>>> getFolderTree(
+			@AuthenticationPrincipal Long userId
+	) {
+		List<FolderTreeNodeResult> results = folderService.getFolderTree(userId);
+
+		List<FolderTreeNodeResponse> responses = results.stream()
+				.map(FolderTreeNodeResponse::from)
 				.toList();
 
 		return ResponseEntity.ok(ApiResponse.success(responses));

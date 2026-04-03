@@ -4,11 +4,13 @@ import com.keepgoing.keepgoing.global.api.response.ApiResponse;
 import com.keepgoing.keepgoing.global.api.response.PagedResponse;
 import com.keepgoing.keepgoing.note.controller.dto.NoteCreateRequest;
 import com.keepgoing.keepgoing.note.controller.dto.NoteDetailResponse;
+import com.keepgoing.keepgoing.note.controller.dto.NoteMoveRequest;
 import com.keepgoing.keepgoing.note.controller.dto.NoteSummaryResponse;
 import com.keepgoing.keepgoing.note.controller.dto.NoteUpdateRequest;
 import com.keepgoing.keepgoing.note.service.NoteService;
 import com.keepgoing.keepgoing.note.service.dto.NoteCreateCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteDetailResult;
+import com.keepgoing.keepgoing.note.service.dto.NoteMoveCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteSearchQuery;
 import com.keepgoing.keepgoing.note.service.dto.NoteSummaryResult;
 import com.keepgoing.keepgoing.note.service.dto.NoteUpdateCommand;
@@ -26,6 +28,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -162,6 +165,23 @@ public class NoteController {
                 .toList();
 
         return ResponseEntity.ok(ApiResponse.success(PagedResponse.of(page, contents)));
+    }
+
+    /**
+     * 노트 이동
+     */
+    @PatchMapping("/{noteId}/folder")
+    public ResponseEntity<ApiResponse<NoteDetailResponse>> moveNote(
+            @PathVariable Long noteId,
+            @AuthenticationPrincipal Long userId,
+            @Valid @RequestBody NoteMoveRequest request
+    ) {
+        NoteMoveCommand command = request.toCommand(noteId, userId);
+        NoteDetailResult noteDetailResult = noteService.moveNote(command);
+
+        NoteDetailResponse response = NoteDetailResponse.from(noteDetailResult);
+
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     private Pageable safePageable(Pageable pageable) {

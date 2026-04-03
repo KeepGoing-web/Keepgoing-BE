@@ -84,6 +84,7 @@ public class SecurityConfig {
 								"/api/folders"
 						).authenticated()
                         // 게시글 조회는 공개(개발/일반 사용자 접근), 쓰기(생성/수정/삭제)는 인증 필요
+						// TODO: post를 note로 리팩토링
                         .requestMatchers(HttpMethod.GET, "/api/posts/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/posts/**").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/posts/**").authenticated()

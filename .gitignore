@@ -49,3 +49,5 @@ docs/perf/results/
 bin/
 .classpath
 .factorypath
+out/
+AGENTS.md
