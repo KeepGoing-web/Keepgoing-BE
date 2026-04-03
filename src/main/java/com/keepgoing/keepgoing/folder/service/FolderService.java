@@ -2,18 +2,14 @@ package com.keepgoing.keepgoing.folder.service;
 
 import com.keepgoing.keepgoing.folder.domain.Folder;
 import com.keepgoing.keepgoing.folder.repository.FolderRepository;
+import com.keepgoing.keepgoing.folder.repository.dto.FolderTreeRow;
 import com.keepgoing.keepgoing.folder.service.dto.FolderCreateCommand;
 import com.keepgoing.keepgoing.folder.service.dto.FolderSummaryResult;
 import com.keepgoing.keepgoing.folder.service.dto.FolderTreeNodeResult;
-import com.keepgoing.keepgoing.folder.service.dto.FolderTreeRow;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import com.keepgoing.keepgoing.user.domain.User;
 import com.keepgoing.keepgoing.user.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -21,13 +17,20 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class FolderService {
 
 	private final UserRepository userRepository;
 	private final FolderRepository folderRepository;
+	private static final int MAX_TREE_DEPTH = 200;
 
 	@Transactional
 	public FolderSummaryResult createFolder(FolderCreateCommand command) {
@@ -54,7 +57,8 @@ public class FolderService {
 
 		return new FolderSummaryResult(
 				saved.getId(),
-				saved.getParent() != null ? saved.getParent().getId() : null,
+				saved.getParent() != null ? saved.getParent()
+						.getId() : null,
 				saved.getName());
 	}
 
@@ -75,7 +79,8 @@ public class FolderService {
 		return folders.stream()
 				.map(f -> new FolderSummaryResult(
 						f.getId(),
-						f.getParent() != null ? f.getParent().getId() : null,
+						f.getParent() != null ? f.getParent()
+								.getId() : null,
 						f.getName()
 				))
 				.toList();
@@ -114,9 +119,14 @@ public class FolderService {
 		}
 
 		roots.sort(Comparator.comparing(n -> n.name));
+		AtomicBoolean truncated = new AtomicBoolean(false);
 		List<FolderTreeNodeResult> results = roots.stream()
-				.map(r -> toResult(r, new HashSet<>()))
+				.map(r -> toResult(r, new HashSet<>(), 0, truncated))
 				.toList();
+
+		if (truncated.get()) {
+			log.warn("folder tree truncated: userId={}, maxDepth={} (children cut)", userId, MAX_TREE_DEPTH);
+		}
 
 		return List.copyOf(results);
 	}
@@ -135,14 +145,23 @@ public class FolderService {
 	}
 
 
-	private FolderTreeNodeResult toResult(Node node, Set<Long> visiting) {
+	private FolderTreeNodeResult toResult(Node node, Set<Long> visiting, int depth, AtomicBoolean truncated) {
+		// depth guard
+		if (depth >= MAX_TREE_DEPTH) {
+			truncated.set(true);
+			return new FolderTreeNodeResult(node.id, node.parentId, node.name, List.of());
+		}
+
+		// cycle guard
 		if (!visiting.add(node.id)) {
+			truncated.set(true);
+			log.warn("folder tree cycle detected: nodeId={} (children cut)", node.id);
 			return new FolderTreeNodeResult(node.id, node.parentId, node.name, List.of());
 		}
 
 		node.children.sort(Comparator.comparing(n -> n.name));
 		List<FolderTreeNodeResult> children = node.children.stream()
-				.map(c -> toResult(c, visiting))
+				.map(c -> toResult(c, visiting, depth + 1, truncated))
 				.toList();
 
 		visiting.remove(node.id);
