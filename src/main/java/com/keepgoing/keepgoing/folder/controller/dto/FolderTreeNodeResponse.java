@@ -5,10 +5,10 @@ import com.keepgoing.keepgoing.folder.service.dto.FolderTreeNodeResult;
 import java.util.List;
 
 public record FolderTreeNodeResponse(
-        Long folderId,
-        Long parentId,
-        String name,
-        List<FolderTreeNodeResponse> children
+		Long folderId,
+		Long parentId,
+		String name,
+		List<FolderTreeNodeResponse> children
 ) {
 	private static final int DEFAULT_MAX_DEPTH = 200;
 
@@ -38,7 +38,8 @@ public record FolderTreeNodeResponse(
 
 		List<FolderTreeNodeResponse> children = (result.children() == null)
 				? List.of()
-				: result.children().stream()
+				: result.children()
+						.stream()
 						.map(child -> from(child, maxDepth, depth + 1))
 						.toList();
 

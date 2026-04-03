@@ -1,16 +1,27 @@
 package com.keepgoing.keepgoing.folder.service;
 
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+
 import com.keepgoing.keepgoing.folder.domain.Folder;
 import com.keepgoing.keepgoing.folder.repository.FolderRepository;
+import com.keepgoing.keepgoing.folder.repository.dto.FolderTreeRow;
 import com.keepgoing.keepgoing.folder.service.dto.FolderCreateCommand;
 import com.keepgoing.keepgoing.folder.service.dto.FolderSummaryResult;
 import com.keepgoing.keepgoing.folder.service.dto.FolderTreeNodeResult;
-import com.keepgoing.keepgoing.folder.service.dto.FolderTreeRow;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import com.keepgoing.keepgoing.user.domain.User;
 import com.keepgoing.keepgoing.user.repository.UserRepository;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -19,16 +30,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
-
-import java.util.List;
-import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class FolderServiceTest {
@@ -264,10 +265,14 @@ class FolderServiceTest {
 
 			//then
 			assertThat(results).hasSize(2);
-			assertThat(results.get(0).name()).isEqualTo("a");
-			assertThat(results.get(1).name()).isEqualTo("b");
-			assertThat(results.get(0).parentId()).isNull();
-			assertThat(results.get(1).parentId()).isNull();
+			assertThat(results.get(0)
+					.name()).isEqualTo("a");
+			assertThat(results.get(1)
+					.name()).isEqualTo("b");
+			assertThat(results.get(0)
+					.parentId()).isNull();
+			assertThat(results.get(1)
+					.parentId()).isNull();
 
 			verify(folderRepository).findRootFolders(userId);
 			verifyNoMoreInteractions(folderRepository);
@@ -297,10 +302,14 @@ class FolderServiceTest {
 
 			//then
 			assertThat(results).hasSize(2);
-			assertThat(results.get(0).parentId()).isEqualTo(parentId);
-			assertThat(results.get(1).parentId()).isEqualTo(parentId);
-			assertThat(results.get(0).name()).isEqualTo("backend");
-			assertThat(results.get(1).name()).isEqualTo("frontend");
+			assertThat(results.get(0)
+					.parentId()).isEqualTo(parentId);
+			assertThat(results.get(1)
+					.parentId()).isEqualTo(parentId);
+			assertThat(results.get(0)
+					.name()).isEqualTo("backend");
+			assertThat(results.get(1)
+					.name()).isEqualTo("frontend");
 
 			verify(folderRepository).findByIdAndDeletedAtIsNull(parentId);
 			verify(folderRepository).findChildFolders(userId, parentId);
@@ -345,6 +354,7 @@ class FolderServiceTest {
 			verifyNoMoreInteractions(folderRepository);
 		}
 	}
+
 	@Nested
 	@DisplayName("getFolderTree()")
 	class GetFolderTree {
@@ -373,14 +383,16 @@ class FolderServiceTest {
 					.containsExactlyInAnyOrder(1L, 4L);
 
 			FolderTreeNodeResult study = roots.stream()
-					.filter(r -> r.folderId().equals(1L))
+					.filter(r -> r.folderId()
+							.equals(1L))
 					.findFirst()
 					.orElseThrow();
 			assertThat(study.children()).extracting(FolderTreeNodeResult::folderId)
 					.containsExactly(3L, 2L);
 
 			FolderTreeNodeResult personal = roots.stream()
-					.filter(r -> r.folderId().equals(4L))
+					.filter(r -> r.folderId()
+							.equals(4L))
 					.findFirst()
 					.orElseThrow();
 			assertThat(personal.children()).extracting(FolderTreeNodeResult::folderId)
@@ -420,9 +432,48 @@ class FolderServiceTest {
 
 			// then
 			assertThat(roots).hasSize(2);
-			assertThat(roots).extracting(FolderTreeNodeResult::folderId).containsExactly(1L, 2L);
-			assertThat(roots.get(1).parentId()).isEqualTo(999L);
-			assertThat(roots.get(1).children()).isEmpty();
+			assertThat(roots).extracting(FolderTreeNodeResult::folderId)
+					.containsExactly(1L, 2L);
+			assertThat(roots.get(1)
+					.parentId()).isEqualTo(999L);
+			assertThat(roots.get(1)
+					.children()).isEmpty();
+			verify(folderRepository).findTreeRows(userId);
+		}
+
+		@Test
+		@DisplayName("트리 깊이가 비정상적으로 깊으면 MAX_TREE_DEPTH에서 잘라서 반환한다.")
+		void getFolderTree_truncatesWhenDepthTooDeep() {
+			// given
+			Long userId = 1L;
+			int maxDepth = (int) ReflectionTestUtils.getField(FolderService.class, "MAX_TREE_DEPTH");
+			int chainLen = maxDepth + 5;
+
+			List<FolderTreeRow> rows = new ArrayList<>(chainLen);
+			rows.add(new FolderTreeRow(1L, null, "root"));
+			for (int i = 2; i <= chainLen; i++) {
+				rows.add(new FolderTreeRow((long) i, (long) (i - 1), "n" + i));
+			}
+
+			given(folderRepository.findTreeRows(userId)).willReturn(rows);
+
+			// when
+			List<FolderTreeNodeResult> roots = folderService.getFolderTree(userId);
+
+			// then
+			assertThat(roots).hasSize(1);
+
+			FolderTreeNodeResult current = roots.get(0);
+
+			for (int d = 0; d < maxDepth; d++) {
+				assertThat(current.children())
+						.as("depth=%s에서 child가 1개 존재해야 한다", d)
+						.hasSize(1);
+				current = current.children().get(0);
+			}
+
+			assertThat(current.children()).isEmpty();
+
 			verify(folderRepository).findTreeRows(userId);
 		}
 	}
