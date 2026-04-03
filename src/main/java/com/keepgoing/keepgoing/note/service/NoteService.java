@@ -8,6 +8,7 @@ import com.keepgoing.keepgoing.note.domain.Note;
 import com.keepgoing.keepgoing.note.repository.NoteRepository;
 import com.keepgoing.keepgoing.note.service.dto.NoteCreateCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteDetailResult;
+import com.keepgoing.keepgoing.note.service.dto.NoteMoveCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteSearchQuery;
 import com.keepgoing.keepgoing.note.service.dto.NoteSummaryResult;
 import com.keepgoing.keepgoing.note.service.dto.NoteUpdateCommand;
@@ -133,5 +134,23 @@ public class NoteService {
 		);
 
 		return page.map(NoteSummaryResult::from);
+	}
+
+	/**
+	 * 폴더 변경
+	 */
+	@Transactional
+	public NoteDetailResult moveNote(NoteMoveCommand command) {
+		Note note = noteRepository.findById(command.noteId())
+				.orElseThrow(() -> new BusinessException(ErrorCode.NOTE_NOT_FOUND));
+
+		Long targetFolderId = command.folderId();
+		Folder targetFolder = (targetFolderId == null)
+				? null
+				: folderRepository.findByIdAndDeletedAtIsNull(targetFolderId)
+				  .orElseThrow(() -> new BusinessException(ErrorCode.FOLDER_NOT_FOUND));
+
+		note.changeFolder(command.userId(), targetFolder);
+		return NoteDetailResult.from(note);
 	}
 }

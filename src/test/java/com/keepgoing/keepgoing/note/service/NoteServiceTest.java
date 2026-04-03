@@ -18,6 +18,7 @@ import com.keepgoing.keepgoing.note.domain.NoteVisibility;
 import com.keepgoing.keepgoing.note.repository.NoteRepository;
 import com.keepgoing.keepgoing.note.service.dto.NoteCreateCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteDetailResult;
+import com.keepgoing.keepgoing.note.service.dto.NoteMoveCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteSearchQuery;
 import com.keepgoing.keepgoing.note.service.dto.NoteSummaryResult;
 import com.keepgoing.keepgoing.note.service.dto.NoteUpdateCommand;
@@ -528,6 +529,167 @@ public class NoteServiceTest {
 				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_ACCESS_DENIED);
 		verify(noteRepository).findById(noteId);
 		verifyNoMoreInteractions(noteRepository);
+		verifyNoInteractions(userRepository);
+	}
+
+	// ========== moveNote ==========
+
+	@Test
+	@DisplayName("moveNote: 내 폴더로 이동하면 folderId가 변경된다")
+	void moveNote_movesToOwnedFolder() {
+		// given
+		Long userId = 1L;
+		Long noteId = 10L;
+		Long folderId = 20L;
+
+		User author = createUser(userId);
+		Note note = Note.create(author, null, "title", "content", NoteVisibility.PRIVATE, true);
+		Folder folder = Folder.create(author, null, DIRECTORY_NAME);
+		ReflectionTestUtils.setField(folder, "id", folderId);
+
+		given(noteRepository.findById(noteId)).willReturn(Optional.of(note));
+		given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(folder));
+
+		NoteMoveCommand command = new NoteMoveCommand(noteId, userId, folderId);
+
+		// when
+		NoteDetailResult result = noteService.moveNote(command);
+
+		// then
+		assertThat(note.getFolder()).isEqualTo(folder);
+		assertThat(result.folderId()).isEqualTo(folderId);
+		verify(noteRepository).findById(noteId);
+		verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
+		verifyNoMoreInteractions(noteRepository, folderRepository);
+		verifyNoInteractions(userRepository);
+	}
+
+	@Test
+	@DisplayName("moveNote: folderId가 null이면 루트로 이동한다")
+	void moveNote_movesToRootWhenFolderIdIsNull() {
+		// given
+		Long userId = 1L;
+		Long noteId = 10L;
+		Long existingFolderId = 30L;
+
+		User author = createUser(userId);
+		Folder existingFolder = Folder.create(author, null, DIRECTORY_NAME);
+		ReflectionTestUtils.setField(existingFolder, "id", existingFolderId);
+		Note note = Note.create(author, existingFolder, "title", "content", NoteVisibility.PRIVATE, true);
+
+		given(noteRepository.findById(noteId)).willReturn(Optional.of(note));
+
+		NoteMoveCommand command = new NoteMoveCommand(noteId, userId, null);
+
+		// when
+		NoteDetailResult result = noteService.moveNote(command);
+
+		// then
+		assertThat(note.getFolder()).isNull();
+		assertThat(result.folderId()).isNull();
+		verify(noteRepository).findById(noteId);
+		verifyNoMoreInteractions(noteRepository);
+		verifyNoInteractions(folderRepository, userRepository);
+	}
+
+	@Test
+	@DisplayName("moveNote: 노트가 없으면 NOTE_NOT_FOUND 예외")
+	void moveNote_throwsWhenNoteNotFound() {
+		// given
+		Long noteId = 10L;
+		Long userId = 1L;
+		Long folderId = 20L;
+
+		given(noteRepository.findById(noteId)).willReturn(Optional.empty());
+
+		NoteMoveCommand command = new NoteMoveCommand(noteId, userId, folderId);
+
+		// when & then
+		assertThatThrownBy(() -> noteService.moveNote(command))
+				.isInstanceOf(BusinessException.class)
+				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_NOT_FOUND);
+		verify(noteRepository).findById(noteId);
+		verifyNoMoreInteractions(noteRepository);
+		verifyNoInteractions(folderRepository, userRepository);
+	}
+
+	@Test
+	@DisplayName("moveNote: 대상 폴더가 없으면 FOLDER_NOT_FOUND 예외")
+	void moveNote_throwsWhenFolderNotFound() {
+		// given
+		Long userId = 1L;
+		Long noteId = 10L;
+		Long folderId = 20L;
+
+		User author = createUser(userId);
+		Note note = Note.create(author, null, "title", "content", NoteVisibility.PRIVATE, true);
+
+		given(noteRepository.findById(noteId)).willReturn(Optional.of(note));
+		given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.empty());
+
+		NoteMoveCommand command = new NoteMoveCommand(noteId, userId, folderId);
+
+		// when & then
+		assertThatThrownBy(() -> noteService.moveNote(command))
+				.isInstanceOf(BusinessException.class)
+				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_NOT_FOUND);
+		verify(noteRepository).findById(noteId);
+		verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
+		verifyNoMoreInteractions(noteRepository, folderRepository);
+		verifyNoInteractions(userRepository);
+	}
+
+	@Test
+	@DisplayName("moveNote: 작성자가 아니면 NOTE_ACCESS_DENIED 예외")
+	void moveNote_throwsWhenRequesterIsNotAuthor() {
+		// given
+		Long requesterId = 1L;
+		Long authorId = 2L;
+		Long noteId = 10L;
+
+		User author = createUser(authorId);
+		Note note = Note.create(author, null, "title", "content", NoteVisibility.PRIVATE, true);
+
+		given(noteRepository.findById(noteId)).willReturn(Optional.of(note));
+
+		NoteMoveCommand command = new NoteMoveCommand(noteId, requesterId, null);
+
+		// when & then
+		assertThatThrownBy(() -> noteService.moveNote(command))
+				.isInstanceOf(BusinessException.class)
+				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_ACCESS_DENIED);
+		verify(noteRepository).findById(noteId);
+		verifyNoMoreInteractions(noteRepository);
+		verifyNoInteractions(folderRepository, userRepository);
+	}
+
+	@Test
+	@DisplayName("moveNote: 다른 사용자의 폴더면 FOLDER_ACCESS_DENIED 예외")
+	void moveNote_throwsWhenTargetFolderOwnedByAnotherUser() {
+		// given
+		Long userId = 1L;
+		Long otherUserId = 2L;
+		Long noteId = 10L;
+		Long folderId = 20L;
+
+		User author = createUser(userId);
+		User otherAuthor = createUser(otherUserId);
+		Note note = Note.create(author, null, "title", "content", NoteVisibility.PRIVATE, true);
+		Folder otherFolder = Folder.create(otherAuthor, null, DIRECTORY_NAME);
+		ReflectionTestUtils.setField(otherFolder, "id", folderId);
+
+		given(noteRepository.findById(noteId)).willReturn(Optional.of(note));
+		given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(otherFolder));
+
+		NoteMoveCommand command = new NoteMoveCommand(noteId, userId, folderId);
+
+		// when & then
+		assertThatThrownBy(() -> noteService.moveNote(command))
+				.isInstanceOf(BusinessException.class)
+				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_ACCESS_DENIED);
+		verify(noteRepository).findById(noteId);
+		verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
+		verifyNoMoreInteractions(noteRepository, folderRepository);
 		verifyNoInteractions(userRepository);
 	}
 
