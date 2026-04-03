@@ -9,6 +9,7 @@ import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -19,9 +20,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.keepgoing.keepgoing.global.api.exception.GlobalExceptionHandler;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
+import com.keepgoing.keepgoing.global.config.JacksonConfig;
 import com.keepgoing.keepgoing.global.security.cookie.CookieConfig;
 import com.keepgoing.keepgoing.global.security.jwt.JwtProvider;
 import com.keepgoing.keepgoing.note.controller.dto.NoteCreateRequest;
+import com.keepgoing.keepgoing.note.service.dto.NoteMoveCommand;
 import com.keepgoing.keepgoing.note.controller.dto.NoteUpdateRequest;
 import com.keepgoing.keepgoing.note.domain.NoteVisibility;
 import com.keepgoing.keepgoing.note.service.NoteService;
@@ -54,7 +57,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @AutoConfigureMockMvc(addFilters = false)
 @WebMvcTest(NoteController.class)
-@Import({GlobalExceptionHandler.class, CookieConfig.class})
+@Import({GlobalExceptionHandler.class, CookieConfig.class, JacksonConfig.class})
 public class NoteControllerTest {
 
 	@Autowired
@@ -536,6 +539,229 @@ public class NoteControllerTest {
 					.andExpect(jsonPath("$.error.code").value("NOTE_ACCESS_DENIED"));
 		}
 
+	}
+
+	// ========== PATCH /api/notes/{noteId}/folder ==========
+
+	@Nested
+	@DisplayName("PATCH /api/notes/{noteId}/folder")
+	class Move {
+
+		@Test
+		@DisplayName("folderId가 있으면 해당 폴더로 이동한다")
+		void successWhenFolderIdIsProvided() throws Exception {
+			// given
+			Long userId = 1L;
+			Long noteId = 10L;
+			Long folderId = 20L;
+
+			NoteDetailResult result = new NoteDetailResult(
+					noteId,
+					folderId,
+					userId,
+					"테스트 제목",
+					"테스트 내용",
+					NoteVisibility.PRIVATE,
+					true,
+					null,
+					null
+			);
+
+			given(noteService.moveNote(any(NoteMoveCommand.class))).willReturn(result);
+
+			SecurityContextHolder.getContext()
+					.setAuthentication(new UsernamePasswordAuthenticationToken(userId, null, List.of()));
+
+			// when & then
+			mockMvc.perform(patch("/api/notes/{noteId}/folder", noteId)
+							.contentType(MediaType.APPLICATION_JSON)
+							.content("""
+									{"folderId": 20}
+									"""))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.success").value(true))
+					.andExpect(jsonPath("$.data.noteId").value(noteId))
+					.andExpect(jsonPath("$.data.folderId").value(folderId))
+					.andExpect(jsonPath("$.data.userId").value(userId));
+
+			ArgumentCaptor<NoteMoveCommand> captor = ArgumentCaptor.forClass(NoteMoveCommand.class);
+			verify(noteService).moveNote(captor.capture());
+			assertThat(captor.getValue().noteId()).isEqualTo(noteId);
+			assertThat(captor.getValue().userId()).isEqualTo(userId);
+			assertThat(captor.getValue().folderId()).isEqualTo(folderId);
+		}
+
+		@Test
+		@DisplayName("folderId가 null이면 루트로 이동한다")
+		void successWhenFolderIdIsNull() throws Exception {
+			// given
+			Long userId = 1L;
+			Long noteId = 10L;
+
+			NoteDetailResult result = new NoteDetailResult(
+					noteId,
+					null,
+					userId,
+					"테스트 제목",
+					"테스트 내용",
+					NoteVisibility.PRIVATE,
+					true,
+					null,
+					null
+			);
+
+			given(noteService.moveNote(any(NoteMoveCommand.class))).willReturn(result);
+
+			SecurityContextHolder.getContext()
+					.setAuthentication(new UsernamePasswordAuthenticationToken(userId, null, List.of()));
+
+			// when & then
+			mockMvc.perform(patch("/api/notes/{noteId}/folder", noteId)
+							.contentType(MediaType.APPLICATION_JSON)
+							.content("""
+									{"folderId": null}
+									"""))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.success").value(true))
+					.andExpect(jsonPath("$.data.noteId").value(noteId))
+					.andExpect(jsonPath("$.data.folderId").isEmpty());
+
+			ArgumentCaptor<NoteMoveCommand> captor = ArgumentCaptor.forClass(NoteMoveCommand.class);
+			verify(noteService).moveNote(captor.capture());
+			assertThat(captor.getValue().folderId()).isNull();
+		}
+
+		@Test
+		@DisplayName("folderId 필드가 없으면 400 validation 에러를 반환한다")
+		void returnsBadRequestWhenFolderIdIsMissing() throws Exception {
+			// given
+			Long userId = 1L;
+			Long noteId = 10L;
+			SecurityContextHolder.getContext()
+					.setAuthentication(new UsernamePasswordAuthenticationToken(userId, null, List.of()));
+
+			// when & then
+			mockMvc.perform(patch("/api/notes/{noteId}/folder", noteId)
+							.contentType(MediaType.APPLICATION_JSON)
+							.content("{}"))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value("VALIDATION_FAILED"))
+					.andExpect(jsonPath("$.error.fieldErrors[0].field").value("folderId"));
+		}
+
+		@Test
+		@DisplayName("folderId가 0 이하이면 400 validation 에러를 반환한다")
+		void returnsBadRequestWhenFolderIdIsNotPositive() throws Exception {
+			// given
+			Long userId = 1L;
+			Long noteId = 10L;
+			SecurityContextHolder.getContext()
+					.setAuthentication(new UsernamePasswordAuthenticationToken(userId, null, List.of()));
+
+			// when & then
+			mockMvc.perform(patch("/api/notes/{noteId}/folder", noteId)
+							.contentType(MediaType.APPLICATION_JSON)
+							.content("""
+									{"folderId": 0}
+									"""))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value("VALIDATION_FAILED"))
+					.andExpect(jsonPath("$.error.fieldErrors[0].field").value("folderId"));
+		}
+
+		@Test
+		@DisplayName("노트가 없으면 NOTE_NOT_FOUND 에러를 반환한다")
+		void returnsNotFoundWhenNoteDoesNotExist() throws Exception {
+			// given
+			Long userId = 1L;
+			Long noteId = 10L;
+			given(noteService.moveNote(any(NoteMoveCommand.class)))
+					.willThrow(new BusinessException(ErrorCode.NOTE_NOT_FOUND));
+
+			SecurityContextHolder.getContext()
+					.setAuthentication(new UsernamePasswordAuthenticationToken(userId, null, List.of()));
+
+			// when & then
+			mockMvc.perform(patch("/api/notes/{noteId}/folder", noteId)
+							.contentType(MediaType.APPLICATION_JSON)
+							.content("""
+									{"folderId": 20}
+									"""))
+					.andExpect(status().isNotFound())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value("NOTE_NOT_FOUND"));
+		}
+
+		@Test
+		@DisplayName("작성자가 아니면 NOTE_ACCESS_DENIED 에러를 반환한다")
+		void returnsForbiddenWhenRequesterIsNotAuthor() throws Exception {
+			// given
+			Long userId = 1L;
+			Long noteId = 10L;
+			given(noteService.moveNote(any(NoteMoveCommand.class)))
+					.willThrow(new BusinessException(ErrorCode.NOTE_ACCESS_DENIED));
+
+			SecurityContextHolder.getContext()
+					.setAuthentication(new UsernamePasswordAuthenticationToken(userId, null, List.of()));
+
+			// when & then
+			mockMvc.perform(patch("/api/notes/{noteId}/folder", noteId)
+							.contentType(MediaType.APPLICATION_JSON)
+							.content("""
+									{"folderId": 20}
+									"""))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value("NOTE_ACCESS_DENIED"));
+		}
+
+		@Test
+		@DisplayName("대상 폴더가 없으면 FOLDER_NOT_FOUND 에러를 반환한다")
+		void returnsNotFoundWhenFolderDoesNotExist() throws Exception {
+			// given
+			Long userId = 1L;
+			Long noteId = 10L;
+			given(noteService.moveNote(any(NoteMoveCommand.class)))
+					.willThrow(new BusinessException(ErrorCode.FOLDER_NOT_FOUND));
+
+			SecurityContextHolder.getContext()
+					.setAuthentication(new UsernamePasswordAuthenticationToken(userId, null, List.of()));
+
+			// when & then
+			mockMvc.perform(patch("/api/notes/{noteId}/folder", noteId)
+							.contentType(MediaType.APPLICATION_JSON)
+							.content("""
+									{"folderId": 20}
+									"""))
+					.andExpect(status().isNotFound())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value("FOLDER_NOT_FOUND"));
+		}
+
+		@Test
+		@DisplayName("다른 사용자의 폴더면 FOLDER_ACCESS_DENIED 에러를 반환한다")
+		void returnsForbiddenWhenFolderOwnedByAnotherUser() throws Exception {
+			// given
+			Long userId = 1L;
+			Long noteId = 10L;
+			given(noteService.moveNote(any(NoteMoveCommand.class)))
+					.willThrow(new BusinessException(ErrorCode.FOLDER_ACCESS_DENIED));
+
+			SecurityContextHolder.getContext()
+					.setAuthentication(new UsernamePasswordAuthenticationToken(userId, null, List.of()));
+
+			// when & then
+			mockMvc.perform(patch("/api/notes/{noteId}/folder", noteId)
+							.contentType(MediaType.APPLICATION_JSON)
+							.content("""
+									{"folderId": 20}
+									"""))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value("FOLDER_ACCESS_DENIED"));
+		}
 	}
 
 	// ========== GET /api/notes/me/search ==========

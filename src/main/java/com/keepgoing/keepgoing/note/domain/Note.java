@@ -163,4 +163,16 @@ public class Note extends BaseEntity {
 		}
 		return this.author.getId();
 	}
+
+	/**
+	 * 폴더 변경
+	 */
+	public void changeFolder(Long requesterId, Folder targetFolder) {
+		validateAuthor(requesterId);
+
+		if (targetFolder != null) {
+			targetFolder.validateOwner(this.author.getId());
+		}
+		this.folder = targetFolder;
+	}
 }
