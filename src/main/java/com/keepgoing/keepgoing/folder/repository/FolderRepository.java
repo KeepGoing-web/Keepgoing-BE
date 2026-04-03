@@ -1,7 +1,7 @@
 package com.keepgoing.keepgoing.folder.repository;
 
 import com.keepgoing.keepgoing.folder.domain.Folder;
-import com.keepgoing.keepgoing.folder.service.dto.FolderTreeRow;
+import com.keepgoing.keepgoing.folder.repository.dto.FolderTreeRow;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -31,7 +31,7 @@ public interface FolderRepository extends JpaRepository<Folder, Long> {
 			order by f.name ASC
 			""")
 	List<Folder> findChildFolders(@Param("ownerId") Long ownerId,
-								  @Param("parentId") Long parentId);
+	                              @Param("parentId") Long parentId);
 
 	@Query("""
 			select count(f) > 0
@@ -42,7 +42,7 @@ public interface FolderRepository extends JpaRepository<Folder, Long> {
 			 and f.deletedAt is null
 			""")
 	boolean existsRootFolder(@Param("userId") Long userId,
-							 @Param("name") String name);
+	                         @Param("name") String name);
 
 	@Query("""
 			select count(f) > 0
@@ -53,16 +53,16 @@ public interface FolderRepository extends JpaRepository<Folder, Long> {
 			 and f.deletedAt is null
 			""")
 	boolean existsChildFolder(@Param("userId") Long userId,
-							  @Param("parentId") Long parentId,
-							  @Param("name") String name);
+	                          @Param("parentId") Long parentId,
+	                          @Param("name") String name);
 
 	@Query("""
-    select new com.keepgoing.keepgoing.folder.repository.dto.FolderTreeRow(f.id, p.id, f.name)
-    from Folder f
-    left join f.parent p
-    where f.owner.id = :ownerId
-      and f.deletedAt is null
-    order by f.name asc
-    """)
+			select new com.keepgoing.keepgoing.folder.repository.dto.FolderTreeRow(f.id, p.id, f.name)
+			from Folder f
+			left join f.parent p
+			where f.owner.id = :ownerId
+			  and f.deletedAt is null
+			order by f.name asc
+			""")
 	List<FolderTreeRow> findTreeRows(@Param("ownerId") Long ownerId);
 }

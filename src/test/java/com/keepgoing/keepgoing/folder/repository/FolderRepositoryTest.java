@@ -4,7 +4,7 @@ package com.keepgoing.keepgoing.folder.repository;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.keepgoing.keepgoing.folder.domain.Folder;
-import com.keepgoing.keepgoing.folder.service.dto.FolderTreeRow;
+import com.keepgoing.keepgoing.folder.repository.dto.FolderTreeRow;
 import com.keepgoing.keepgoing.global.config.JpaAuditingConfig;
 import com.keepgoing.keepgoing.user.domain.User;
 import com.keepgoing.keepgoing.user.repository.UserRepository;
@@ -120,7 +120,8 @@ public class FolderRepositoryTest {
 			List<FolderTreeRow> rows = folderRepository.findTreeRows(user1.getId());
 
 			// then
-			assertThat(rows).extracting(FolderTreeRow::name).containsExactly("A", "AA", "B");
+			assertThat(rows).extracting(FolderTreeRow::name)
+					.containsExactly("A", "AA", "B");
 
 			FolderTreeRow aRow = rows.stream()
 					.filter(r -> r.folderId()
