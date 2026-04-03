@@ -1,5 +1,6 @@
 package com.keepgoing.keepgoing.note.service;
 
+import static com.keepgoing.keepgoing.support.UserFixture.user;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -55,16 +56,6 @@ public class NoteServiceTest {
 	@InjectMocks
 	NoteService noteService;
 
-	// ===== 테스트용 헬퍼 메서드들 =====
-
-	private User createUser(Long id) {
-		return User.builder()
-				.id(id)
-				.email("test@example.com")
-				.name("테스트유저")
-				.build();
-	}
-
 	// ========== createNote ==========
 
 	@Test
@@ -80,7 +71,7 @@ public class NoteServiceTest {
 				.visibility(NoteVisibility.PRIVATE)
 				.aiCollectable(true)
 				.build();
-		User author = createUser(userId);
+		User author = user(userId, "test@example.com", "테스트유저");
 
 		given(userRepository.findById(userId)).willReturn(Optional.of(author));
 		given(noteRepository.save(any(Note.class)))
@@ -147,7 +138,7 @@ public class NoteServiceTest {
 	void createNote_createsNoteWhenFolderExists() {
 		// given
 		Long userId = 1L;
-		User author = createUser(1L);
+		User author = user(1L, "test@example.com", "테스트유저");
 
 		Folder folder = Folder.create(author, null, DIRECTORY_NAME);
 		ReflectionTestUtils.setField(folder, "id", 2L);
@@ -201,7 +192,7 @@ public class NoteServiceTest {
 	void createNote_throwsWhenFolderNotFound() {
 		// given
 		Long userId = 1L;
-		User author = createUser(1L);
+		User author = user(1L);
 		var command = NoteCreateCommand.builder()
 				.userId(userId)
 				.folderId(2L)
@@ -232,8 +223,8 @@ public class NoteServiceTest {
 		Long userId = 1L;
 		Long otherUserId = 2L;
 		Long folderId = 10L;
-		User author = createUser(1L);
-		User otherAuthor = createUser(otherUserId);
+		User author = user(1L);
+		User otherAuthor = user(otherUserId);
 		Folder folder = Folder.create(
 				otherAuthor,
 				null,
@@ -270,7 +261,7 @@ public class NoteServiceTest {
 	void getNote_returnsNoteWhenExists() {
 		// given
 		Long noteId = 1L;
-		User user = createUser(1L);
+		User user = user(1L);
 		Note note = Note.create(user, null, "제목", "내용", NoteVisibility.PRIVATE, true);
 
 		given(noteRepository.findById(noteId)).willReturn(Optional.of(note));
@@ -312,7 +303,7 @@ public class NoteServiceTest {
 	void getNotes_returnsPage() {
 		// given
 		Long userId = 1L;
-		User user = createUser(userId);
+		User user = user(userId);
 		Folder folder = Folder.create(user, null, DIRECTORY_NAME);
 		ReflectionTestUtils.setField(folder, "id", 10L);
 
@@ -367,7 +358,7 @@ public class NoteServiceTest {
 		Long userId = 1L;
 		Long noteId = 10L;
 
-		User user = createUser(userId);
+		User user = user(userId);
 		Note note = Note.create(user, null, "old", "old", NoteVisibility.PRIVATE, true);
 
 		String newTitle = "수정 제목";
@@ -439,7 +430,7 @@ public class NoteServiceTest {
 		Long othersId = 2L;
 		Long noteId = 10L;
 
-		User user = createUser(othersId); // 실제 작성자는 2번
+		User user = user(othersId); // 실제 작성자는 2번
 		Note note = Note.create(user, null, "old", "old", NoteVisibility.PRIVATE, true);
 
 		String newTitle = "수정 제목";
@@ -476,7 +467,7 @@ public class NoteServiceTest {
 		Long userId = 1L;
 		Long noteId = 10L;
 
-		User user = createUser(userId);
+		User user = user(userId);
 		Note note = Note.create(user, null, "title", "content", NoteVisibility.PRIVATE, true);
 
 		given(noteRepository.findById(noteId)).willReturn(Optional.of(note));
@@ -517,7 +508,7 @@ public class NoteServiceTest {
 		Long othersId = 2L;
 		Long noteId = 10L;
 
-		User user = createUser(othersId); // 작성자는 2번
+		User user = user(othersId); // 작성자는 2번
 		Note note = Note.create(user, null, "title", "content", NoteVisibility.PRIVATE, true);
 
 		given(noteRepository.findById(noteId)).willReturn(Optional.of(note));
@@ -538,7 +529,7 @@ public class NoteServiceTest {
 	void searchMyNotes_returnsPageWhenKeywordProvided() {
 		// given
 		Long userId = 1L;
-		User user = createUser(userId);
+		User user = user(userId);
 		Folder folder = Folder.create(user, null, DIRECTORY_NAME);
 		ReflectionTestUtils.setField(folder, "id", 10L);
 
@@ -588,7 +579,7 @@ public class NoteServiceTest {
 	void searchMyNotes_trimsKeywordBeforeSearching() {
 		// given
 		Long userId = 1L;
-		User user = createUser(userId);
+		User user = user(userId);
 		Note note = Note.create(user, null, "spring 제목", "내용", NoteVisibility.PUBLIC, true);
 
 		Pageable pageable = PageRequest.of(0, 10);

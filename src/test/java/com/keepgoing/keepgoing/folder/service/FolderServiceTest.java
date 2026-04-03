@@ -1,5 +1,12 @@
 package com.keepgoing.keepgoing.folder.service;
 
+import static com.keepgoing.keepgoing.support.UserFixture.user;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import com.keepgoing.keepgoing.folder.domain.Folder;
 import com.keepgoing.keepgoing.folder.repository.FolderRepository;
@@ -17,16 +24,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
-
 import java.util.List;
 import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class FolderServiceTest {
@@ -41,14 +40,6 @@ class FolderServiceTest {
 	@InjectMocks
 	FolderService folderService;
 
-	private User createUser(Long id) {
-		return User.builder()
-				.id(id)
-				.email("test@test.com")
-				.name("test")
-				.build();
-	}
-
 	@Nested
 	@DisplayName("createFolder()")
 	class CreateFolder {
@@ -58,7 +49,7 @@ class FolderServiceTest {
 		void createFolder_createsRootFolder() {
 			// given
 			Long userId = 1L;
-			User user = createUser(userId);
+			User user = user(userId, "test@test.com", "test");
 			FolderCreateCommand command = new FolderCreateCommand(userId, null, DIRECTORY_NAME);
 
 			given(userRepository.findById(userId)).willReturn(Optional.of(user));
@@ -88,7 +79,7 @@ class FolderServiceTest {
 			// given
 			Long userId = 1L;
 			Long parentId = 2L;
-			User user = createUser(userId);
+			User user = user(userId, "test@test.com", "test");
 			Folder parent = Folder.create(user, null, "root");
 			ReflectionTestUtils.setField(parent, "id", parentId);
 
@@ -141,7 +132,7 @@ class FolderServiceTest {
 			// given
 			Long userId = 1L;
 			Long parentId = 2L;
-			User user = createUser(userId);
+			User user = user(userId);
 
 			FolderCreateCommand command = new FolderCreateCommand(userId, parentId, DIRECTORY_NAME);
 
@@ -164,8 +155,8 @@ class FolderServiceTest {
 			Long userId = 1L;
 			Long parentId = 2L;
 
-			User user = createUser(userId);
-			User otherUser = createUser(99L);
+			User user = user(userId);
+			User otherUser = user(99L);
 
 			Folder parent = Folder.create(otherUser, null, "other-root");
 			ReflectionTestUtils.setField(parent, "id", parentId);
@@ -190,7 +181,7 @@ class FolderServiceTest {
 		void createFolder_throwsWhenRootFolderNameDuplicated() {
 			// given
 			Long userId = 1L;
-			User user = createUser(userId);
+			User user = user(userId);
 
 			FolderCreateCommand command = new FolderCreateCommand(userId, null, DIRECTORY_NAME);
 
@@ -215,7 +206,7 @@ class FolderServiceTest {
 			Long userId = 1L;
 			Long parentId = 2L;
 
-			User user = createUser(userId);
+			User user = user(userId);
 			Folder parent = Folder.create(user, null, "root");
 			ReflectionTestUtils.setField(parent, "id", parentId);
 
@@ -247,7 +238,7 @@ class FolderServiceTest {
 		void getFolders_returnsRootFoldersOrderedByName() {
 			//given
 			Long userId = 1L;
-			User user = createUser(userId);
+			User user = user(userId);
 
 			Folder a = Folder.create(user, null, "a");
 			ReflectionTestUtils.setField(a, "id", 1L);
@@ -277,7 +268,7 @@ class FolderServiceTest {
 			//given
 			Long userId = 1L;
 			Long parentId = 10L;
-			User user = createUser(userId);
+			User user = user(userId);
 
 			Folder parent = Folder.create(user, null, "root");
 			ReflectionTestUtils.setField(parent, "id", parentId);
@@ -329,7 +320,7 @@ class FolderServiceTest {
 			Long userId = 1L;
 			Long parentId = 10L;
 
-			User other = createUser(99L);
+			User other = user(99L);
 			Folder parent = Folder.create(other, null, "other-root");
 			ReflectionTestUtils.setField(parent, "id", parentId);
 
