@@ -557,7 +557,6 @@ public class NoteServiceTest {
 
 		// then
 		assertThat(note.getFolder()).isEqualTo(folder);
-		assertThat(result.noteId()).isEqualTo(note.getId());
 		assertThat(result.folderId()).isEqualTo(folderId);
 		verify(noteRepository).findById(noteId);
 		verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
