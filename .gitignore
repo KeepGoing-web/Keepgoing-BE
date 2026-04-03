@@ -49,3 +49,4 @@ docs/perf/results/
 bin/
 .classpath
 .factorypath
+out/
