@@ -65,10 +65,11 @@ public class FolderRepositoryTest {
 		void findChildFolders_ordersByName_and_excludesDeleted() {
 			// given
 			Folder parent = folderRepository.save(Folder.create(user1, null, "root"));
+			Folder otherParent = folderRepository.save(Folder.create(user2, null, "other-root"));
 
 			Folder c1 = folderRepository.save(Folder.create(user1, parent, "backend"));
 			Folder c2 = folderRepository.save(Folder.create(user1, parent, "frontend"));
-			Folder otherUserChild = folderRepository.save(Folder.create(user2, parent, "zzz"));
+			folderRepository.save(Folder.create(user2, otherParent, "zzz"));
 
 			Folder deleted = folderRepository.save(Folder.create(user1, parent, "old"));
 			deleted.softDelete();

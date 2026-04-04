@@ -10,6 +10,7 @@ import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import com.keepgoing.keepgoing.user.domain.User;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 class FolderTest {
 
@@ -42,6 +43,20 @@ class FolderTest {
 		// then
 		assertThat(child.getParent()).isEqualTo(parent);
 		assertThat(child.getName()).isEqualTo("java");
+	}
+
+	@Test
+	@DisplayName("다른 사용자의 부모 폴더 아래에는 생성할 수 없다")
+	void create_throwsWhenParentOwnerDoesNotMatch() {
+		// given
+		User owner = user(1L);
+		User otherOwner = user(2L);
+		Folder parent = Folder.create(otherOwner, null, "root");
+
+		// when & then
+		assertThatThrownBy(() -> Folder.create(owner, parent, "java"))
+				.isInstanceOf(BusinessException.class)
+				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_ACCESS_DENIED);
 	}
 
 	@Test
@@ -134,6 +149,18 @@ class FolderTest {
 		Folder folder = Folder.create(owner, null, "backend");
 
 		assertThatThrownBy(() -> folder.validateOwner(2L))
+				.isInstanceOf(BusinessException.class)
+				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_ACCESS_DENIED);
+	}
+
+	@Test
+	@DisplayName("소유자 ID가 없으면 접근 권한 검증에 실패한다")
+	void validateOwner_throwsWhenOwnerIdIsNull() {
+		User owner = user(1L);
+		Folder folder = Folder.create(owner, null, "backend");
+		ReflectionTestUtils.setField(owner, "id", null);
+
+		assertThatThrownBy(() -> folder.validateOwner(1L))
 				.isInstanceOf(BusinessException.class)
 				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_ACCESS_DENIED);
 	}

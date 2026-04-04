@@ -18,7 +18,6 @@ import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import com.keepgoing.keepgoing.user.domain.User;
 import com.keepgoing.keepgoing.user.repository.UserRepository;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Optional;
@@ -177,6 +176,25 @@ class FolderServiceTest {
 
 			verify(userRepository).findById(userId);
 			verify(folderRepository).findByIdAndDeletedAtIsNull(parentId);
+			verifyNoMoreInteractions(userRepository, folderRepository);
+		}
+
+		@Test
+		@DisplayName("이름이 유효하지 않으면 중복 조회 전에 FOLDER_INVALID_NAME 예외가 발생한다.")
+		void createFolder_throwsWhenNameIsInvalidBeforeDuplicationCheck() {
+			// given
+			Long userId = 1L;
+			User user = user(userId);
+			FolderCreateCommand command = new FolderCreateCommand(userId, null, "   ");
+
+			given(userRepository.findById(userId)).willReturn(Optional.of(user));
+
+			// when & then
+			assertThatThrownBy(() -> folderService.createFolder(command))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_INVALID_NAME);
+
+			verify(userRepository).findById(userId);
 			verifyNoMoreInteractions(userRepository, folderRepository);
 		}
 
