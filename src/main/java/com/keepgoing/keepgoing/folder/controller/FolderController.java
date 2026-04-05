@@ -71,4 +71,17 @@ public class FolderController {
 
 		return ResponseEntity.ok(ApiResponse.success(responses));
 	}
+
+	@PatchMapping("/{folderId}")
+	public ResponseEntity<ApiResponse<FolderSummaryResponse>> renameFolder(
+			@PathVariable Long folderId,
+			@AuthenticationPrincipal Long userId,
+			@Valid @RequestBody FolderRenameRequest request
+	) {
+		FolderRenameCommand command = request.toCommand(userId, folderId);
+		FolderSummaryResult result = folderService.renameFolder(command);
+		FolderSummaryResponse response = FolderSummaryResponse.from(result);
+
+		return ResponseEntity.ok(ApiResponse.success(response));
+	}
 }
