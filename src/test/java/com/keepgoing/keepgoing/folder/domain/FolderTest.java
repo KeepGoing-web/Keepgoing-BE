@@ -88,7 +88,7 @@ class FolderTest {
 		// when & then
 		assertThatThrownBy(() -> Folder.create(owner, null, "   "))
 				.isInstanceOf(BusinessException.class)
-				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_NAME_INVALID);
+				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_INVALID_NAME);
 	}
 
 	@Test
@@ -100,7 +100,7 @@ class FolderTest {
 		// when & then
 		assertThatThrownBy(() -> Folder.create(owner, null, "back/end"))
 				.isInstanceOf(BusinessException.class)
-				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_NAME_INVALID);
+				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_INVALID_NAME);
 	}
 
 	@Test
@@ -127,7 +127,7 @@ class FolderTest {
 		// when & then
 		assertThatThrownBy(() -> folder.rename("   "))
 				.isInstanceOf(BusinessException.class)
-				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_NAME_INVALID);
+				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_INVALID_NAME);
 	}
 
 	@Test

@@ -2,18 +2,22 @@ package com.keepgoing.keepgoing.folder.controller;
 
 import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.keepgoing.keepgoing.folder.controller.dto.FolderCreateRequest;
+import com.keepgoing.keepgoing.folder.controller.dto.FolderRenameRequest;
 import com.keepgoing.keepgoing.folder.service.FolderService;
 import com.keepgoing.keepgoing.folder.service.dto.FolderCreateCommand;
+import com.keepgoing.keepgoing.folder.service.dto.FolderRenameCommand;
 import com.keepgoing.keepgoing.folder.service.dto.FolderSummaryResult;
 import com.keepgoing.keepgoing.folder.service.dto.FolderTreeNodeResult;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
@@ -147,7 +151,7 @@ class FolderControllerTest {
 			mockLoginUser(userId);
 
 			given(folderService.createFolder(any(FolderCreateCommand.class)))
-					.willThrow(new BusinessException(ErrorCode.FOLDER_NAME_INVALID));
+					.willThrow(new BusinessException(ErrorCode.FOLDER_INVALID_NAME));
 
 			// when & then
 			mockMvc.perform(post("/api/folders")

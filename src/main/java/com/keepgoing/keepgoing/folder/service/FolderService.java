@@ -43,7 +43,7 @@ public class FolderService {
 				.orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
 		if (folderName.isBlank()) {
-			throw new BusinessException(ErrorCode.FOLDER_NAME_INVALID);
+			throw new BusinessException(ErrorCode.FOLDER_INVALID_NAME);
 		}
 
 		Folder parent = null;
@@ -133,7 +133,7 @@ public class FolderService {
 
 		String newName = normalizeName(command.name());
 		if (newName.isBlank()) {
-			throw new BusinessException(ErrorCode.FOLDER_NAME_INVALID);
+			throw new BusinessException(ErrorCode.FOLDER_INVALID_NAME);
 		}
 
 		if (newName.equals(folder.getName())) {

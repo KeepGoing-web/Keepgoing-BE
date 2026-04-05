@@ -67,7 +67,7 @@ public class Folder extends BaseEntity {
 
 	private static void validateName(String name) {
 		if (name == null || name.isBlank() || name.contains("/")) {
-			throw new BusinessException(ErrorCode.FOLDER_NAME_INVALID);
+			throw new BusinessException(ErrorCode.FOLDER_INVALID_NAME);
 		}
 	}
 

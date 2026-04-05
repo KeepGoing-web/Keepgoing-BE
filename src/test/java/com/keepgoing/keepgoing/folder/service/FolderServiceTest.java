@@ -25,6 +25,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -193,7 +194,7 @@ class FolderServiceTest {
 			// when & then
 			assertThatThrownBy(() -> folderService.createFolder(command))
 					.isInstanceOf(BusinessException.class)
-					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_NAME_INVALID);
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_INVALID_NAME);
 
 			verify(userRepository).findById(userId);
 			verifyNoMoreInteractions(userRepository, folderRepository);
