@@ -257,6 +257,78 @@ class NoteServiceTest {
 		}
 
 		@Test
+		@DisplayName("익명 사용자는 공개 노트를 조회할 수 있다")
+		void returnsPublicNoteForAnonymousViewer() {
+			Long noteId = 1L;
+			User author = user(2L);
+			Note note = Note.create(author, null, "제목", "내용", NoteVisibility.PUBLIC, true);
+
+			given(noteRepository.findById(noteId)).willReturn(Optional.of(note));
+
+			NoteDetailResult result = noteService.getNote(null, noteId);
+
+			assertThat(result.title()).isEqualTo("제목");
+			assertThat(result.visibility()).isEqualTo(NoteVisibility.PUBLIC);
+			verify(noteRepository).findById(noteId);
+			verifyNoMoreInteractions(noteRepository);
+			verifyNoInteractions(userRepository, folderRepository);
+		}
+
+		@Test
+		@DisplayName("익명 사용자가 비공개 노트를 조회하면 NOTE_ACCESS_DENIED 예외가 발생한다")
+		void throwsWhenAnonymousViewerRequestsPrivateNote() {
+			Long noteId = 1L;
+			User author = user(2L);
+			Note note = Note.create(author, null, "제목", "내용", NoteVisibility.PRIVATE, true);
+
+			given(noteRepository.findById(noteId)).willReturn(Optional.of(note));
+
+			assertThatThrownBy(() -> noteService.getNote(null, noteId))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_ACCESS_DENIED);
+			verify(noteRepository).findById(noteId);
+			verifyNoMoreInteractions(noteRepository);
+			verifyNoInteractions(userRepository, folderRepository);
+		}
+
+		@Test
+		@DisplayName("다른 사용자는 공개 노트를 조회할 수 있다")
+		void returnsPublicNoteForDifferentViewer() {
+			Long noteId = 1L;
+			Long viewerId = 1L;
+			User author = user(2L);
+			Note note = Note.create(author, null, "제목", "내용", NoteVisibility.PUBLIC, true);
+
+			given(noteRepository.findById(noteId)).willReturn(Optional.of(note));
+
+			NoteDetailResult result = noteService.getNote(viewerId, noteId);
+
+			assertThat(result.title()).isEqualTo("제목");
+			assertThat(result.visibility()).isEqualTo(NoteVisibility.PUBLIC);
+			verify(noteRepository).findById(noteId);
+			verifyNoMoreInteractions(noteRepository);
+			verifyNoInteractions(userRepository, folderRepository);
+		}
+
+		@Test
+		@DisplayName("다른 사용자가 비공개 노트를 조회하면 NOTE_ACCESS_DENIED 예외가 발생한다")
+		void throwsWhenDifferentViewerRequestsPrivateNote() {
+			Long noteId = 1L;
+			Long viewerId = 1L;
+			User author = user(2L);
+			Note note = Note.create(author, null, "제목", "내용", NoteVisibility.PRIVATE, true);
+
+			given(noteRepository.findById(noteId)).willReturn(Optional.of(note));
+
+			assertThatThrownBy(() -> noteService.getNote(viewerId, noteId))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_ACCESS_DENIED);
+			verify(noteRepository).findById(noteId);
+			verifyNoMoreInteractions(noteRepository);
+			verifyNoInteractions(userRepository, folderRepository);
+		}
+
+		@Test
 		@DisplayName("게시글이 없으면 NOTE_NOT_FOUND 예외가 발생한다")
 		void throwsWhenNotFound() {
 			Long viewerId = 1L;
@@ -650,6 +722,76 @@ class NoteServiceTest {
 			ArgumentCaptor<String> keywordCaptor = ArgumentCaptor.forClass(String.class);
 			verify(noteRepository).searchMyNotes(eq(userId), keywordCaptor.capture(), any(Pageable.class));
 			assertThat(keywordCaptor.getValue()).isEqualTo("spring");
+			verifyNoMoreInteractions(noteRepository);
+			verifyNoInteractions(userRepository, folderRepository);
+		}
+	}
+
+	@Nested
+	@DisplayName("공개 노트 검색")
+	class SearchPublicNote {
+
+		@Test
+		@DisplayName("keyword가 있으면 공개 검색 결과를 페이지로 반환한다")
+		void returnsPageWhenKeywordProvided() {
+			User author1 = user(1L);
+			User author2 = user(2L);
+			Folder folder = folder(author1, 10L);
+			Note note1 = Note.create(author1, folder, "spring 제목", "내용", NoteVisibility.PUBLIC, true);
+			Note note2 = Note.create(author2, null, "제목", "spring 내용", NoteVisibility.PUBLIC, false);
+			Pageable pageable = PageRequest.of(0, 10);
+			Page<Note> notePage = new PageImpl<>(List.of(note1, note2), pageable, 2);
+			NoteSearchQuery query = new NoteSearchQuery("spring", pageable);
+
+			given(noteRepository.searchPublicNotes(eq("spring"), eq(pageable)))
+					.willReturn(notePage);
+
+			Page<NoteSummaryResult> result = noteService.searchPublicNote(query);
+
+			assertThat(result.getTotalElements()).isEqualTo(2);
+			assertThat(result.getContent()).hasSize(2);
+			assertThat(result.getContent().get(0).folderId()).isEqualTo(10L);
+			assertThat(result.getContent().get(0).visibility()).isEqualTo(NoteVisibility.PUBLIC);
+			assertThat(result.getContent().get(1).folderId()).isNull();
+			verify(noteRepository).searchPublicNotes(eq("spring"), eq(pageable));
+			verifyNoMoreInteractions(noteRepository);
+			verifyNoInteractions(userRepository, folderRepository);
+		}
+
+		@Test
+		@DisplayName("keyword가 비어있으면 NOTE_SEARCH_KEYWORD_REQUIRED 예외가 발생한다")
+		void throwsWhenKeywordBlank() {
+			Pageable pageable = PageRequest.of(0, 10);
+			NoteSearchQuery query = new NoteSearchQuery("   ", pageable);
+
+			assertThatThrownBy(() -> noteService.searchPublicNote(query))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_SEARCH_KEYWORD_REQUIRED);
+
+			verifyNoInteractions(noteRepository, userRepository, folderRepository);
+		}
+
+		@Test
+		@DisplayName("keyword 앞뒤 공백은 trim되어 공개 검색된다")
+		void trimsKeywordBeforeSearching() {
+			User author = user(1L);
+			Note note = Note.create(author, null, "spring 제목", "내용", NoteVisibility.PUBLIC, true);
+			Pageable pageable = PageRequest.of(0, 10);
+			Page<Note> notePage = new PageImpl<>(List.of(note), pageable, 1);
+			NoteSearchQuery query = new NoteSearchQuery("  spring  ", pageable);
+
+			given(noteRepository.searchPublicNotes(eq("spring"), eq(pageable)))
+					.willReturn(notePage);
+
+			Page<NoteSummaryResult> result = noteService.searchPublicNote(query);
+
+			assertThat(result.getTotalElements()).isEqualTo(1);
+
+			ArgumentCaptor<String> keywordCaptor = ArgumentCaptor.forClass(String.class);
+			ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+			verify(noteRepository).searchPublicNotes(keywordCaptor.capture(), pageableCaptor.capture());
+			assertThat(keywordCaptor.getValue()).isEqualTo("spring");
+			assertThat(pageableCaptor.getValue()).isEqualTo(pageable);
 			verifyNoMoreInteractions(noteRepository);
 			verifyNoInteractions(userRepository, folderRepository);
 		}

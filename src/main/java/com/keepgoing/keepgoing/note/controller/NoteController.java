@@ -67,8 +67,11 @@ public class NoteController {
      * 단일 노트 조회
      */
     @GetMapping("/{noteId}")
-    public ResponseEntity<ApiResponse<NoteDetailResponse>> getNote(@PathVariable Long noteId) {
-        NoteDetailResult note = noteService.getNote(noteId);
+    public ResponseEntity<ApiResponse<NoteDetailResponse>> getNote(
+			@PathVariable Long noteId,
+			@AuthenticationPrincipal Long userId
+    ) {
+        NoteDetailResult note = noteService.getNote(userId, noteId);
 
         return ResponseEntity.ok(ApiResponse.success(NoteDetailResponse.from(note)));
     }
@@ -156,7 +159,7 @@ public class NoteController {
     ) {
         Pageable safePageable = safePageableUnsorted(pageable);
 
-        Page<NoteSummaryResult> page = noteService.searchNote(
+        Page<NoteSummaryResult> page = noteService.searchPublicNote(
                 new NoteSearchQuery(keyword, safePageable)
         );
 
