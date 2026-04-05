@@ -159,9 +159,125 @@ class FolderControllerTest {
 							.content(objectMapper.writeValueAsString(request)))
 					.andExpect(status().isBadRequest())
 					.andExpect(jsonPath("$.success").value(false))
-					.andExpect(jsonPath("$.error.code").value(ErrorCode.FOLDER_NAME_INVALID.toString()));
+					.andExpect(jsonPath("$.error.code").value(ErrorCode.FOLDER_INVALID_NAME.toString()));
 		}
 
+	}
+
+	@Nested
+	@DisplayName("PATCH /api/folders/{folderId}")
+	class PatchFolders {
+
+		@Test
+		@DisplayName("유효한 요청이면 200 OK를 반환한다.")
+		void renameFolder_returnsOk() throws Exception {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			var request = new FolderRenameRequest("   backend-renamed   ");
+			var result = new FolderSummaryResult(folderId, null, "backend-renamed");
+			mockLoginUser(userId);
+
+			given(folderService.renameFolder(any(FolderRenameCommand.class)))
+					.willReturn(result);
+
+			// when & then
+			mockMvc.perform(patch("/api/folders/{folderId}", folderId)
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(objectMapper.writeValueAsString(request)))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.success").value(true))
+					.andExpect(jsonPath("$.data.folderId").value(folderId))
+					.andExpect(jsonPath("$.data.parentId").value(nullValue()))
+					.andExpect(jsonPath("$.data.name").value("backend-renamed"));
+
+			verify(folderService).renameFolder(argThat(command ->
+					command.userId().equals(userId)
+							&& command.folderId().equals(folderId)
+							&& command.name().equals("   backend-renamed   ")
+			));
+		}
+
+		@Test
+		@DisplayName("이름이 공백이면 400 Bad Request를 반환한다.")
+		void renameFolder_returnsBadRequestWhenNameIsBlank() throws Exception {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			var request = new FolderRenameRequest("   ");
+			mockLoginUser(userId);
+
+			// when & then
+			mockMvc.perform(patch("/api/folders/{folderId}", folderId)
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(objectMapper.writeValueAsString(request)))
+					.andExpect(status().isBadRequest());
+
+			verifyNoInteractions(folderService);
+		}
+
+		@Test
+		@DisplayName("접근 권한이 없으면 403 Forbidden을 반환한다.")
+		void renameFolder_returnsForbiddenWhenAccessDenied() throws Exception {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			var request = new FolderRenameRequest("backend-renamed");
+			mockLoginUser(userId);
+
+			given(folderService.renameFolder(any(FolderRenameCommand.class)))
+					.willThrow(new BusinessException(ErrorCode.FOLDER_ACCESS_DENIED));
+
+			// when & then
+			mockMvc.perform(patch("/api/folders/{folderId}", folderId)
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(objectMapper.writeValueAsString(request)))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value(ErrorCode.FOLDER_ACCESS_DENIED.toString()));
+		}
+
+		@Test
+		@DisplayName("폴더가 없으면 404 Not Found를 반환한다.")
+		void renameFolder_returnsNotFoundWhenFolderDoesNotExist() throws Exception {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			var request = new FolderRenameRequest("backend-renamed");
+			mockLoginUser(userId);
+
+			given(folderService.renameFolder(any(FolderRenameCommand.class)))
+					.willThrow(new BusinessException(ErrorCode.FOLDER_NOT_FOUND));
+
+			// when & then
+			mockMvc.perform(patch("/api/folders/{folderId}", folderId)
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(objectMapper.writeValueAsString(request)))
+					.andExpect(status().isNotFound())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value(ErrorCode.FOLDER_NOT_FOUND.toString()));
+		}
+
+		@Test
+		@DisplayName("같은 이름의 폴더가 이미 있으면 409 Conflict를 반환한다.")
+		void renameFolder_returnsConflictWhenFolderNameDuplicated() throws Exception {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			var request = new FolderRenameRequest("backend-renamed");
+			mockLoginUser(userId);
+
+			given(folderService.renameFolder(any(FolderRenameCommand.class)))
+					.willThrow(new BusinessException(ErrorCode.FOLDER_NAME_DUPLICATED));
+
+			// when & then
+			mockMvc.perform(patch("/api/folders/{folderId}", folderId)
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(objectMapper.writeValueAsString(request)))
+					.andExpect(status().isConflict())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value(ErrorCode.FOLDER_NAME_DUPLICATED.toString()));
+		}
 	}
 
 	@Nested
