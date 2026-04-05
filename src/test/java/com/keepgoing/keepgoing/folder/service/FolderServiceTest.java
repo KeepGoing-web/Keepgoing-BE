@@ -79,6 +79,41 @@ class FolderServiceTest {
 		}
 
 		@Test
+		@DisplayName("이름 앞뒤 공백을 제거한 뒤 중복 검사와 저장에 사용한다.")
+		void createFolder_trimsNameBeforeDuplicateCheckAndSave() {
+			// given
+			Long userId = 1L;
+			User user = user(userId, "test@test.com", "test");
+			FolderCreateCommand command = new FolderCreateCommand(userId, null, "   backend   ");
+
+			given(userRepository.findById(userId)).willReturn(Optional.of(user));
+			given(folderRepository.existsRootFolder(userId, DIRECTORY_NAME)).willReturn(false);
+			given(folderRepository.save(any(Folder.class))).willAnswer(invocation -> {
+				Folder folder = invocation.getArgument(0);
+				ReflectionTestUtils.setField(folder, "id", 10L);
+				return folder;
+			});
+
+			// when
+			FolderSummaryResult result = folderService.createFolder(command);
+
+			// then
+			ArgumentCaptor<Folder> folderCaptor = ArgumentCaptor.forClass(Folder.class);
+
+			assertThat(result.folderId()).isEqualTo(10L);
+			assertThat(result.parentId()).isNull();
+			assertThat(result.name()).isEqualTo(DIRECTORY_NAME);
+
+			verify(userRepository).findById(userId);
+			verify(folderRepository).existsRootFolder(userId, DIRECTORY_NAME);
+			verify(folderRepository).save(folderCaptor.capture());
+			verifyNoMoreInteractions(userRepository, folderRepository);
+
+			assertThat(folderCaptor.getValue().getName()).isEqualTo(DIRECTORY_NAME);
+			assertThat(folderCaptor.getValue().getParent()).isNull();
+		}
+
+		@Test
 		@DisplayName("부모가 있으면 하위 폴더를 생성한다.")
 		void createFolder_createsChildFolder() {
 			// given
