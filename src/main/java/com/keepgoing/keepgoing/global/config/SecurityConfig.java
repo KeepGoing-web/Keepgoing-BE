@@ -75,20 +75,20 @@ public class SecurityConfig {
 								AUTH_API_PREFIX + "/refresh",
 								AUTH_API_PREFIX + "/logout"
 						).permitAll()
-                        .requestMatchers(
-                                "/oauth2/**",
-                                "/login/oauth2/**"
-                        ).permitAll()
+						.requestMatchers(
+								"/oauth2/**",
+								"/login/oauth2/**"
+						).permitAll()
 						.requestMatchers(
 								"/api/notes/me/**",
 								"/api/folders"
 						).authenticated()
-                        // 노트 조회는 공개, 쓰기(생성/수정/삭제)는 인증 필요
-                        .requestMatchers(HttpMethod.GET, "/api/notes/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/notes/**").authenticated()
-                        .requestMatchers(HttpMethod.PUT, "/api/notes/**").authenticated()
-                        .requestMatchers(HttpMethod.PATCH, "/api/notes/**").authenticated()
-                        .requestMatchers(HttpMethod.DELETE, "/api/notes/**").authenticated()
+						// 노트 조회는 공개, 쓰기(생성/수정/삭제)는 인증 필요
+						.requestMatchers(HttpMethod.GET, "/api/notes/**").permitAll()
+						.requestMatchers(HttpMethod.POST, "/api/notes/**").authenticated()
+						.requestMatchers(HttpMethod.PUT, "/api/notes/**").authenticated()
+						.requestMatchers(HttpMethod.PATCH, "/api/notes/**").authenticated()
+						.requestMatchers(HttpMethod.DELETE, "/api/notes/**").authenticated()
 						// 나머지는 인증 필요
 						.anyRequest().authenticated()
 				)
