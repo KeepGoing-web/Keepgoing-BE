@@ -34,32 +34,32 @@ public class FolderService {
 
 	@Transactional
 	public FolderSummaryResult createFolder(FolderCreateCommand command) {
-		User user = userRepository.findById(command.userId())
+		Long userId = command.userId();
+		Long parentId = command.parentId();
+		String folderName = command.name();
+
+		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
 		Folder parent = null;
-		if (command.parentId() != null) {
-			parent = folderRepository.findByIdAndDeletedAtIsNull(command.parentId())
+		if (parentId != null) {
+			parent = folderRepository.findByIdAndDeletedAtIsNull(parentId)
 					.orElseThrow(() -> new BusinessException(ErrorCode.FOLDER_NOT_FOUND));
-			parent.validateOwner(user.getId());
 		}
 
-		boolean duplicated = (parent == null)
-				? folderRepository.existsRootFolder(user.getId(), command.name())
-				: folderRepository.existsChildFolder(user.getId(), parent.getId(), command.name());
-
-		if (duplicated) {
+		Folder newFolder = Folder.create(user, parent, folderName);
+		if (isDuplicatedFolderName(userId, parent, folderName)) {
 			throw new BusinessException(ErrorCode.FOLDER_NAME_DUPLICATED);
 		}
 
-		Folder newFolder = Folder.create(user, parent, command.name());
 		Folder saved = folderRepository.save(newFolder);
+		return FolderSummaryResult.from(saved);
+	}
 
-		return new FolderSummaryResult(
-				saved.getId(),
-				saved.getParent() != null ? saved.getParent()
-						.getId() : null,
-				saved.getName());
+	private boolean isDuplicatedFolderName(Long userId, Folder parent, String folderName) {
+		return (parent == null)
+				? folderRepository.existsRootFolder(userId, folderName)
+				: folderRepository.existsChildFolder(userId, parent.getId(), folderName);
 	}
 
 	@Transactional(readOnly = true)
@@ -68,7 +68,6 @@ public class FolderService {
 		if (parentId != null) {
 			Folder parent = folderRepository.findByIdAndDeletedAtIsNull(parentId)
 					.orElseThrow(() -> new BusinessException(ErrorCode.FOLDER_NOT_FOUND));
-
 			parent.validateOwner(userId);
 
 			folders = folderRepository.findChildFolders(userId, parentId);
@@ -77,12 +76,7 @@ public class FolderService {
 		}
 
 		return folders.stream()
-				.map(f -> new FolderSummaryResult(
-						f.getId(),
-						f.getParent() != null ? f.getParent()
-								.getId() : null,
-						f.getName()
-				))
+				.map(FolderSummaryResult::from)
 				.toList();
 	}
 

@@ -32,14 +32,8 @@ public class FolderRepositoryTest {
 
 	@BeforeEach
 	void setUp() {
-		user1 = userRepository.save(User.builder()
-				.email("user1@test.com")
-				.name("유저1")
-				.build());
-		user2 = userRepository.save(User.builder()
-				.email("user2@test.com")
-				.name("유저2")
-				.build());
+		user1 = userRepository.save(User.create("user1@test.com", "유저1"));
+		user2 = userRepository.save(User.create("user2@test.com", "유저2"));
 	}
 
 	@Nested
@@ -71,10 +65,11 @@ public class FolderRepositoryTest {
 		void findChildFolders_ordersByName_and_excludesDeleted() {
 			// given
 			Folder parent = folderRepository.save(Folder.create(user1, null, "root"));
+			Folder otherParent = folderRepository.save(Folder.create(user2, null, "other-root"));
 
 			Folder c1 = folderRepository.save(Folder.create(user1, parent, "backend"));
 			Folder c2 = folderRepository.save(Folder.create(user1, parent, "frontend"));
-			Folder otherUserChild = folderRepository.save(Folder.create(user2, parent, "zzz"));
+			folderRepository.save(Folder.create(user2, otherParent, "zzz"));
 
 			Folder deleted = folderRepository.save(Folder.create(user1, parent, "old"));
 			deleted.softDelete();

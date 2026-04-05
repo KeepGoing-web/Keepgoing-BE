@@ -1,6 +1,6 @@
 package com.keepgoing.keepgoing.folder.service;
 
-
+import static com.keepgoing.keepgoing.support.UserFixture.user;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -18,7 +18,6 @@ import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import com.keepgoing.keepgoing.user.domain.User;
 import com.keepgoing.keepgoing.user.repository.UserRepository;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Optional;
@@ -44,14 +43,6 @@ class FolderServiceTest {
 	@InjectMocks
 	FolderService folderService;
 
-	private User createUser(Long id) {
-		return User.builder()
-				.id(id)
-				.email("test@test.com")
-				.name("test")
-				.build();
-	}
-
 	@Nested
 	@DisplayName("createFolder()")
 	class CreateFolder {
@@ -61,7 +52,7 @@ class FolderServiceTest {
 		void createFolder_createsRootFolder() {
 			// given
 			Long userId = 1L;
-			User user = createUser(userId);
+			User user = user(userId, "test@test.com", "test");
 			FolderCreateCommand command = new FolderCreateCommand(userId, null, DIRECTORY_NAME);
 
 			given(userRepository.findById(userId)).willReturn(Optional.of(user));
@@ -91,7 +82,7 @@ class FolderServiceTest {
 			// given
 			Long userId = 1L;
 			Long parentId = 2L;
-			User user = createUser(userId);
+			User user = user(userId, "test@test.com", "test");
 			Folder parent = Folder.create(user, null, "root");
 			ReflectionTestUtils.setField(parent, "id", parentId);
 
@@ -144,7 +135,7 @@ class FolderServiceTest {
 			// given
 			Long userId = 1L;
 			Long parentId = 2L;
-			User user = createUser(userId);
+			User user = user(userId);
 
 			FolderCreateCommand command = new FolderCreateCommand(userId, parentId, DIRECTORY_NAME);
 
@@ -167,8 +158,8 @@ class FolderServiceTest {
 			Long userId = 1L;
 			Long parentId = 2L;
 
-			User user = createUser(userId);
-			User otherUser = createUser(99L);
+			User user = user(userId);
+			User otherUser = user(99L);
 
 			Folder parent = Folder.create(otherUser, null, "other-root");
 			ReflectionTestUtils.setField(parent, "id", parentId);
@@ -189,11 +180,30 @@ class FolderServiceTest {
 		}
 
 		@Test
+		@DisplayName("이름이 유효하지 않으면 중복 조회 전에 FOLDER_INVALID_NAME 예외가 발생한다.")
+		void createFolder_throwsWhenNameIsInvalidBeforeDuplicationCheck() {
+			// given
+			Long userId = 1L;
+			User user = user(userId);
+			FolderCreateCommand command = new FolderCreateCommand(userId, null, "   ");
+
+			given(userRepository.findById(userId)).willReturn(Optional.of(user));
+
+			// when & then
+			assertThatThrownBy(() -> folderService.createFolder(command))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_INVALID_NAME);
+
+			verify(userRepository).findById(userId);
+			verifyNoMoreInteractions(userRepository, folderRepository);
+		}
+
+		@Test
 		@DisplayName("같은 루트 이름이 이미 있으면 FOLDER_NAME_DUPLICATED 예외가 발생한다.")
 		void createFolder_throwsWhenRootFolderNameDuplicated() {
 			// given
 			Long userId = 1L;
-			User user = createUser(userId);
+			User user = user(userId);
 
 			FolderCreateCommand command = new FolderCreateCommand(userId, null, DIRECTORY_NAME);
 
@@ -218,7 +228,7 @@ class FolderServiceTest {
 			Long userId = 1L;
 			Long parentId = 2L;
 
-			User user = createUser(userId);
+			User user = user(userId);
 			Folder parent = Folder.create(user, null, "root");
 			ReflectionTestUtils.setField(parent, "id", parentId);
 
@@ -250,7 +260,7 @@ class FolderServiceTest {
 		void getFolders_returnsRootFoldersOrderedByName() {
 			//given
 			Long userId = 1L;
-			User user = createUser(userId);
+			User user = user(userId);
 
 			Folder a = Folder.create(user, null, "a");
 			ReflectionTestUtils.setField(a, "id", 1L);
@@ -265,14 +275,10 @@ class FolderServiceTest {
 
 			//then
 			assertThat(results).hasSize(2);
-			assertThat(results.get(0)
-					.name()).isEqualTo("a");
-			assertThat(results.get(1)
-					.name()).isEqualTo("b");
-			assertThat(results.get(0)
-					.parentId()).isNull();
-			assertThat(results.get(1)
-					.parentId()).isNull();
+			assertThat(results.get(0).name()).isEqualTo("a");
+			assertThat(results.get(1).name()).isEqualTo("b");
+			assertThat(results.get(0).parentId()).isNull();
+			assertThat(results.get(1).parentId()).isNull();
 
 			verify(folderRepository).findRootFolders(userId);
 			verifyNoMoreInteractions(folderRepository);
@@ -284,7 +290,7 @@ class FolderServiceTest {
 			//given
 			Long userId = 1L;
 			Long parentId = 10L;
-			User user = createUser(userId);
+			User user = user(userId);
 
 			Folder parent = Folder.create(user, null, "root");
 			ReflectionTestUtils.setField(parent, "id", parentId);
@@ -302,14 +308,10 @@ class FolderServiceTest {
 
 			//then
 			assertThat(results).hasSize(2);
-			assertThat(results.get(0)
-					.parentId()).isEqualTo(parentId);
-			assertThat(results.get(1)
-					.parentId()).isEqualTo(parentId);
-			assertThat(results.get(0)
-					.name()).isEqualTo("backend");
-			assertThat(results.get(1)
-					.name()).isEqualTo("frontend");
+			assertThat(results.get(0).parentId()).isEqualTo(parentId);
+			assertThat(results.get(1).parentId()).isEqualTo(parentId);
+			assertThat(results.get(0).name()).isEqualTo("backend");
+			assertThat(results.get(1).name()).isEqualTo("frontend");
 
 			verify(folderRepository).findByIdAndDeletedAtIsNull(parentId);
 			verify(folderRepository).findChildFolders(userId, parentId);
@@ -340,7 +342,7 @@ class FolderServiceTest {
 			Long userId = 1L;
 			Long parentId = 10L;
 
-			User other = createUser(99L);
+			User other = user(99L);
 			Folder parent = Folder.create(other, null, "other-root");
 			ReflectionTestUtils.setField(parent, "id", parentId);
 
