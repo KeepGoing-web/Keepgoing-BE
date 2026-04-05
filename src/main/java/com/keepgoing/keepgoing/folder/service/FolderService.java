@@ -35,37 +35,30 @@ public class FolderService {
 
 	@Transactional
 	public FolderSummaryResult createFolder(FolderCreateCommand command) {
-		User user = userRepository.findById(command.userId())
+		Long userId = command.userId();
+		Long parentId = command.parentId();
+		String folderName = normalizeName(command.name());
+
+		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-		String name = normalizeName(command.name());
-		if (name.isBlank()) {
+		if (folderName.isBlank()) {
 			throw new BusinessException(ErrorCode.FOLDER_NAME_INVALID);
 		}
 
 		Folder parent = null;
-		if (command.parentId() != null) {
-			parent = folderRepository.findByIdAndDeletedAtIsNull(command.parentId())
+		if (parentId != null) {
+			parent = folderRepository.findByIdAndDeletedAtIsNull(parentId)
 					.orElseThrow(() -> new BusinessException(ErrorCode.FOLDER_NOT_FOUND));
-			parent.validateOwner(user.getId());
 		}
 
-		boolean duplicated = (parent == null)
-				? folderRepository.existsRootFolder(user.getId(), name)
-				: folderRepository.existsChildFolder(user.getId(), parent.getId(), name);
-
-		if (duplicated) {
+		Folder newFolder = Folder.create(user, parent, folderName);
+		if (isDuplicatedFolderName(userId, parent, folderName)) {
 			throw new BusinessException(ErrorCode.FOLDER_NAME_DUPLICATED);
 		}
 
-		Folder newFolder = Folder.create(user, parent, name);
 		Folder saved = folderRepository.save(newFolder);
-
-		return new FolderSummaryResult(
-				saved.getId(),
-				saved.getParent() != null ? saved.getParent()
-						.getId() : null,
-				saved.getName());
+		return FolderSummaryResult.from(saved);
 	}
 
 	@Transactional(readOnly = true)
@@ -74,7 +67,6 @@ public class FolderService {
 		if (parentId != null) {
 			Folder parent = folderRepository.findByIdAndDeletedAtIsNull(parentId)
 					.orElseThrow(() -> new BusinessException(ErrorCode.FOLDER_NOT_FOUND));
-
 			parent.validateOwner(userId);
 
 			folders = folderRepository.findChildFolders(userId, parentId);
@@ -83,12 +75,7 @@ public class FolderService {
 		}
 
 		return folders.stream()
-				.map(f -> new FolderSummaryResult(
-						f.getId(),
-						f.getParent() != null ? f.getParent()
-								.getId() : null,
-						f.getName()
-				))
+				.map(FolderSummaryResult::from)
 				.toList();
 	}
 
@@ -150,21 +137,13 @@ public class FolderService {
 		}
 
 		if (newName.equals(folder.getName())) {
-			return new FolderSummaryResult(
-					folder.getId(),
-					folder.getParent() != null ? folder.getParent().getId() : null,
-					folder.getName()
-			);
+			return FolderSummaryResult.from(folder);
 		}
 
 		Long userId = command.userId();
 		Folder parent = folder.getParent();
 
-		boolean duplicated = (parent == null)
-				? folderRepository.existsRootFolder(userId, newName)
-				: folderRepository.existsChildFolder(userId, parent.getId(), newName);
-
-		if (duplicated) {
+		if (isDuplicatedFolderName(userId, parent, newName)) {
 			throw new BusinessException(ErrorCode.FOLDER_NAME_DUPLICATED);
 		}
 
@@ -179,6 +158,12 @@ public class FolderService {
 
 	private String normalizeName(String raw) {
 		return raw == null ? "" : raw.trim();
+	}
+
+	private boolean isDuplicatedFolderName(Long userId, Folder parent, String folderName) {
+		return (parent == null)
+				? folderRepository.existsRootFolder(userId, folderName)
+				: folderRepository.existsChildFolder(userId, parent.getId(), folderName);
 	}
 
 	private static class Node {

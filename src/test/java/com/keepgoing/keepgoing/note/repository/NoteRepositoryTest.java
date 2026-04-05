@@ -52,8 +52,8 @@ class NoteRepositoryTest {
 	@BeforeEach
 	void setUp() {
 		// 각 테스트 전에 데이터 초기화 및 설정
-		user1 = userRepository.save(User.builder().email("user1@test.com").name("유저1").build());
-		user2 = userRepository.save(User.builder().email("user2@test.com").name("유저2").build());
+		user1 = userRepository.save(User.create("user1@test.com", "유저1"));
+		user2 = userRepository.save(User.create("user2@test.com", "유저2"));
 	}
 
 	private Pageable sortedByCreatedAtDesc(int size) {

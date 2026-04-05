@@ -50,6 +50,10 @@ public class Folder extends BaseEntity {
 			throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
 		}
 
+		if (parent != null) {
+			parent.validateOwner(owner.getId());
+		}
+
 		validateName(name);
 
 		return new Folder(
@@ -70,10 +74,6 @@ public class Folder extends BaseEntity {
 	public void rename(String name) {
 		validateName(name);
 		this.name = name;
-	}
-
-	public void moveTo(Folder parent) {
-		this.parent = parent;
 	}
 
 	public void softDelete() {

@@ -3,7 +3,6 @@ package com.keepgoing.keepgoing.user.domain;
 import com.keepgoing.keepgoing.global.common.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
@@ -14,80 +13,77 @@ import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @Table(
-        name = "users",
-        uniqueConstraints = {
-                @UniqueConstraint(
-                        name = "uq_users_email",
-                        columnNames = "email"
-                )
-        }
+		name = "users",
+		uniqueConstraints = {
+				@UniqueConstraint(
+						name = "uq_users_email",
+						columnNames = "email"
+				)
+		}
 )
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor
-@Builder
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class User extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id", nullable = false, updatable = false)
-    private Long id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@Column(name = "id", nullable = false, updatable = false)
+	private Long id;
 
-    @Column(name = "email", nullable = false, length = 320)
-    private String email;
+	@Column(name = "email", nullable = false, length = 320)
+	private String email;
 
-    @Column(name = "name", nullable = false, length = 100)
-    private String name;
+	@Column(name = "name", nullable = false, length = 100)
+	private String name;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "role", nullable = false, length = 10)
-    @Builder.Default
-    private UserRole role = UserRole.USER;
+	@Enumerated(EnumType.STRING)
+	@Column(name = "role", nullable = false, length = 10)
+	private UserRole role = UserRole.USER;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 10)
-    @Builder.Default
-    private UserStatus status = UserStatus.ACTIVE;
+	@Enumerated(EnumType.STRING)
+	@Column(name = "status", nullable = false, length = 10)
+	private UserStatus status = UserStatus.ACTIVE;
 
-    @Column(name = "last_login_at")
-    private LocalDateTime lastLoginAt;
+	@Column(name = "last_login_at")
+	private LocalDateTime lastLoginAt;
 
-    // === 비즈니스 로직 메서드 ===
+	// === 비즈니스 로직 메서드 ===
 
-    /**
-     * 마지막 로그인 시간 갱신
-     */
-    public void markLoginNow() {
-        this.lastLoginAt = LocalDateTime.now();
-    }
+	/**
+	 * 마지막 로그인 시간 갱신
+	 */
+	public void markLoginNow() {
+		this.lastLoginAt = LocalDateTime.now();
+	}
 
-    /**
-     * 계정 정지
-     */
-    public void suspend() {
-        this.status = UserStatus.SUSPENDED;
-    }
+	/**
+	 * 계정 정지
+	 */
+	public void suspend() {
+		this.status = UserStatus.SUSPENDED;
+	}
 
-    /**
-     * 계정 활성화
-     */
-    public void activate() {
-        this.status = UserStatus.ACTIVE;
-    }
+	/**
+	 * 계정 활성화
+	 */
+	public void activate() {
+		this.status = UserStatus.ACTIVE;
+	}
 
-    public static User create(String email, String name) {
-        return User.builder()
-                .email(email)
-                .name(name)
-                .build();
-    }
+	public static User create(String email, String name) {
+		return new User(
+				null,
+				email,
+				name,
+				UserRole.USER,
+				UserStatus.ACTIVE,
+				null
+		);
+	}
 }

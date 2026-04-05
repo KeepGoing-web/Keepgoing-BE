@@ -1,5 +1,6 @@
 package com.keepgoing.keepgoing.note.domain;
 
+import static com.keepgoing.keepgoing.support.UserFixture.user;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
@@ -17,14 +18,6 @@ class NoteTest {
 	public static final String TITLE = "제목";
 	public static final String CONTENT = "내용";
 
-	private User createUser(Long id, String email, String name) {
-		return User.builder()
-				.id(id)
-				.email(email)
-				.name(name)
-				.build();
-	}
-
 	// ========== create ==========
 	@Nested
 	@DisplayName("create")
@@ -33,9 +26,7 @@ class NoteTest {
 		@DisplayName("기본값이 잘 세팅 되는지 테스트")
 		void create_setsDefault() {
 			// given
-			User author = User.builder()
-					.id(1L)
-					.build();
+			User author = user(1L);
 
 			String title = TITLE;
 			String content = CONTENT;
@@ -55,25 +46,21 @@ class NoteTest {
 			assertThat(note.getFolder()).isNull();
 			assertThat(note.getTitle()).isEqualTo(title);
 			assertThat(note.getContent()).isEqualTo(content);
-			assertThat(note.getVisibility()).isEqualTo(NoteVisibility.PRIVATE); // null일 때 기본값
+			assertThat(note.getVisibility()).isEqualTo(NoteVisibility.PRIVATE);
 			assertThat(note.isAiCollectable()).isTrue();
 		}
 
 		@Test
 		@DisplayName("visibility가 null이면 PRIVATE 기본값")
 		void create_defaultVisibilityWhenNull() {
-			//given
-			User author = User.builder()
-					.id(1L)
-					.email("test@example.com")
-					.name("테스트유저")
-					.build();
+			// given
+			User author = user(1L, "test@example.com", "테스트유저");
 
 			String title = TITLE;
 			String content = CONTENT;
 			boolean aiCollectable = false;
 
-			//when
+			// when
 			Note note = Note.create(
 					author,
 					null,
@@ -83,7 +70,7 @@ class NoteTest {
 					aiCollectable
 			);
 
-			//then
+			// then
 			assertThat(note.getAuthorId()).isEqualTo(1L);
 			assertThat(note.getTitle()).isEqualTo(title);
 			assertThat(note.getContent()).isEqualTo(content);
@@ -94,22 +81,16 @@ class NoteTest {
 		@Test
 		@DisplayName("visibility가 주어지면 그 값을 사용")
 		void create_useGivenVisibility() {
-			//given
-			User author = User.builder()
-					.id(1L)
-					.email("test@example.com")
-					.name("테스트유저")
-					.build();
+			// given
+			User author = user(1L, "test@example.com", "테스트유저");
 
-			String title = TITLE;
-			String content = CONTENT;
 			NoteVisibility visibility = NoteVisibility.PUBLIC;
 			boolean aiCollectable = false;
 
-			//when
-			Note note = Note.create(author, null, title, content, visibility, aiCollectable);
+			// when
+			Note note = Note.create(author, null, TITLE, CONTENT, visibility, aiCollectable);
 
-			//then
+			// then
 			assertThat(note.getVisibility()).isEqualTo(NoteVisibility.PUBLIC);
 			assertThat(note.isAiCollectable()).isFalse();
 		}
@@ -118,7 +99,7 @@ class NoteTest {
 		@DisplayName("폴더 owner와 작성자가 같으면 해당 폴더로 노트를 생성한다.")
 		void create_createsNoteWhenFolderOwnerMatchesAuthor() {
 			// given
-			User author = createUser(1L, "test@example.com", "test");
+			User author = user(1L, "test@example.com", "test");
 			Folder folder = Folder.create(author, null, DIR_NAME);
 
 			// when
@@ -145,25 +126,21 @@ class NoteTest {
 		void create_throwsWhenFolderOwnerDoesNotMatchAuthor() {
 			// given
 			Long authorId = 1L;
-			User author = createUser(authorId, "test@test.com", "test");
+			User author = user(authorId, "test@test.com", "test");
 
 			Long otherAuthorId = 2L;
-			User otherAuthor = createUser(otherAuthorId, "other@other.com", "other");
-
+			User otherAuthor = user(otherAuthorId, "other@other.com", "other");
 			Folder otherUserFolder = Folder.create(otherAuthor, null, DIR_NAME);
 
 			// when & then
-			assertThatThrownBy(() ->
-			{
-				Note.create(
-						author,
-						otherUserFolder,
-						TITLE,
-						CONTENT,
-						NoteVisibility.PRIVATE,
-						false
-				);
-			})
+			assertThatThrownBy(() -> Note.create(
+					author,
+					otherUserFolder,
+					TITLE,
+					CONTENT,
+					NoteVisibility.PRIVATE,
+					false
+			))
 					.isInstanceOf(BusinessException.class)
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_ACCESS_DENIED);
 		}
@@ -191,7 +168,7 @@ class NoteTest {
 		@DisplayName("제목이 비어있으면 INVALID_INPUT 예외가 발생한다.")
 		void create_throwsWhenTitleIsBlank() {
 			// given
-			User author = createUser(1L, "test@test.com", "test");
+			User author = user(1L, "test@test.com", "test");
 
 			// when & then
 			assertThatThrownBy(() -> Note.create(
@@ -210,7 +187,7 @@ class NoteTest {
 		@DisplayName("본문이 비어있으면 INVALID_INPUT 예외가 발생한다.")
 		void create_throwsWhenContentIsBlank() {
 			// given
-			User author = createUser(1L, "test@test.com", "test");
+			User author = user(1L, "test@test.com", "test");
 
 			// when & then
 			assertThatThrownBy(() -> Note.create(
@@ -232,9 +209,7 @@ class NoteTest {
 	@DisplayName("update: 제목/내용/visibility/aiCollectable 변경")
 	void update_changeFields() {
 		// given
-		User author = User.builder()
-				.id(1L)
-				.build();
+		User author = user(1L);
 
 		Note note = Note.create(
 				author,
@@ -264,11 +239,7 @@ class NoteTest {
 	@DisplayName("softDelete: deletedAt 채워지고 isDeleted true 반환")
 	void softDelete_setsDeletedAt() {
 		// given
-		User author = User.builder()
-				.id(1L)
-				.email("test@example.com")
-				.name("테스트유저")
-				.build();
+		User author = user(1L, "test@example.com", "테스트유저");
 
 		Note note = Note.create(
 				author,
@@ -292,11 +263,7 @@ class NoteTest {
 	@DisplayName("validateAuthor: 작성자가 아니면 예외 발생")
 	void validateAuthor_throws_whenNotAuthor() {
 		// given
-		User author = User.builder()
-				.id(1L)
-				.email("a@a.com")
-				.name("작성자")
-				.build();
+		User author = user(1L, "a@a.com", "작성자");
 
 		Note note = Note.create(
 				author,
@@ -318,11 +285,7 @@ class NoteTest {
 	@DisplayName("isAuthor: 작성자인지 여부를 반환")
 	void isAuthor_returnsTrueOnlyForAuthor() {
 		// given
-		User author = User.builder()
-				.id(1L)
-				.email("a@a.com")
-				.name("작성자")
-				.build();
+		User author = user(1L, "a@a.com", "작성자");
 
 		Note note = Note.create(
 				author,
@@ -343,9 +306,7 @@ class NoteTest {
 	@DisplayName("getAuthorId: 작성자 ID를 정상적으로 반환")
 	void getAuthorId_returnsAuthorId() {
 		// given
-		User author = User.builder()
-				.id(1L)
-				.build();
+		User author = user(1L);
 
 		Note note = Note.create(
 				author,
@@ -364,7 +325,7 @@ class NoteTest {
 	@DisplayName("changeFolder: 작성자가 요청하고 같은 소유자의 폴더면 이동한다")
 	void changeFolder_movesWhenRequesterIsAuthorAndFolderOwnerMatches() {
 		// given
-		User author = createUser(1L, "author@test.com", "author");
+		User author = user(1L, "author@test.com", "author");
 		Folder targetFolder = Folder.create(author, null, DIR_NAME);
 		Note note = Note.create(author, null, TITLE, CONTENT, NoteVisibility.PRIVATE, false);
 
@@ -379,7 +340,7 @@ class NoteTest {
 	@DisplayName("changeFolder: 작성자가 요청하면 루트로 이동할 수 있다")
 	void changeFolder_movesToRootWhenTargetFolderIsNull() {
 		// given
-		User author = createUser(1L, "author@test.com", "author");
+		User author = user(1L, "author@test.com", "author");
 		Folder currentFolder = Folder.create(author, null, DIR_NAME);
 		Note note = Note.create(author, currentFolder, TITLE, CONTENT, NoteVisibility.PRIVATE, false);
 
@@ -394,7 +355,7 @@ class NoteTest {
 	@DisplayName("changeFolder: 작성자가 아니면 NOTE_ACCESS_DENIED 예외가 발생한다")
 	void changeFolder_throwsWhenRequesterIsNotAuthor() {
 		// given
-		User author = createUser(1L, "author@test.com", "author");
+		User author = user(1L, "author@test.com", "author");
 		Folder targetFolder = Folder.create(author, null, DIR_NAME);
 		Note note = Note.create(author, null, TITLE, CONTENT, NoteVisibility.PRIVATE, false);
 
@@ -408,8 +369,8 @@ class NoteTest {
 	@DisplayName("changeFolder: 다른 사용자의 폴더면 FOLDER_ACCESS_DENIED 예외가 발생한다")
 	void changeFolder_throwsWhenTargetFolderOwnedByAnotherUser() {
 		// given
-		User author = createUser(1L, "author@test.com", "author");
-		User otherAuthor = createUser(2L, "other@test.com", "other");
+		User author = user(1L, "author@test.com", "author");
+		User otherAuthor = user(2L, "other@test.com", "other");
 		Folder otherFolder = Folder.create(otherAuthor, null, DIR_NAME);
 		Note note = Note.create(author, null, TITLE, CONTENT, NoteVisibility.PRIVATE, false);
 
