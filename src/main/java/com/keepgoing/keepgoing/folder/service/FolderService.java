@@ -4,6 +4,7 @@ import com.keepgoing.keepgoing.folder.domain.Folder;
 import com.keepgoing.keepgoing.folder.repository.FolderRepository;
 import com.keepgoing.keepgoing.folder.repository.dto.FolderTreeRow;
 import com.keepgoing.keepgoing.folder.service.dto.FolderCreateCommand;
+import com.keepgoing.keepgoing.folder.service.dto.FolderRenameCommand;
 import com.keepgoing.keepgoing.folder.service.dto.FolderSummaryResult;
 import com.keepgoing.keepgoing.folder.service.dto.FolderTreeNodeResult;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
@@ -37,6 +38,11 @@ public class FolderService {
 		User user = userRepository.findById(command.userId())
 				.orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
+		String name = normalizeName(command.name());
+		if (name.isBlank()) {
+			throw new BusinessException(ErrorCode.FOLDER_NAME_INVALID);
+		}
+
 		Folder parent = null;
 		if (command.parentId() != null) {
 			parent = folderRepository.findByIdAndDeletedAtIsNull(command.parentId())
@@ -45,14 +51,14 @@ public class FolderService {
 		}
 
 		boolean duplicated = (parent == null)
-				? folderRepository.existsRootFolder(user.getId(), command.name())
-				: folderRepository.existsChildFolder(user.getId(), parent.getId(), command.name());
+				? folderRepository.existsRootFolder(user.getId(), name)
+				: folderRepository.existsChildFolder(user.getId(), parent.getId(), name);
 
 		if (duplicated) {
 			throw new BusinessException(ErrorCode.FOLDER_NAME_DUPLICATED);
 		}
 
-		Folder newFolder = Folder.create(user, parent, command.name());
+		Folder newFolder = Folder.create(user, parent, name);
 		Folder saved = folderRepository.save(newFolder);
 
 		return new FolderSummaryResult(
@@ -131,6 +137,50 @@ public class FolderService {
 		return List.copyOf(results);
 	}
 
+	@Transactional
+	public FolderSummaryResult renameFolder(FolderRenameCommand command) {
+		Folder folder = folderRepository.findByIdAndDeletedAtIsNull(command.folderId())
+				.orElseThrow(() -> new BusinessException(ErrorCode.FOLDER_NOT_FOUND));
+
+		folder.validateOwner(command.userId());
+
+		String newName = normalizeName(command.name());
+		if (newName.isBlank()) {
+			throw new BusinessException(ErrorCode.FOLDER_NAME_INVALID);
+		}
+
+		if (newName.equals(folder.getName())) {
+			return new FolderSummaryResult(
+					folder.getId(),
+					folder.getParent() != null ? folder.getParent().getId() : null,
+					folder.getName()
+			);
+		}
+
+		Long userId = command.userId();
+		Folder parent = folder.getParent();
+
+		boolean duplicated = (parent == null)
+				? folderRepository.existsRootFolder(userId, newName)
+				: folderRepository.existsChildFolder(userId, parent.getId(), newName);
+
+		if (duplicated) {
+			throw new BusinessException(ErrorCode.FOLDER_NAME_DUPLICATED);
+		}
+
+		folder.rename(newName);
+
+		return new FolderSummaryResult(
+				folder.getId(),
+				parent != null ? parent.getId() : null,
+				folder.getName()
+		);
+	}
+
+	private String normalizeName(String raw) {
+		return raw == null ? "" : raw.trim();
+	}
+
 	private static class Node {
 		final Long id;
 		final Long parentId;
@@ -143,7 +193,6 @@ public class FolderService {
 			this.name = name;
 		}
 	}
-
 
 	private FolderTreeNodeResult toResult(Node node, Set<Long> visiting, int depth, AtomicBoolean truncated) {
 		// depth guard

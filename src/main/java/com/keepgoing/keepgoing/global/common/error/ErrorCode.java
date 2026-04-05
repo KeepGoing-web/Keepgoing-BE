@@ -183,7 +183,7 @@ public enum ErrorCode {
 			"FOLDER_003",
 			"이미 존재하는 폴더 이름입니다."
 	),
-	FOLDER_INVALID_NAME(
+	FOLDER_NAME_INVALID(
 			HttpStatus.BAD_REQUEST,
 			"FOLDER_004",
 			"허용되지 않는 폴더 이름입니다.");
