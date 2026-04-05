@@ -147,7 +147,7 @@ class FolderControllerTest {
 			mockLoginUser(userId);
 
 			given(folderService.createFolder(any(FolderCreateCommand.class)))
-					.willThrow(new BusinessException(ErrorCode.FOLDER_INVALID_NAME));
+					.willThrow(new BusinessException(ErrorCode.FOLDER_NAME_INVALID));
 
 			// when & then
 			mockMvc.perform(post("/api/folders")
@@ -155,7 +155,7 @@ class FolderControllerTest {
 							.content(objectMapper.writeValueAsString(request)))
 					.andExpect(status().isBadRequest())
 					.andExpect(jsonPath("$.success").value(false))
-					.andExpect(jsonPath("$.error.code").value(ErrorCode.FOLDER_INVALID_NAME.toString()));
+					.andExpect(jsonPath("$.error.code").value(ErrorCode.FOLDER_NAME_INVALID.toString()));
 		}
 
 	}

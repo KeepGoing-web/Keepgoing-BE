@@ -12,6 +12,7 @@ import com.keepgoing.keepgoing.folder.domain.Folder;
 import com.keepgoing.keepgoing.folder.repository.FolderRepository;
 import com.keepgoing.keepgoing.folder.repository.dto.FolderTreeRow;
 import com.keepgoing.keepgoing.folder.service.dto.FolderCreateCommand;
+import com.keepgoing.keepgoing.folder.service.dto.FolderRenameCommand;
 import com.keepgoing.keepgoing.folder.service.dto.FolderSummaryResult;
 import com.keepgoing.keepgoing.folder.service.dto.FolderTreeNodeResult;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
@@ -20,7 +21,6 @@ import com.keepgoing.keepgoing.user.domain.User;
 import com.keepgoing.keepgoing.user.repository.UserRepository;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.ArrayList;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -475,6 +475,143 @@ class FolderServiceTest {
 			assertThat(current.children()).isEmpty();
 
 			verify(folderRepository).findTreeRows(userId);
+		}
+	}
+
+	@Nested
+	@DisplayName("renameFolder()")
+	class RenameFolder {
+
+		@Test
+		@DisplayName("루트 폴더 이름을 변경한다(trim 적용)")
+		void renameFolder_renamesRootFolderWithTrim() {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			User user = createUser(userId);
+
+			Folder folder = Folder.create(user, null, "old");
+			ReflectionTestUtils.setField(folder, "id", folderId);
+
+			FolderRenameCommand command = new FolderRenameCommand(
+					userId,
+					folderId,
+					"   test   "
+			);
+
+			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(folder));
+			given(folderRepository.existsRootFolder(userId, "test")).willReturn(false);
+
+			// when
+			FolderSummaryResult result = folderService.renameFolder(command);
+
+			// then
+			assertThat(result.folderId()).isEqualTo(folderId);
+			assertThat(result.parentId()).isNull();
+			assertThat(result.name()).isEqualTo("test");
+
+			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
+			verify(folderRepository).existsRootFolder(userId, "test");
+			verifyNoMoreInteractions(folderRepository);
+		}
+
+		@Test
+		@DisplayName("폴더가 없으면 FOLDER_NOT_FOUND 예외가 발생한다")
+		void renameFolder_throwsWhenFolderNotFound() {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			FolderRenameCommand command = new FolderRenameCommand(userId, folderId, "test");
+
+			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.empty());
+
+			// when & then
+			assertThatThrownBy(() -> folderService.renameFolder(command))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_NOT_FOUND);
+
+			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
+			verifyNoMoreInteractions(folderRepository);
+		}
+
+		@Test
+		@DisplayName("다른 사용자의 폴더면 FOLDER_ACCESS_DENIED 예외가 발생한다")
+		void renameFolder_throwWhenFolderOwnedByAnotherUser() {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+
+			User other = createUser(99L);
+			Folder folder = Folder.create(other, null, "old");
+			ReflectionTestUtils.setField(folder, "id", folderId);
+
+			FolderRenameCommand command = new FolderRenameCommand(userId, folderId, "test");
+
+			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(folder));
+
+			// when & then
+			assertThatThrownBy(() -> folderService.renameFolder(command))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_ACCESS_DENIED);
+
+			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
+			verifyNoMoreInteractions(folderRepository);
+		}
+
+		@Test
+		@DisplayName("같은 루트 이름이 이미 있으면 FOLDER_NAME_DUPLICATED 예외가 발생한다")
+		void renameFolder_throwsWhenRootNameDuplicated() {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			User user = createUser(userId);
+
+			Folder folder = Folder.create(user, null, "old");
+			ReflectionTestUtils.setField(folder, "id", folderId);
+
+			FolderRenameCommand command = new FolderRenameCommand(userId, folderId, "test");
+
+			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(folder));
+			given(folderRepository.existsRootFolder(userId, "test")).willReturn(true);
+
+			// when & then
+			assertThatThrownBy(() -> folderService.renameFolder(command))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_NAME_DUPLICATED);
+
+			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
+			verify(folderRepository).existsRootFolder(userId, "test");
+			verifyNoMoreInteractions(folderRepository);
+		}
+
+		@Test
+		@DisplayName("같은 부모 아래 같은 이름이 이미 있으면 FOLDER_NAME_DUPLICATED 예외가 발생한다")
+		void renameFolder_throwsWhenChildNameDuplicated() {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			Long parentId = 2L;
+			User user = createUser(userId);
+
+			Folder parent = Folder.create(user, null, "root");
+			ReflectionTestUtils.setField(parent, "id", parentId);
+
+			Folder folder = Folder.create(user, parent, "old");
+			ReflectionTestUtils.setField(folder, "id", folderId);
+
+			FolderRenameCommand command = new FolderRenameCommand(userId, folderId, "test");
+
+			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(folder));
+			given(folderRepository.existsChildFolder(userId, parentId, "test")).willReturn(true);
+
+			// when & then
+			assertThatThrownBy(() -> folderService.renameFolder(command))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_NAME_DUPLICATED);
+
+			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
+			verify(folderRepository).existsChildFolder(userId, parentId, "test");
+			verifyNoMoreInteractions(folderRepository);
 		}
 	}
 }
