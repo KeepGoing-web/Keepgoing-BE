@@ -11,12 +11,6 @@ public record FolderCreateRequest(
 		@Size(max = 120)
 		String name
 ) {
-	public FolderCreateRequest {
-		if (name != null) {
-			name = name.trim();
-		}
-	}
-
 	public FolderCreateCommand toCommand(Long userId) {
 		return new FolderCreateCommand(
 				userId,
