@@ -56,7 +56,7 @@ public class NoteService {
 	}
 
 	/**
-	 * 단일 포스트 조회
+	 * 단일 노트 조회
 	 */
 	@Transactional(readOnly = true)
 	public NoteDetailResult getNote(Long viewerId, Long noteId) {
@@ -69,7 +69,7 @@ public class NoteService {
 	}
 
 	/**
-	 * 포스트 목록 조회
+	 * 노트 목록 조회
 	 */
 	@Transactional(readOnly = true)
 	public Page<NoteSummaryResult> getNotes(Long userId, Pageable pageable) {
@@ -98,7 +98,7 @@ public class NoteService {
 	}
 
 	/**
-	 * 포스트 삭제 (soft delete)
+	 * 노트 삭제 (soft delete)
 	 */
 	@Transactional
 	public void deleteNote(Long userId, Long noteId) {
