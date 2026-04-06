@@ -38,7 +38,7 @@ public interface NoteRepository extends JpaRepository<Note, Long> {
 			    lower(n.title) like concat('%', lower(:keyword), '%')
 				  OR lower(n.content) like concat('%', lower(:keyword), '%')
 			  )
-			ORDER BY n.createdAt DESC , n.id DESC
+			ORDER BY n.createdAt DESC, n.id DESC
 			""")
 	Page<Note> searchPublicNotes(
 			@Param("keyword") String keyword,
