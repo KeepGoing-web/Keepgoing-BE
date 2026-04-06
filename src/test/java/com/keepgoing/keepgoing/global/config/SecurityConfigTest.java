@@ -133,6 +133,23 @@ class SecurityConfigTest {
 		void getMyInfo_allowAuthenticatedUser() throws Exception {
 			assertNotBlocked(get("/api/users/me").with(authentication(authenticatedUser())));
 		}
+
+		@Test
+		@DisplayName("PATCH /api/users/me 는 익명 사용자에게 401을 반환한다")
+		void updateMyInfo_requireAuthentication() throws Exception {
+			assertUnauthorized(patch("/api/users/me")
+					.contentType(JSON)
+					.content("{\"name\":\"새 이름\"}"));
+		}
+
+		@Test
+		@DisplayName("PATCH /api/users/me 는 인증 사용자에게 열려 있다")
+		void updateMyInfo_allowAuthenticatedUser() throws Exception {
+			assertNotBlocked(patch("/api/users/me")
+					.with(authentication(authenticatedUser()))
+					.contentType(JSON)
+					.content("{\"name\":\"새 이름\"}"));
+		}
 	}
 
 	@Nested
@@ -266,5 +283,4 @@ class SecurityConfigTest {
 		void probe() {
 		}
 	}
-
 }

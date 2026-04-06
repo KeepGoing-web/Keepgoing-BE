@@ -1,19 +1,25 @@
 package com.keepgoing.keepgoing.user.controller;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
+import com.keepgoing.keepgoing.user.controller.dto.UserUpdateRequest;
 import com.keepgoing.keepgoing.user.domain.UserRole;
 import com.keepgoing.keepgoing.global.security.jwt.JwtAuthenticationFilter;
 import com.keepgoing.keepgoing.user.service.UserService;
 import com.keepgoing.keepgoing.user.service.dto.UserInfoResult;
+import com.keepgoing.keepgoing.user.service.dto.UserUpdateCommand;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -22,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -38,6 +45,9 @@ class UserControllerTest {
 
 	@Autowired
 	MockMvc mockMvc;
+
+	@Autowired
+	ObjectMapper objectMapper;
 
 	@MockitoBean
 	UserService userService;
@@ -91,6 +101,92 @@ class UserControllerTest {
 
 			then(userService).should().getMyInfo(userId);
 		}
+	}
+
+	@Nested
+	@DisplayName("PATCH /api/users/me")
+	class PatchMyProfile {
+
+		@Test
+		@DisplayName("성공 시 200과 수정된 사용자 정보를 반환한다.")
+		void success() throws Exception {
+			Long userId = 1L;
+			String updatedName = "새 이름";
+			UserInfoResult result = new UserInfoResult(userId, EMAIL, updatedName, UserRole.USER);
+
+			given(userService.updateMyProfile(any(UserUpdateCommand.class))).willReturn(result);
+			mockLoginUser(userId);
+
+			mockMvc.perform(patch("/api/users/me")
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(requestJson(new UserUpdateRequest("  새 이름  "))))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.success").value(true))
+					.andExpect(jsonPath("$.data.userId").value(userId))
+					.andExpect(jsonPath("$.data.email").value(EMAIL))
+					.andExpect(jsonPath("$.data.name").value(updatedName))
+					.andExpect(jsonPath("$.data.role").value(UserRole.USER.toString()));
+
+			then(userService).should().updateMyProfile(argThat(command ->
+					command.userId().equals(userId)
+							&& command.name().equals("  새 이름  ")
+			));
+		}
+
+		@Test
+		@DisplayName("이름이 공백이면 400을 반환하고 서비스를 호출하지 않는다.")
+		void badRequestWhenNameIsBlank() throws Exception {
+			Long userId = 1L;
+			mockLoginUser(userId);
+
+			mockMvc.perform(patch("/api/users/me")
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(requestJson(new UserUpdateRequest("   "))))
+					.andExpect(status().isBadRequest());
+
+			then(userService).shouldHaveNoInteractions();
+		}
+
+		@Test
+		@DisplayName("이름이 100자를 초과하면 400을 반환하고 서비스를 호출하지 않는다.")
+		void badRequestWhenNameTooLong() throws Exception {
+			Long userId = 1L;
+			mockLoginUser(userId);
+
+			mockMvc.perform(patch("/api/users/me")
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(requestJson(new UserUpdateRequest("가".repeat(101)))))
+					.andExpect(status().isBadRequest());
+
+			then(userService).shouldHaveNoInteractions();
+		}
+
+		@Test
+		@DisplayName("사용자가 없으면 404와 USER_NOT_FOUND를 반환한다.")
+		void userNotFound() throws Exception {
+			Long userId = 1L;
+
+			willThrow(new BusinessException(ErrorCode.USER_NOT_FOUND))
+					.given(userService)
+					.updateMyProfile(any(UserUpdateCommand.class));
+			mockLoginUser(userId);
+
+			mockMvc.perform(patch("/api/users/me")
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(requestJson(new UserUpdateRequest("수정할 이름"))))
+					.andExpect(status().isNotFound())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value(ErrorCode.USER_NOT_FOUND.name()));
+
+			then(userService).should().updateMyProfile(argThat(command ->
+					command.userId().equals(userId)
+							&& command.name().equals("수정할 이름")
+			));
+		}
+	}
+
+	private String requestJson(UserUpdateRequest request) throws Exception {
+		return objectMapper.writeValueAsString(request);
 	}
 
 	private void mockLoginUser(Long userId) {
