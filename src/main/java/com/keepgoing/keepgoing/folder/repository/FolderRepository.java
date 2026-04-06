@@ -12,6 +12,8 @@ public interface FolderRepository extends JpaRepository<Folder, Long> {
 
 	Optional<Folder> findByIdAndDeletedAtIsNull(Long id);
 
+	boolean existsByOwner_IdAndParent_IdAndDeletedAtIsNull(Long ownerId, Long parentId);
+
 	@Query("""
 			select f
 			from Folder f
@@ -65,4 +67,6 @@ public interface FolderRepository extends JpaRepository<Folder, Long> {
 			order by f.name asc
 			""")
 	List<FolderTreeRow> findTreeRows(@Param("ownerId") Long ownerId);
+
+
 }

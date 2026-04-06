@@ -18,6 +18,8 @@ public interface NoteRepository extends JpaRepository<Note, Long> {
     @EntityGraph(attributePaths = {"author"})
     Optional<Note> findById(Long id);
 
+	boolean existsByFolder_IdAndDeletedAtIsNull(Long folderId);
+
     /**
      * authorId 로 필터해서, 전달받은 Pageable 조건(페이지/정렬)에 맞게 조회한다.
      */
