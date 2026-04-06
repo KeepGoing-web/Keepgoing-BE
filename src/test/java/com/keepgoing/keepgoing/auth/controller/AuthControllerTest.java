@@ -29,7 +29,7 @@ import com.keepgoing.keepgoing.auth.controller.dto.SignupResponse;
 import com.keepgoing.keepgoing.auth.service.AuthService;
 import com.keepgoing.keepgoing.auth.service.dto.LoginCommand;
 import com.keepgoing.keepgoing.auth.service.dto.LoginResult;
-import com.keepgoing.keepgoing.auth.service.dto.MyInfoResult;
+import com.keepgoing.keepgoing.user.service.dto.UserInfoResult;
 import com.keepgoing.keepgoing.auth.service.dto.SignupCommand;
 import com.keepgoing.keepgoing.auth.service.dto.SignupResult;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
@@ -69,7 +69,6 @@ import org.springframework.test.web.servlet.MockMvc;
 class AuthControllerTest {
 
 	private static final String EMAIL = "test@test.com";
-	public static final String NAME = "홍길동";
 	public static final String ACCESS_TOKEN = "access-token";
 	public static final String REFRESH_TOKEN = "refresh-token";
 	public static final String NEW_ACCESS_TOKEN = "new-access-token";
@@ -246,63 +245,6 @@ class AuthControllerTest {
 		}
 	}
 
-	@Nested
-	@DisplayName("GET /api/auth/me - 정보")
-	class MyInfo {
-
-		@Test
-		@DisplayName("성공 시 200과 사용자 정보를 반환한다.")
-		void success() throws Exception {
-			// given
-			Long userId = 1L;
-			MyInfoResult result = new MyInfoResult(userId, EMAIL, NAME, UserRole.USER);
-
-			given(authService.getMyInfo(any()))
-					.willReturn(result);
-
-			Authentication authenticated = UsernamePasswordAuthenticationToken.authenticated(
-					userId,
-					null,
-					List.of(new SimpleGrantedAuthority(UserRole.USER.toAuthority()))
-			);
-			SecurityContextHolder.getContext().setAuthentication(authenticated);
-
-			// when
-			mockMvc.perform(get("/api/auth/me"))
-					.andExpect(status().isOk())
-					.andExpect(jsonPath("$.success").value(true))
-					.andExpect(jsonPath("$.data.userId").value(1L))
-					.andExpect(jsonPath("$.data.name").value(NAME))
-					.andExpect(jsonPath("$.data.role").value(UserRole.USER.toString()));
-
-			then(authService).should().getMyInfo(userId);
-		}
-
-		@Test
-		@DisplayName("가입된 사용자가 없는 경우 404와 USER_NOT_FOUND 반환한다.")
-		void me_userNotFound() throws Exception {
-			// given
-			Long userId = 1L;
-			Authentication authenticated = UsernamePasswordAuthenticationToken.authenticated(
-					userId,
-					null,
-					List.of(new SimpleGrantedAuthority(UserRole.USER.toAuthority()))
-			);
-			SecurityContextHolder.getContext().setAuthentication(authenticated);
-
-			willThrow(new BusinessException(USER_NOT_FOUND))
-					.given(authService)
-					.getMyInfo(userId);
-
-			// when & then
-			mockMvc.perform(get("/api/auth/me"))
-					.andExpect(status().isNotFound())
-					.andExpect(jsonPath("$.success").value(false))
-					.andExpect(jsonPath("$.error.code").value(USER_NOT_FOUND.name()));
-
-			then(authService).should().getMyInfo(userId);
-		}
-	}
 
 	@Nested
 	@DisplayName("POST /api/auth/refresh")
