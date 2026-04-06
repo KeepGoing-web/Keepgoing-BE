@@ -1,6 +1,8 @@
 package com.keepgoing.keepgoing.user.domain;
 
 import com.keepgoing.keepgoing.global.common.entity.BaseEntity;
+import com.keepgoing.keepgoing.global.common.error.BusinessException;
+import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -85,5 +87,11 @@ public class User extends BaseEntity {
 				UserStatus.ACTIVE,
 				null
 		);
+	}
+
+	public void changeName(String newName) {
+		if (newName == null || newName.isBlank())
+			throw new BusinessException(ErrorCode.INVALID_INPUT);
+		this.name = newName;
 	}
 }
