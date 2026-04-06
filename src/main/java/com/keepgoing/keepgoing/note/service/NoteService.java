@@ -125,7 +125,7 @@ public class NoteService {
 	 * 전체(공개) 검색
 	 */
 	@Transactional(readOnly = true)
-	public Page<NoteSummaryResult> searchPublicNote(NoteSearchQuery query) {
+	public Page<NoteSummaryResult> searchPublicNotes(NoteSearchQuery query) {
 		validateSearchQuery(query);
 
 		Page<Note> page = noteRepository.searchPublicNotes(query.keyword(), query.pageable());

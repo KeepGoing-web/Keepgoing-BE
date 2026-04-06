@@ -870,7 +870,7 @@ public class NoteControllerTest {
 
 			Page<NoteSummaryResult> page = new PageImpl<>(results, pageable, results.size());
 
-			given(noteService.searchPublicNote(any(NoteSearchQuery.class)))
+			given(noteService.searchPublicNotes(any(NoteSearchQuery.class)))
 					.willReturn(page);
 
 			mockMvc.perform(get("/api/notes/search")
@@ -886,7 +886,7 @@ public class NoteControllerTest {
 					.andExpect(jsonPath("$.data.contents[1].folderId").isEmpty());
 
 			ArgumentCaptor<NoteSearchQuery> captor = ArgumentCaptor.forClass(NoteSearchQuery.class);
-			verify(noteService).searchPublicNote(captor.capture());
+			verify(noteService).searchPublicNotes(captor.capture());
 			assertThat(captor.getValue().keyword()).isEqualTo("spring");
 			assertThat(captor.getValue().pageable().getPageSize()).isEqualTo(10);
 		}
@@ -894,7 +894,7 @@ public class NoteControllerTest {
 		@Test
 		@DisplayName("size가 MAX_PAGE_SIZE보다 크면 상한(100)으로 제한된다")
 		void clampsPageSize() throws Exception {
-			given(noteService.searchPublicNote(any(NoteSearchQuery.class)))
+			given(noteService.searchPublicNotes(any(NoteSearchQuery.class)))
 					.willReturn(Page.empty());
 
 			mockMvc.perform(get("/api/notes/search")
@@ -905,7 +905,7 @@ public class NoteControllerTest {
 					.andExpect(jsonPath("$.success").value(true));
 
 			ArgumentCaptor<NoteSearchQuery> captor = ArgumentCaptor.forClass(NoteSearchQuery.class);
-			verify(noteService).searchPublicNote(captor.capture());
+			verify(noteService).searchPublicNotes(captor.capture());
 			assertThat(captor.getValue().keyword()).isEqualTo("spring");
 			assertThat(captor.getValue().pageable().getPageSize()).isEqualTo(100);
 		}
@@ -913,7 +913,7 @@ public class NoteControllerTest {
 		@Test
 		@DisplayName("keyword가 공백이면 400 + NOTE_SEARCH_KEYWORD_REQUIRED 반환")
 		void blankKeywordReturns400() throws Exception {
-			given(noteService.searchPublicNote(any(NoteSearchQuery.class)))
+			given(noteService.searchPublicNotes(any(NoteSearchQuery.class)))
 					.willThrow(new BusinessException(ErrorCode.NOTE_SEARCH_KEYWORD_REQUIRED));
 
 			mockMvc.perform(get("/api/notes/search")

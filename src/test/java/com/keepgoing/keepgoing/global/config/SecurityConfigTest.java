@@ -137,7 +137,7 @@ class SecurityConfigTest {
 		@DisplayName("노트 공개 조회 경로는 익명 접근을 허용한다")
 		void noteReadEndpoints_allowAnonymous() throws Exception {
 			given(noteService.getNote(isNull(), eq(1L))).willReturn(noteDetail(1L));
-			given(noteService.searchPublicNote(any(NoteSearchQuery.class)))
+			given(noteService.searchPublicNotes(any(NoteSearchQuery.class)))
 					.willReturn(new PageImpl<>(List.of(noteSummary(1L))));
 
 			mockMvc.perform(get("/api/notes/{noteId}", 1L))

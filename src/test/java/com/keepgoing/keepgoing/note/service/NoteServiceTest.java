@@ -746,7 +746,7 @@ class NoteServiceTest {
 			given(noteRepository.searchPublicNotes(eq("spring"), eq(pageable)))
 					.willReturn(notePage);
 
-			Page<NoteSummaryResult> result = noteService.searchPublicNote(query);
+			Page<NoteSummaryResult> result = noteService.searchPublicNotes(query);
 
 			assertThat(result.getTotalElements()).isEqualTo(2);
 			assertThat(result.getContent()).hasSize(2);
@@ -764,7 +764,7 @@ class NoteServiceTest {
 			Pageable pageable = PageRequest.of(0, 10);
 			NoteSearchQuery query = new NoteSearchQuery("   ", pageable);
 
-			assertThatThrownBy(() -> noteService.searchPublicNote(query))
+			assertThatThrownBy(() -> noteService.searchPublicNotes(query))
 					.isInstanceOf(BusinessException.class)
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_SEARCH_KEYWORD_REQUIRED);
 
@@ -783,7 +783,7 @@ class NoteServiceTest {
 			given(noteRepository.searchPublicNotes(eq("spring"), eq(pageable)))
 					.willReturn(notePage);
 
-			Page<NoteSummaryResult> result = noteService.searchPublicNote(query);
+			Page<NoteSummaryResult> result = noteService.searchPublicNotes(query);
 
 			assertThat(result.getTotalElements()).isEqualTo(1);
 

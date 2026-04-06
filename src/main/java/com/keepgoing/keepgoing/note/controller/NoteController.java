@@ -159,7 +159,7 @@ public class NoteController {
 	) {
 		Pageable safePageable = safePageableUnsorted(pageable);
 
-		Page<NoteSummaryResult> page = noteService.searchPublicNote(
+		Page<NoteSummaryResult> page = noteService.searchPublicNotes(
 				new NoteSearchQuery(keyword, safePageable)
 		);
 
