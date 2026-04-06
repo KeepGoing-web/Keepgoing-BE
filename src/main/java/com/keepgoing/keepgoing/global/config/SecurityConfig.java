@@ -29,6 +29,10 @@ import org.springframework.web.cors.CorsConfigurationSource;
 public class SecurityConfig {
 
 	private static final String AUTH_API_PREFIX = "/api/auth";
+	private static final String USERS_ME_PATH = "/api/users/me";
+	private static final String FOLDERS_API_PATTERN = "/api/folders/**";
+	private static final String NOTES_API_PATTERN = "/api/notes/**";
+	private static final String NOTES_ME_API_PATTERN = "/api/notes/me/**";
 
 	private final JwtAuthenticationFilter jwtAuthenticationFilter;
 	private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
@@ -59,38 +63,42 @@ public class SecurityConfig {
 				.httpBasic(AbstractHttpConfigurer::disable) // 기본 Basic 인증 비활성화
 				.sessionManagement(session ->
 						session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .exceptionHandling(ex ->
-                        ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
-				.authorizeHttpRequests(auth -> auth
-						// Swagger & OpenAPI 문서 경로 허용
-						.requestMatchers(
-								"/v3/api-docs/**",
-								"/swagger-ui/**",
-								"/swagger-ui.html"
-						).permitAll()
-						// 회원가입/로그인 API 허용
-						.requestMatchers(
-								AUTH_API_PREFIX + "/signup",
-								AUTH_API_PREFIX + "/login",
-								AUTH_API_PREFIX + "/refresh",
-								AUTH_API_PREFIX + "/logout"
-						).permitAll()
-						.requestMatchers(
-								"/oauth2/**",
-								"/login/oauth2/**"
-						).permitAll()
-						.requestMatchers(
-								"/api/notes/me/**",
-								"/api/folders"
-						).authenticated()
-						// 노트 조회는 공개, 쓰기(생성/수정/삭제)는 인증 필요
-						.requestMatchers(HttpMethod.GET, "/api/notes/**").permitAll()
-						.requestMatchers(HttpMethod.POST, "/api/notes/**").authenticated()
-						.requestMatchers(HttpMethod.PUT, "/api/notes/**").authenticated()
-						.requestMatchers(HttpMethod.PATCH, "/api/notes/**").authenticated()
-						.requestMatchers(HttpMethod.DELETE, "/api/notes/**").authenticated()
-						// 나머지는 인증 필요
-						.anyRequest().authenticated()
+				.exceptionHandling(ex ->
+						ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
+				.authorizeHttpRequests(auth -> {
+							auth
+									// Swagger & OpenAPI 문서 경로 허용
+									.requestMatchers(
+											"/v3/api-docs/**",
+											"/swagger-ui/**",
+											"/swagger-ui.html"
+									).permitAll()
+									// auth 도메인
+									.requestMatchers(
+											AUTH_API_PREFIX + "/signup",
+											AUTH_API_PREFIX + "/login",
+											AUTH_API_PREFIX + "/refresh",
+											AUTH_API_PREFIX + "/logout"
+									).permitAll()
+									// user 도메인
+									.requestMatchers(USERS_ME_PATH).authenticated()
+									// folder 도메인
+									.requestMatchers(FOLDERS_API_PATTERN).authenticated()
+									// note 도메인, 노트 조회는 공개, 쓰기(생성/수정/삭제)는 인증 필요
+									.requestMatchers(NOTES_ME_API_PATTERN).authenticated()
+									.requestMatchers(HttpMethod.GET, NOTES_API_PATTERN).permitAll()
+									.requestMatchers(HttpMethod.POST, NOTES_API_PATTERN).authenticated()
+									.requestMatchers(HttpMethod.PUT, NOTES_API_PATTERN).authenticated()
+									.requestMatchers(HttpMethod.PATCH, NOTES_API_PATTERN).authenticated()
+									.requestMatchers(HttpMethod.DELETE, NOTES_API_PATTERN).authenticated()
+									// oauth
+									.requestMatchers(
+											"/oauth2/**",
+											"/login/oauth2/**"
+									).permitAll()
+									// 나머지는 인증 필요
+									.anyRequest().authenticated();
+						}
 				)
 				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
 				.oauth2Login(oauth2 -> oauth2
