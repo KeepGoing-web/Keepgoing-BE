@@ -4,8 +4,10 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -368,6 +370,80 @@ class FolderControllerTest {
 					.andExpect(jsonPath("$.data[0].children[0].name").value("spring"));
 
 			verify(folderService).getFolderTree(userId);
+		}
+	}
+
+	@Nested
+	@DisplayName("DELETE /api/folders/{folderId}")
+	class DeleteFolder {
+
+		@Test
+		@DisplayName("유효한 요청이면 204 No Content를 반환한다")
+		void deleteFolder_returnsNoContent() throws Exception {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			mockLoginUser(userId);
+
+			// when & then
+			mockMvc.perform(delete("/api/folders/{folderId}", folderId))
+					.andExpect(status().isNoContent());
+
+			verify(folderService).deleteFolder(userId, folderId);
+		}
+
+		@Test
+		@DisplayName("폴더가 없으면 404 Not Found를 반환한다")
+		void deleteFolder_returnsNotFoundWhenFolderDoesNotExist() throws Exception {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			mockLoginUser(userId);
+
+			willThrow(new BusinessException(ErrorCode.FOLDER_NOT_FOUND))
+					.given(folderService).deleteFolder(userId, folderId);
+
+			// when & then
+			mockMvc.perform(delete("/api/folders/{folderId}", folderId))
+					.andExpect(status().isNotFound())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value(ErrorCode.FOLDER_NOT_FOUND.toString()));
+		}
+
+		@Test
+		@DisplayName("접근 권한이 없으면 403 Forbidden을 반환한다")
+		void deleteFolder_returnsForbiddenWhenAccessDenied() throws Exception {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			mockLoginUser(userId);
+
+			willThrow(new BusinessException(ErrorCode.FOLDER_ACCESS_DENIED))
+					.given(folderService).deleteFolder(userId, folderId);
+
+			// when & then
+			mockMvc.perform(delete("/api/folders/{folderId}", folderId))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value(ErrorCode.FOLDER_ACCESS_DENIED.toString()));
+		}
+
+		@Test
+		@DisplayName("폴더가 비어있지 않으면 409 Conflict를 반환한다")
+		void deleteFolder_returnsConflictWhenFolderIsNotEmpty() throws Exception {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			mockLoginUser(userId);
+
+			willThrow(new BusinessException(ErrorCode.FOLDER_NOT_EMPTY))
+					.given(folderService).deleteFolder(userId, folderId);
+
+			// when & then
+			mockMvc.perform(delete("/api/folders/{folderId}", folderId))
+					.andExpect(status().isConflict())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value(ErrorCode.FOLDER_NOT_EMPTY.toString()));
 		}
 	}
 
