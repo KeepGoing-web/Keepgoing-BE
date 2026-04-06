@@ -9,6 +9,7 @@ import com.keepgoing.keepgoing.folder.service.dto.FolderSummaryResult;
 import com.keepgoing.keepgoing.folder.service.dto.FolderTreeNodeResult;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
+import com.keepgoing.keepgoing.note.repository.NoteRepository;
 import com.keepgoing.keepgoing.user.domain.User;
 import com.keepgoing.keepgoing.user.repository.UserRepository;
 import java.util.ArrayList;
@@ -31,6 +32,7 @@ public class FolderService {
 
 	private final UserRepository userRepository;
 	private final FolderRepository folderRepository;
+	private final NoteRepository noteRepository;
 	private static final int MAX_TREE_DEPTH = 200;
 
 	@Transactional
@@ -154,6 +156,26 @@ public class FolderService {
 				parent != null ? parent.getId() : null,
 				folder.getName()
 		);
+	}
+
+	@Transactional
+	public void deleteFolder(Long userId, Long folderId) {
+		Folder folder = folderRepository.findByIdAndDeletedAtIsNull(folderId)
+				.orElseThrow(() -> new BusinessException(ErrorCode.FOLDER_NOT_FOUND));
+
+		folder.validateOwner(userId);
+
+		boolean hasChildren = folderRepository.existsByOwner_IdAndParent_IdAndDeletedAtIsNull(userId, folderId);
+		if (hasChildren) {
+			throw new BusinessException(ErrorCode.FOLDER_NOT_EMPTY);
+		}
+
+		boolean hasNotes = noteRepository.existsByFolder_IdAndDeletedAtIsNull(folderId);
+		if (hasNotes) {
+			throw new BusinessException(ErrorCode.FOLDER_NOT_EMPTY);
+		}
+
+		folder.softDelete();
 	}
 
 	private String normalizeName(String raw) {

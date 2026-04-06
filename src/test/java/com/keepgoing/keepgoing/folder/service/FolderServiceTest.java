@@ -17,6 +17,7 @@ import com.keepgoing.keepgoing.folder.service.dto.FolderSummaryResult;
 import com.keepgoing.keepgoing.folder.service.dto.FolderTreeNodeResult;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
+import com.keepgoing.keepgoing.note.repository.NoteRepository;
 import com.keepgoing.keepgoing.user.domain.User;
 import com.keepgoing.keepgoing.user.repository.UserRepository;
 import java.util.ArrayList;
@@ -25,8 +26,8 @@ import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -41,6 +42,9 @@ class FolderServiceTest {
 
 	@Mock
 	FolderRepository folderRepository;
+
+	@Mock
+	NoteRepository noteRepository;
 
 	@InjectMocks
 	FolderService folderService;
@@ -651,6 +655,127 @@ class FolderServiceTest {
 			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
 			verify(folderRepository).existsChildFolder(userId, parentId, "test");
 			verifyNoMoreInteractions(folderRepository);
+		}
+	}
+
+	@Nested
+	@DisplayName("deleteFolder()")
+	class DeleteFolder {
+
+		@Test
+		@DisplayName("자식 폴더가 없으면 soft delete 처리한다.")
+		void deleteFolder_softDeletesWhenNoChildren() {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			User user = user(userId);
+
+			Folder folder = Folder.create(user, null, "root");
+			ReflectionTestUtils.setField(folder, "id", folderId);
+
+			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(folder));
+			given(folderRepository.existsByOwner_IdAndParent_IdAndDeletedAtIsNull(userId, folderId)).willReturn(false);
+
+			// when
+			folderService.deleteFolder(userId, folderId);
+
+			// then
+			Object deletedAt = ReflectionTestUtils.getField(folder, "deletedAt");
+			assertThat(deletedAt).isNotNull();
+			assertThat(folder.isDeleted()).isTrue();
+			assertThat(folder.getDeletedAt()).isNotNull();
+
+			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
+			verify(folderRepository).existsByOwner_IdAndParent_IdAndDeletedAtIsNull(userId, folderId);
+			verify(noteRepository).existsByFolder_IdAndDeletedAtIsNull(folderId);
+			verifyNoMoreInteractions(folderRepository, noteRepository);
+		}
+
+		@Test
+		@DisplayName("폴더가 없으면 FOLDER_NOT_FOUND 예외가 발생한다")
+		void deleteFolder_throwsWhenFolderNotFound() {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+
+			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.empty());
+
+			// when & then
+			assertThatThrownBy(() -> folderService.deleteFolder(userId, folderId))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_NOT_FOUND);
+
+			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
+			verifyNoMoreInteractions(folderRepository, noteRepository);
+		}
+
+		@Test
+		@DisplayName("다른 사용자의 폴더면 FOLDER_ACCESS_DENIED 예외가 발생한다")
+		void deleteFolder_throwsWhenFolderOwnedByAnotherUser() {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+
+			User other = user(99L);
+			Folder folder = Folder.create(other, null, "root");
+			ReflectionTestUtils.setField(folder, "id", folderId);
+
+			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(folder));
+
+			// when & then
+			assertThatThrownBy(() -> folderService.deleteFolder(userId, folderId))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_ACCESS_DENIED);
+			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
+			verifyNoMoreInteractions(folderRepository, noteRepository);
+		}
+
+		@Test
+		@DisplayName("자식 폴더가 있으면 FOLDER_NOT_EMPTY 예외가 발생한다")
+		void deleteFolder_throwsWhenFolderHasChildren() {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			User user = user(userId);
+
+			Folder folder = Folder.create(user, null, "root");
+			ReflectionTestUtils.setField(folder, "id", folderId);
+
+			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(folder));
+			given(folderRepository.existsByOwner_IdAndParent_IdAndDeletedAtIsNull(userId, folderId)).willReturn(true);
+
+			// when & then
+			assertThatThrownBy(() -> folderService.deleteFolder(userId, folderId))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_NOT_EMPTY);
+			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
+			verify(folderRepository).existsByOwner_IdAndParent_IdAndDeletedAtIsNull(userId, folderId);
+			verifyNoMoreInteractions(folderRepository, noteRepository);
+		}
+
+		@Test
+		@DisplayName("노트가 있으면 FOLDER_NOT_EMPTY 예외가 발생한다")
+		void deleteFolder_throwsWhenFolderHasNotes() {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			User user = user(userId);
+
+			Folder folder = Folder.create(user, null, "root");
+			ReflectionTestUtils.setField(folder, "id", folderId);
+
+			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(folder));
+			given(folderRepository.existsByOwner_IdAndParent_IdAndDeletedAtIsNull(userId, folderId)).willReturn(false);
+			given(noteRepository.existsByFolder_IdAndDeletedAtIsNull(folderId)).willReturn(true);
+
+			// when & then
+			assertThatThrownBy(() -> folderService.deleteFolder(userId, folderId))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_NOT_EMPTY);
+			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
+			verify(folderRepository).existsByOwner_IdAndParent_IdAndDeletedAtIsNull(userId, folderId);
+			verify(noteRepository).existsByFolder_IdAndDeletedAtIsNull(folderId);
+			verifyNoMoreInteractions(folderRepository, noteRepository);
 		}
 	}
 }
