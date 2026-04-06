@@ -3,13 +3,11 @@ package com.keepgoing.keepgoing.auth.controller;
 import com.keepgoing.keepgoing.auth.AuthMapper;
 import com.keepgoing.keepgoing.auth.controller.dto.LoginRequest;
 import com.keepgoing.keepgoing.auth.controller.dto.LoginResponse;
-import com.keepgoing.keepgoing.auth.controller.dto.MyInfoResponse;
 import com.keepgoing.keepgoing.auth.controller.dto.SignupRequest;
 import com.keepgoing.keepgoing.auth.controller.dto.SignupResponse;
 import com.keepgoing.keepgoing.auth.service.AuthService;
 import com.keepgoing.keepgoing.auth.service.dto.LoginCommand;
 import com.keepgoing.keepgoing.auth.service.dto.LoginResult;
-import com.keepgoing.keepgoing.auth.service.dto.MyInfoResult;
 import com.keepgoing.keepgoing.auth.service.dto.SignupCommand;
 import com.keepgoing.keepgoing.auth.service.dto.SignupResult;
 import com.keepgoing.keepgoing.global.api.response.ApiResponse;
@@ -22,8 +20,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -62,18 +58,6 @@ public class AuthController implements AuthApiDocs {
 		authCookieManager.addRefreshToken(servletResponse, result.refreshToken());
 
 		LoginResponse body = authMapper.toResponse(result);
-
-		return ResponseEntity.status(HttpStatus.OK)
-				.body(ApiResponse.success(body));
-	}
-
-	@GetMapping("/me")
-	public ResponseEntity<ApiResponse<MyInfoResponse>> getMyInfo(
-			@AuthenticationPrincipal Long userId
-	) {
-		MyInfoResult result = authService.getMyInfo(userId);
-
-		MyInfoResponse body = authMapper.toResponse(result);
 
 		return ResponseEntity.status(HttpStatus.OK)
 				.body(ApiResponse.success(body));

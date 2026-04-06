@@ -4,7 +4,6 @@ import com.keepgoing.keepgoing.auth.AuthMapper;
 import com.keepgoing.keepgoing.auth.security.CustomUserDetails;
 import com.keepgoing.keepgoing.auth.service.dto.LoginCommand;
 import com.keepgoing.keepgoing.auth.service.dto.LoginResult;
-import com.keepgoing.keepgoing.auth.service.dto.MyInfoResult;
 import com.keepgoing.keepgoing.auth.service.dto.SignupCommand;
 import com.keepgoing.keepgoing.auth.service.dto.SignupResult;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
@@ -73,14 +72,6 @@ public class AuthService {
 
 		String email = principal.getUsername();
 		return new LoginResult(accessToken, refreshToken, userId, email);
-	}
-
-	@Transactional(readOnly = true)
-	public MyInfoResult getMyInfo(Long userId) {
-		User user = userRepository.findById(userId)
-				.orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-		return new MyInfoResult(userId, user.getEmail(), user.getName(), user.getRole());
 	}
 
 	@Transactional(readOnly = true)
