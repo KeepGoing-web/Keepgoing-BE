@@ -43,161 +43,164 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 public class NoteController {
 
-    private static final int MAX_PAGE_SIZE = 100;
+	private static final int MAX_PAGE_SIZE = 100;
 
-    private final NoteService noteService;
+	private final NoteService noteService;
 
-    /**
-     * 노트 생성
-     */
-    @PostMapping
-    public ResponseEntity<ApiResponse<NoteDetailResponse>> createNote(
-            @RequestBody @Valid NoteCreateRequest request,
-            @AuthenticationPrincipal Long userId
-    ) {
-        NoteCreateCommand command = request.toCommand(userId);
+	/**
+	 * 노트 생성
+	 */
+	@PostMapping
+	public ResponseEntity<ApiResponse<NoteDetailResponse>> createNote(
+			@RequestBody @Valid NoteCreateRequest request,
+			@AuthenticationPrincipal Long userId
+	) {
+		NoteCreateCommand command = request.toCommand(userId);
 
-        NoteDetailResult created = noteService.createNote(command);
+		NoteDetailResult created = noteService.createNote(command);
 
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(NoteDetailResponse.from(created)));
-    }
+		return ResponseEntity.status(HttpStatus.CREATED)
+				.body(ApiResponse.success(NoteDetailResponse.from(created)));
+	}
 
-    /**
-     * 단일 노트 조회
-     */
-    @GetMapping("/{noteId}")
-    public ResponseEntity<ApiResponse<NoteDetailResponse>> getNote(@PathVariable Long noteId) {
-        NoteDetailResult note = noteService.getNote(noteId);
+	/**
+	 * 단일 노트 조회
+	 */
+	@GetMapping("/{noteId}")
+	public ResponseEntity<ApiResponse<NoteDetailResponse>> getNote(
+			@PathVariable Long noteId,
+			@AuthenticationPrincipal Long userId
+	) {
+		NoteDetailResult note = noteService.getNote(userId, noteId);
 
-        return ResponseEntity.ok(ApiResponse.success(NoteDetailResponse.from(note)));
-    }
+		return ResponseEntity.ok(ApiResponse.success(NoteDetailResponse.from(note)));
+	}
 
-    /**
-     * 노트 목록 조회
-     */
-    @GetMapping("/me")
-    public ResponseEntity<ApiResponse<PagedResponse<NoteSummaryResponse>>> getNotes(
-            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
-            Pageable pageable,
-            @AuthenticationPrincipal Long userId
-    ) {
-        Pageable safePageable = safePageable(pageable);
+	/**
+	 * 노트 목록 조회
+	 */
+	@GetMapping("/me")
+	public ResponseEntity<ApiResponse<PagedResponse<NoteSummaryResponse>>> getNotes(
+			@PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
+			Pageable pageable,
+			@AuthenticationPrincipal Long userId
+	) {
+		Pageable safePageable = safePageable(pageable);
 
-        Page<NoteSummaryResult> page = noteService.getNotes(userId, safePageable);
+		Page<NoteSummaryResult> page = noteService.getNotes(userId, safePageable);
 
-        List<NoteSummaryResponse> contents = page.getContent().stream()
-                .map(NoteSummaryResponse::from)
-                .toList();
+		List<NoteSummaryResponse> contents = page.getContent().stream()
+				.map(NoteSummaryResponse::from)
+				.toList();
 
-        return ResponseEntity.ok(ApiResponse.success(PagedResponse.of(page, contents)));
-    }
+		return ResponseEntity.ok(ApiResponse.success(PagedResponse.of(page, contents)));
+	}
 
-    /**
-     * 노트 수정
-     */
-    @PutMapping("/{noteId}")
-    public ResponseEntity<ApiResponse<NoteDetailResponse>> updateNote(
-            @PathVariable Long noteId,
-            @RequestBody @Valid NoteUpdateRequest request,
-            @AuthenticationPrincipal Long userId
-    ) {
-        NoteUpdateCommand command = request.toCommand(noteId, userId);
+	/**
+	 * 노트 수정
+	 */
+	@PutMapping("/{noteId}")
+	public ResponseEntity<ApiResponse<NoteDetailResponse>> updateNote(
+			@PathVariable Long noteId,
+			@RequestBody @Valid NoteUpdateRequest request,
+			@AuthenticationPrincipal Long userId
+	) {
+		NoteUpdateCommand command = request.toCommand(noteId, userId);
 
-        NoteDetailResult updated = noteService.updateNote(command);
+		NoteDetailResult updated = noteService.updateNote(command);
 
-        return ResponseEntity.ok(ApiResponse.success(NoteDetailResponse.from(updated)));
-    }
+		return ResponseEntity.ok(ApiResponse.success(NoteDetailResponse.from(updated)));
+	}
 
-    /**
-     * 노트 삭제
-     */
-    @DeleteMapping("/{noteId}")
-    public ResponseEntity<Void> deleteNote(
-            @AuthenticationPrincipal Long userId,
-            @PathVariable Long noteId
-    ) {
-        noteService.deleteNote(userId, noteId);
-        return ResponseEntity.noContent().build();
-    }
+	/**
+	 * 노트 삭제
+	 */
+	@DeleteMapping("/{noteId}")
+	public ResponseEntity<Void> deleteNote(
+			@AuthenticationPrincipal Long userId,
+			@PathVariable Long noteId
+	) {
+		noteService.deleteNote(userId, noteId);
+		return ResponseEntity.noContent().build();
+	}
 
-    /**
-     * 내 노트 검색
-     */
-    @GetMapping("/me/search")
-    public ResponseEntity<ApiResponse<PagedResponse<NoteSummaryResponse>>> searchMyNotes(
-            @RequestParam String keyword,
-            @PageableDefault(size = 10)
-            Pageable pageable,
-            @AuthenticationPrincipal Long userId
-    ) {
-        Pageable safePageable = safePageableUnsorted(pageable);
+	/**
+	 * 내 노트 검색
+	 */
+	@GetMapping("/me/search")
+	public ResponseEntity<ApiResponse<PagedResponse<NoteSummaryResponse>>> searchMyNotes(
+			@RequestParam String keyword,
+			@PageableDefault(size = 10)
+			Pageable pageable,
+			@AuthenticationPrincipal Long userId
+	) {
+		Pageable safePageable = safePageableUnsorted(pageable);
 
-        Page<NoteSummaryResult> page = noteService.searchMyNotes(
-                userId,
-                new NoteSearchQuery(keyword, safePageable)
-        );
+		Page<NoteSummaryResult> page = noteService.searchMyNotes(
+				userId,
+				new NoteSearchQuery(keyword, safePageable)
+		);
 
-        List<NoteSummaryResponse> contents = page.getContent().stream()
-                .map(NoteSummaryResponse::from)
-                .toList();
+		List<NoteSummaryResponse> contents = page.getContent().stream()
+				.map(NoteSummaryResponse::from)
+				.toList();
 
-        return ResponseEntity.ok(ApiResponse.success(PagedResponse.of(page, contents)));
-    }
+		return ResponseEntity.ok(ApiResponse.success(PagedResponse.of(page, contents)));
+	}
 
-    /**
-     * 전체 노트 검색
-     */
-    @GetMapping("/search")
-    public ResponseEntity<ApiResponse<PagedResponse<NoteSummaryResponse>>> search(
-            @RequestParam String keyword,
-            @PageableDefault(size = 10)
-            Pageable pageable
-    ) {
-        Pageable safePageable = safePageableUnsorted(pageable);
+	/**
+	 * 전체 노트 검색
+	 */
+	@GetMapping("/search")
+	public ResponseEntity<ApiResponse<PagedResponse<NoteSummaryResponse>>> search(
+			@RequestParam String keyword,
+			@PageableDefault(size = 10)
+			Pageable pageable
+	) {
+		Pageable safePageable = safePageableUnsorted(pageable);
 
-        Page<NoteSummaryResult> page = noteService.searchNote(
-                new NoteSearchQuery(keyword, safePageable)
-        );
+		Page<NoteSummaryResult> page = noteService.searchPublicNotes(
+				new NoteSearchQuery(keyword, safePageable)
+		);
 
-        List<NoteSummaryResponse> contents = page.getContent().stream()
-                .map(NoteSummaryResponse::from)
-                .toList();
+		List<NoteSummaryResponse> contents = page.getContent().stream()
+				.map(NoteSummaryResponse::from)
+				.toList();
 
-        return ResponseEntity.ok(ApiResponse.success(PagedResponse.of(page, contents)));
-    }
+		return ResponseEntity.ok(ApiResponse.success(PagedResponse.of(page, contents)));
+	}
 
-    /**
-     * 노트 이동
-     */
-    @PatchMapping("/{noteId}/folder")
-    public ResponseEntity<ApiResponse<NoteDetailResponse>> moveNote(
-            @PathVariable Long noteId,
-            @AuthenticationPrincipal Long userId,
-            @Valid @RequestBody NoteMoveRequest request
-    ) {
-        NoteMoveCommand command = request.toCommand(noteId, userId);
-        NoteDetailResult noteDetailResult = noteService.moveNote(command);
+	/**
+	 * 노트 이동
+	 */
+	@PatchMapping("/{noteId}/folder")
+	public ResponseEntity<ApiResponse<NoteDetailResponse>> moveNote(
+			@PathVariable Long noteId,
+			@AuthenticationPrincipal Long userId,
+			@Valid @RequestBody NoteMoveRequest request
+	) {
+		NoteMoveCommand command = request.toCommand(noteId, userId);
+		NoteDetailResult noteDetailResult = noteService.moveNote(command);
 
-        NoteDetailResponse response = NoteDetailResponse.from(noteDetailResult);
+		NoteDetailResponse response = NoteDetailResponse.from(noteDetailResult);
 
-        return ResponseEntity.ok(ApiResponse.success(response));
-    }
+		return ResponseEntity.ok(ApiResponse.success(response));
+	}
 
-    private Pageable safePageable(Pageable pageable) {
-        int safeSize = Math.min(pageable.getPageSize(), MAX_PAGE_SIZE);
-        return PageRequest.of(
-                pageable.getPageNumber(),
-                safeSize,
-                pageable.getSort()
-        );
-    }
+	private Pageable safePageable(Pageable pageable) {
+		int safeSize = Math.min(pageable.getPageSize(), MAX_PAGE_SIZE);
+		return PageRequest.of(
+				pageable.getPageNumber(),
+				safeSize,
+				pageable.getSort()
+		);
+	}
 
-    private Pageable safePageableUnsorted(Pageable pageable) {
-        int safeSize = Math.min(pageable.getPageSize(), MAX_PAGE_SIZE);
-        return PageRequest.of(
-                pageable.getPageNumber(),
-                safeSize
-        );
-    }
+	private Pageable safePageableUnsorted(Pageable pageable) {
+		int safeSize = Math.min(pageable.getPageSize(), MAX_PAGE_SIZE);
+		return PageRequest.of(
+				pageable.getPageNumber(),
+				safeSize
+		);
+	}
 }

@@ -3,6 +3,7 @@ package com.keepgoing.keepgoing.note.controller;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willDoNothing;
 import static org.mockito.BDDMockito.willThrow;
@@ -286,20 +287,63 @@ public class NoteControllerTest {
 	// ========== GET ==========
 
 	@Nested
-	@DisplayName("GET /api/notes/{notedId}")
+	@DisplayName("GET /api/notes/{noteId}")
 	class Get {
 
 		@Test
-		@DisplayName("단일 게시글 조회 성공")
-		void getNote_success() throws Exception {
-			// given
+		@DisplayName("익명 사용자는 공개 노트를 조회할 수 있다")
+		void anonymousUser_canReadPublicNote() throws Exception {
 			Long noteId = 1L;
 
 			NoteDetailResult result = new NoteDetailResult(
 					noteId,
 					1L,
-					null,
+					2L,
 					"테스트 제목",
+					"테스트 내용",
+					NoteVisibility.PUBLIC,
+					true,
+					null,
+					null
+			);
+
+			given(noteService.getNote(isNull(), eq(noteId))).willReturn(result);
+
+			mockMvc.perform(get("/api/notes/{noteId}", noteId))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.success").value(true))
+					.andExpect(jsonPath("$.data.title").value("테스트 제목"))
+					.andExpect(jsonPath("$.data.visibility").value("PUBLIC"));
+		}
+
+		@Test
+		@DisplayName("익명 사용자가 비공개 노트를 조회하면 403을 반환한다")
+		void anonymousUser_cannotReadPrivateNote() throws Exception {
+			Long noteId = 1L;
+
+			given(noteService.getNote(isNull(), eq(noteId)))
+					.willThrow(new BusinessException(ErrorCode.NOTE_ACCESS_DENIED));
+
+			mockMvc.perform(get("/api/notes/{noteId}", noteId))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value("NOTE_ACCESS_DENIED"));
+		}
+
+		@Test
+		@DisplayName("인증 사용자는 본인 비공개 노트를 조회할 수 있다")
+		void authenticatedUser_canReadOwnPrivateNote() throws Exception {
+			Long userId = 1L;
+			Long noteId = 1L;
+
+			SecurityContextHolder.getContext()
+					.setAuthentication(new UsernamePasswordAuthenticationToken(userId, null, List.of()));
+
+			NoteDetailResult result = new NoteDetailResult(
+					noteId,
+					1L,
+					userId,
+					"내 비공개 노트",
 					"테스트 내용",
 					NoteVisibility.PRIVATE,
 					true,
@@ -307,25 +351,69 @@ public class NoteControllerTest {
 					null
 			);
 
-			given(noteService.getNote(noteId)).willReturn(result);
+			given(noteService.getNote(eq(userId), eq(noteId))).willReturn(result);
 
-			// when & then
 			mockMvc.perform(get("/api/notes/{noteId}", noteId))
 					.andExpect(status().isOk())
 					.andExpect(jsonPath("$.success").value(true))
-					.andExpect(jsonPath("$.data.title").value("테스트 제목"));
+					.andExpect(jsonPath("$.data.visibility").value("PRIVATE"));
+		}
+
+		@Test
+		@DisplayName("인증 사용자는 타인의 공개 노트를 조회할 수 있다")
+		void authenticatedUser_canReadOthersPublicNote() throws Exception {
+			Long userId = 1L;
+			Long noteId = 2L;
+
+			SecurityContextHolder.getContext()
+					.setAuthentication(new UsernamePasswordAuthenticationToken(userId, null, List.of()));
+
+			NoteDetailResult result = new NoteDetailResult(
+					noteId,
+					null,
+					2L,
+					"타인 공개 노트",
+					"테스트 내용",
+					NoteVisibility.PUBLIC,
+					true,
+					null,
+					null
+			);
+
+			given(noteService.getNote(eq(userId), eq(noteId))).willReturn(result);
+
+			mockMvc.perform(get("/api/notes/{noteId}", noteId))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.success").value(true))
+					.andExpect(jsonPath("$.data.visibility").value("PUBLIC"));
+		}
+
+		@Test
+		@DisplayName("인증 사용자가 타인의 비공개 노트를 조회하면 403을 반환한다")
+		void authenticatedUser_cannotReadOthersPrivateNote() throws Exception {
+			Long userId = 1L;
+			Long noteId = 2L;
+
+			SecurityContextHolder.getContext()
+					.setAuthentication(new UsernamePasswordAuthenticationToken(userId, null, List.of()));
+
+			given(noteService.getNote(eq(userId), eq(noteId)))
+					.willThrow(new BusinessException(ErrorCode.NOTE_ACCESS_DENIED));
+
+			mockMvc.perform(get("/api/notes/{noteId}", noteId))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value("NOTE_ACCESS_DENIED"));
 		}
 
 		@Test
 		@DisplayName("없는 게시글이면 NOTE_NOT_FOUND 에러 응답")
-		void getNote_notFound() throws Exception {
-			// given
+		void returnsNotFoundWhenNoteDoesNotExist() throws Exception {
 			Long noteId = 999L;
 
-			given(noteService.getNote(noteId))
+			given(noteService.getNote(isNull(), eq(noteId)))
 					.willThrow(new BusinessException(ErrorCode.NOTE_NOT_FOUND));
 
-			// when & then
 			mockMvc.perform(get("/api/notes/{noteId}", noteId))
 					.andExpect(status().isNotFound())
 					.andExpect(jsonPath("$.success").value(false))
@@ -761,6 +849,80 @@ public class NoteControllerTest {
 					.andExpect(status().isForbidden())
 					.andExpect(jsonPath("$.success").value(false))
 					.andExpect(jsonPath("$.error.code").value("FOLDER_ACCESS_DENIED"));
+		}
+	}
+
+	// ========== GET /api/notes/search ==========
+
+	@Nested
+	@DisplayName("GET /api/notes/search")
+	class SearchPublic {
+
+		@Test
+		@DisplayName("공개 노트 검색 성공 시 200 OK 및 contents 반환")
+		void success() throws Exception {
+			Pageable pageable = PageRequest.of(0, 10);
+
+			List<NoteSummaryResult> results = List.of(
+					new NoteSummaryResult(1L, 10L, "spring 공개 제목", NoteVisibility.PUBLIC, true, null),
+					new NoteSummaryResult(2L, null, "다른 공개 제목", NoteVisibility.PUBLIC, false, null)
+			);
+
+			Page<NoteSummaryResult> page = new PageImpl<>(results, pageable, results.size());
+
+			given(noteService.searchPublicNotes(any(NoteSearchQuery.class)))
+					.willReturn(page);
+
+			mockMvc.perform(get("/api/notes/search")
+							.param("keyword", "spring")
+							.param("page", "0")
+							.param("size", "10"))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.success").value(true))
+					.andExpect(jsonPath("$.data.contents").isArray())
+					.andExpect(jsonPath("$.data.contents.length()").value(2))
+					.andExpect(jsonPath("$.data.contents[0].title").value("spring 공개 제목"))
+					.andExpect(jsonPath("$.data.contents[0].visibility").value("PUBLIC"))
+					.andExpect(jsonPath("$.data.contents[1].folderId").isEmpty());
+
+			ArgumentCaptor<NoteSearchQuery> captor = ArgumentCaptor.forClass(NoteSearchQuery.class);
+			verify(noteService).searchPublicNotes(captor.capture());
+			assertThat(captor.getValue().keyword()).isEqualTo("spring");
+			assertThat(captor.getValue().pageable().getPageSize()).isEqualTo(10);
+		}
+
+		@Test
+		@DisplayName("size가 MAX_PAGE_SIZE보다 크면 상한(100)으로 제한된다")
+		void clampsPageSize() throws Exception {
+			given(noteService.searchPublicNotes(any(NoteSearchQuery.class)))
+					.willReturn(Page.empty());
+
+			mockMvc.perform(get("/api/notes/search")
+							.param("keyword", "spring")
+							.param("page", "0")
+							.param("size", "1000"))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.success").value(true));
+
+			ArgumentCaptor<NoteSearchQuery> captor = ArgumentCaptor.forClass(NoteSearchQuery.class);
+			verify(noteService).searchPublicNotes(captor.capture());
+			assertThat(captor.getValue().keyword()).isEqualTo("spring");
+			assertThat(captor.getValue().pageable().getPageSize()).isEqualTo(100);
+		}
+
+		@Test
+		@DisplayName("keyword가 공백이면 400 + NOTE_SEARCH_KEYWORD_REQUIRED 반환")
+		void blankKeywordReturns400() throws Exception {
+			given(noteService.searchPublicNotes(any(NoteSearchQuery.class)))
+					.willThrow(new BusinessException(ErrorCode.NOTE_SEARCH_KEYWORD_REQUIRED));
+
+			mockMvc.perform(get("/api/notes/search")
+							.param("keyword", "   ")
+							.param("page", "0")
+							.param("size", "10"))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value("NOTE_SEARCH_KEYWORD_REQUIRED"));
 		}
 	}
 
