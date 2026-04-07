@@ -30,6 +30,7 @@ public class SecurityConfig {
 
 	private static final String AUTH_API_PREFIX = "/api/auth";
 	private static final String USERS_ME_PATH = "/api/users/me";
+	private static final String USERS_ME_CHANGE_PASSWORD_PATH = "/api/users/me/change-password";
 	private static final String FOLDERS_API_PATTERN = "/api/folders/**";
 	private static final String NOTES_API_PATTERN = "/api/notes/**";
 	private static final String NOTES_ME_API_PATTERN = "/api/notes/me/**";
@@ -82,6 +83,7 @@ public class SecurityConfig {
 									).permitAll()
 									// user 도메인
 									.requestMatchers(USERS_ME_PATH).authenticated()
+									.requestMatchers(USERS_ME_CHANGE_PASSWORD_PATH).authenticated()
 									// folder 도메인
 									.requestMatchers(FOLDERS_API_PATTERN).authenticated()
 									// note 도메인, 노트 조회는 공개, 쓰기(생성/수정/삭제)는 인증 필요
