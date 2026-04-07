@@ -150,6 +150,33 @@ class SecurityConfigTest {
 					.contentType(JSON)
 					.content("{\"name\":\"새 이름\"}"));
 		}
+
+		@Test
+		@DisplayName("POST /api/users/me/change-password 는 익명 사용자에게 401을 반환한다")
+		void changePassword_requireAuthentication() throws Exception {
+			assertUnauthorized(post("/api/users/me/change-password")
+					.contentType(JSON)
+					.content("""
+							{
+							  "currentPassword": "OldP@ssw0rd!",
+							  "newPassword": "NewP@ssw0rd!"
+							}
+							"""));
+		}
+
+		@Test
+		@DisplayName("POST /api/users/me/change-password 는 인증 사용자에게 열려 있다")
+		void changePassword_allowAuthenticatedUser() throws Exception {
+			assertNotBlocked(post("/api/users/me/change-password")
+					.with(authentication(authenticatedUser()))
+					.contentType(JSON)
+					.content("""
+							{
+							  "currentPassword": "OldP@ssw0rd!",
+							  "newPassword": "NewP@ssw0rd!"
+							}
+							"""));
+		}
 	}
 
 	@Nested
