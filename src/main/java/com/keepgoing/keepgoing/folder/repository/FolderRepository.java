@@ -67,6 +67,4 @@ public interface FolderRepository extends JpaRepository<Folder, Long> {
 			order by f.name asc
 			""")
 	List<FolderTreeRow> findTreeRows(@Param("ownerId") Long ownerId);
-
-
 }
