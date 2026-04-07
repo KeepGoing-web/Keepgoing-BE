@@ -91,6 +91,16 @@ public enum ErrorCode {
 			"USER_004",
 			"삭제된 사용자입니다."
 	),
+	USER_PASSWORD_CHANGE_NOT_SUPPORTED(
+			HttpStatus.FORBIDDEN,
+			"USER_005",
+			"비밀번호 변경이 지원되지 않는 계정입니다."
+	),
+	USER_CURRENT_PASSWORD_MISMATCH(
+			HttpStatus.UNAUTHORIZED,
+			"USER_006",
+			"현재 비밀번호가 올바르지 않습니다."
+	),
 
 	// ===== Validation =====
 	VALIDATION_FAILED(
