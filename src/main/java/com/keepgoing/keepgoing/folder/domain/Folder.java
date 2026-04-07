@@ -76,6 +76,10 @@ public class Folder extends BaseEntity {
 		this.name = name;
 	}
 
+	public void moveTo(Folder parent) {
+		this.parent = parent;
+	}
+
 	public void softDelete() {
 		if (this.deletedAt == null) {
 			this.deletedAt = LocalDateTime.now();

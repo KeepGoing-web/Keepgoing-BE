@@ -4,6 +4,7 @@ import com.keepgoing.keepgoing.folder.domain.Folder;
 import com.keepgoing.keepgoing.folder.repository.FolderRepository;
 import com.keepgoing.keepgoing.folder.repository.dto.FolderTreeRow;
 import com.keepgoing.keepgoing.folder.service.dto.FolderCreateCommand;
+import com.keepgoing.keepgoing.folder.service.dto.FolderMoveCommand;
 import com.keepgoing.keepgoing.folder.service.dto.FolderRenameCommand;
 import com.keepgoing.keepgoing.folder.service.dto.FolderSummaryResult;
 import com.keepgoing.keepgoing.folder.service.dto.FolderTreeNodeResult;
@@ -18,6 +19,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.RequiredArgsConstructor;
@@ -159,6 +161,42 @@ public class FolderService {
 	}
 
 	@Transactional
+	public FolderSummaryResult moveFolder(FolderMoveCommand command) {
+		Folder folder = folderRepository.findByIdAndDeletedAtIsNull(command.folderId())
+				.orElseThrow(() -> new BusinessException(ErrorCode.FOLDER_NOT_FOUND));
+
+		Long userId = command.userId();
+		Long folderId = command.folderId();
+		Long targetParentId = command.parentId();
+		Long currentParentId = folder.getParent() != null ? folder.getParent().getId() : null;
+
+		folder.validateOwner(userId);
+
+		if (Objects.equals(folderId, targetParentId)) {
+			throw new BusinessException(ErrorCode.FOLDER_MOVE_INVALID);
+		}
+
+		if (Objects.equals(currentParentId, targetParentId)) {
+			return FolderSummaryResult.from(folder);
+		}
+
+		Folder targetParent = null;
+		if (targetParentId != null) {
+			targetParent = folderRepository.findByIdAndDeletedAtIsNull(targetParentId)
+					.orElseThrow(() -> new BusinessException(ErrorCode.FOLDER_NOT_FOUND));
+			targetParent.validateOwner(userId);
+			validateMoveTarget(userId, folderId, targetParentId);
+		}
+
+		if (isDuplicatedFolderName(userId, targetParent, folder.getName())) {
+			throw new BusinessException(ErrorCode.FOLDER_NAME_DUPLICATED);
+		}
+
+		folder.moveTo(targetParent);
+		return FolderSummaryResult.from(folder);
+	}
+
+	@Transactional
 	public void deleteFolder(Long userId, Long folderId) {
 		Folder folder = folderRepository.findByIdAndDeletedAtIsNull(folderId)
 				.orElseThrow(() -> new BusinessException(ErrorCode.FOLDER_NOT_FOUND));
@@ -176,6 +214,21 @@ public class FolderService {
 		}
 
 		folder.softDelete();
+	}
+
+	private void validateMoveTarget(Long userId, Long folderId, Long targetParentId) {
+		Map<Long, Long> parentMap = new LinkedHashMap<>();
+		for (FolderTreeRow row : folderRepository.findTreeRows(userId)) {
+			parentMap.put(row.folderId(), row.parentId());
+		}
+
+		Long currentId = targetParentId;
+		while (currentId != null) {
+			if (currentId.equals(folderId)) {
+				throw new BusinessException(ErrorCode.FOLDER_MOVE_INVALID);
+			}
+			currentId = parentMap.get(currentId);
+		}
 	}
 
 	private String normalizeName(String raw) {

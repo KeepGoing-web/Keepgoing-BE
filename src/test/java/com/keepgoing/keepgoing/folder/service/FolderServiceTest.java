@@ -6,12 +6,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import com.keepgoing.keepgoing.folder.domain.Folder;
 import com.keepgoing.keepgoing.folder.repository.FolderRepository;
 import com.keepgoing.keepgoing.folder.repository.dto.FolderTreeRow;
 import com.keepgoing.keepgoing.folder.service.dto.FolderCreateCommand;
+import com.keepgoing.keepgoing.folder.service.dto.FolderMoveCommand;
 import com.keepgoing.keepgoing.folder.service.dto.FolderRenameCommand;
 import com.keepgoing.keepgoing.folder.service.dto.FolderSummaryResult;
 import com.keepgoing.keepgoing.folder.service.dto.FolderTreeNodeResult;
@@ -776,6 +778,353 @@ class FolderServiceTest {
 			verify(folderRepository).existsByOwner_IdAndParent_IdAndDeletedAtIsNull(userId, folderId);
 			verify(noteRepository).existsByFolder_IdAndDeletedAtIsNull(folderId);
 			verifyNoMoreInteractions(folderRepository, noteRepository);
+		}
+	}
+
+	@Nested
+	@DisplayName("moveFolder()")
+	class MoveFolder {
+
+		@Test
+		@DisplayName("루트 폴더를 다른 부모 아래로 이동한다")
+		void moveFolder_movesRootFolderToAnotherParent() {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			Long targetParentId = 20L;
+			User user = user(userId);
+
+			Folder folder = Folder.create(user, null, "backend");
+			ReflectionTestUtils.setField(folder, "id", folderId);
+
+			Folder targetParent = Folder.create(user, null, "root");
+			ReflectionTestUtils.setField(targetParent, "id", targetParentId);
+
+			FolderMoveCommand command = new FolderMoveCommand(userId, folderId, targetParentId);
+
+			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(folder));
+			given(folderRepository.findByIdAndDeletedAtIsNull(targetParentId)).willReturn(Optional.of(targetParent));
+			given(folderRepository.findTreeRows(userId)).willReturn(List.of(
+					new FolderTreeRow(folderId, null, "backend"),
+					new FolderTreeRow(targetParentId, null, "root")
+			));
+			given(folderRepository.existsChildFolder(userId, targetParentId, "backend")).willReturn(false);
+
+			// when
+			FolderSummaryResult result = folderService.moveFolder(command);
+
+			// then
+			assertThat(result.folderId()).isEqualTo(folderId);
+			assertThat(result.parentId()).isEqualTo(targetParentId);
+			assertThat(result.name()).isEqualTo("backend");
+			assertThat(folder.getParent()).isEqualTo(targetParent);
+
+			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
+			verify(folderRepository).findByIdAndDeletedAtIsNull(targetParentId);
+			verify(folderRepository).findTreeRows(userId);
+			verify(folderRepository).existsChildFolder(userId, targetParentId, "backend");
+			verifyNoMoreInteractions(folderRepository);
+			verifyNoInteractions(noteRepository, userRepository);
+		}
+
+		@Test
+		@DisplayName("하위 폴더를 루트로 이동한다")
+		void moveFolder_movesChildFolderToRoot() {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			Long currentParentId = 20L;
+			User user = user(userId);
+
+			Folder currentParent = Folder.create(user, null, "root");
+			ReflectionTestUtils.setField(currentParent, "id", currentParentId);
+
+			Folder folder = Folder.create(user, currentParent, "backend");
+			ReflectionTestUtils.setField(folder, "id", folderId);
+
+			FolderMoveCommand command = new FolderMoveCommand(userId, folderId, null);
+
+			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(folder));
+			given(folderRepository.existsRootFolder(userId, "backend")).willReturn(false);
+
+			// when
+			FolderSummaryResult result = folderService.moveFolder(command);
+
+			// then
+			assertThat(result.folderId()).isEqualTo(folderId);
+			assertThat(result.parentId()).isNull();
+			assertThat(result.name()).isEqualTo("backend");
+			assertThat(folder.getParent()).isNull();
+
+			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
+			verify(folderRepository).existsRootFolder(userId, "backend");
+			verifyNoMoreInteractions(folderRepository);
+			verifyNoInteractions(noteRepository, userRepository);
+		}
+
+		@Test
+		@DisplayName("같은 부모로 이동하면 그대로 반환한다")
+		void moveFolder_returnsCurrentFolderWhenTargetParentIsSame() {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			Long currentParentId = 20L;
+			User user = user(userId);
+
+			Folder currentParent = Folder.create(user, null, "root");
+			ReflectionTestUtils.setField(currentParent, "id", currentParentId);
+
+			Folder folder = Folder.create(user, currentParent, "backend");
+			ReflectionTestUtils.setField(folder, "id", folderId);
+
+			FolderMoveCommand command = new FolderMoveCommand(userId, folderId, currentParentId);
+
+			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(folder));
+
+			// when
+			FolderSummaryResult result = folderService.moveFolder(command);
+
+			// then
+			assertThat(result.folderId()).isEqualTo(folderId);
+			assertThat(result.parentId()).isEqualTo(currentParentId);
+			assertThat(result.name()).isEqualTo("backend");
+			assertThat(folder.getParent()).isEqualTo(currentParent);
+
+			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
+			verifyNoMoreInteractions(folderRepository);
+			verifyNoInteractions(noteRepository, userRepository);
+		}
+
+		@Test
+		@DisplayName("폴더가 없으면 FOLDER_NOT_FOUND 예외가 발생한다")
+		void moveFolder_throwsWhenFolderNotFound() {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			FolderMoveCommand command = new FolderMoveCommand(userId, folderId, 20L);
+
+			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.empty());
+
+			// when & then
+			assertThatThrownBy(() -> folderService.moveFolder(command))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_NOT_FOUND);
+
+			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
+			verifyNoMoreInteractions(folderRepository);
+			verifyNoInteractions(noteRepository, userRepository);
+		}
+
+		@Test
+		@DisplayName("다른 사용자의 폴더면 FOLDER_ACCESS_DENIED 예외가 발생한다")
+		void moveFolder_throwsWhenFolderOwnedByAnotherUser() {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			User other = user(99L);
+			Folder folder = Folder.create(other, null, "backend");
+			ReflectionTestUtils.setField(folder, "id", folderId);
+
+			FolderMoveCommand command = new FolderMoveCommand(userId, folderId, 20L);
+
+			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(folder));
+
+			// when & then
+			assertThatThrownBy(() -> folderService.moveFolder(command))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_ACCESS_DENIED);
+
+			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
+			verifyNoMoreInteractions(folderRepository);
+			verifyNoInteractions(noteRepository, userRepository);
+		}
+
+		@Test
+		@DisplayName("새 부모 폴더가 없으면 FOLDER_NOT_FOUND 예외가 발생한다")
+		void moveFolder_throwsWhenTargetParentNotFound() {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			Long targetParentId = 20L;
+			User user = user(userId);
+			Folder folder = Folder.create(user, null, "backend");
+			ReflectionTestUtils.setField(folder, "id", folderId);
+
+			FolderMoveCommand command = new FolderMoveCommand(userId, folderId, targetParentId);
+
+			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(folder));
+			given(folderRepository.findByIdAndDeletedAtIsNull(targetParentId)).willReturn(Optional.empty());
+
+			// when & then
+			assertThatThrownBy(() -> folderService.moveFolder(command))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_NOT_FOUND);
+
+			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
+			verify(folderRepository).findByIdAndDeletedAtIsNull(targetParentId);
+			verifyNoMoreInteractions(folderRepository);
+			verifyNoInteractions(noteRepository, userRepository);
+		}
+
+		@Test
+		@DisplayName("다른 사용자의 부모 폴더로는 이동할 수 없다")
+		void moveFolder_throwsWhenTargetParentOwnedByAnotherUser() {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			Long targetParentId = 20L;
+			User user = user(userId);
+			User other = user(99L);
+
+			Folder folder = Folder.create(user, null, "backend");
+			ReflectionTestUtils.setField(folder, "id", folderId);
+
+			Folder targetParent = Folder.create(other, null, "other-root");
+			ReflectionTestUtils.setField(targetParent, "id", targetParentId);
+
+			FolderMoveCommand command = new FolderMoveCommand(userId, folderId, targetParentId);
+
+			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(folder));
+			given(folderRepository.findByIdAndDeletedAtIsNull(targetParentId)).willReturn(Optional.of(targetParent));
+
+			// when & then
+			assertThatThrownBy(() -> folderService.moveFolder(command))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_ACCESS_DENIED);
+
+			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
+			verify(folderRepository).findByIdAndDeletedAtIsNull(targetParentId);
+			verifyNoMoreInteractions(folderRepository);
+			verifyNoInteractions(noteRepository, userRepository);
+		}
+
+		@Test
+		@DisplayName("자기 자신 아래로는 이동할 수 없다")
+		void moveFolder_throwsWhenTargetParentIsSelf() {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			User user = user(userId);
+			Folder folder = Folder.create(user, null, "backend");
+			ReflectionTestUtils.setField(folder, "id", folderId);
+
+			FolderMoveCommand command = new FolderMoveCommand(userId, folderId, folderId);
+
+			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(folder));
+
+			// when & then
+			assertThatThrownBy(() -> folderService.moveFolder(command))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_MOVE_INVALID);
+
+			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
+			verifyNoMoreInteractions(folderRepository);
+			verifyNoInteractions(noteRepository, userRepository);
+		}
+
+		@Test
+		@DisplayName("하위 폴더 아래로는 이동할 수 없다")
+		void moveFolder_throwsWhenTargetParentIsDescendant() {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			Long targetParentId = 20L;
+			User user = user(userId);
+
+			Folder folder = Folder.create(user, null, "backend");
+			ReflectionTestUtils.setField(folder, "id", folderId);
+
+			Folder targetParent = Folder.create(user, folder, "child");
+			ReflectionTestUtils.setField(targetParent, "id", targetParentId);
+
+			FolderMoveCommand command = new FolderMoveCommand(userId, folderId, targetParentId);
+
+			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(folder));
+			given(folderRepository.findByIdAndDeletedAtIsNull(targetParentId)).willReturn(Optional.of(targetParent));
+			given(folderRepository.findTreeRows(userId)).willReturn(List.of(
+					new FolderTreeRow(folderId, null, "backend"),
+					new FolderTreeRow(targetParentId, folderId, "child")
+			));
+
+			// when & then
+			assertThatThrownBy(() -> folderService.moveFolder(command))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_MOVE_INVALID);
+
+			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
+			verify(folderRepository).findByIdAndDeletedAtIsNull(targetParentId);
+			verify(folderRepository).findTreeRows(userId);
+			verifyNoMoreInteractions(folderRepository);
+			verifyNoInteractions(noteRepository, userRepository);
+		}
+
+		@Test
+		@DisplayName("루트로 이동할 때 같은 이름이 있으면 FOLDER_NAME_DUPLICATED 예외가 발생한다")
+		void moveFolder_throwsWhenRootNameDuplicated() {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			Long currentParentId = 20L;
+			User user = user(userId);
+
+			Folder currentParent = Folder.create(user, null, "root");
+			ReflectionTestUtils.setField(currentParent, "id", currentParentId);
+
+			Folder folder = Folder.create(user, currentParent, "backend");
+			ReflectionTestUtils.setField(folder, "id", folderId);
+
+			FolderMoveCommand command = new FolderMoveCommand(userId, folderId, null);
+
+			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(folder));
+			given(folderRepository.existsRootFolder(userId, "backend")).willReturn(true);
+
+			// when & then
+			assertThatThrownBy(() -> folderService.moveFolder(command))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_NAME_DUPLICATED);
+
+			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
+			verify(folderRepository).existsRootFolder(userId, "backend");
+			verifyNoMoreInteractions(folderRepository);
+			verifyNoInteractions(noteRepository, userRepository);
+		}
+
+		@Test
+		@DisplayName("대상 부모 아래 같은 이름이 있으면 FOLDER_NAME_DUPLICATED 예외가 발생한다")
+		void moveFolder_throwsWhenChildNameDuplicated() {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			Long targetParentId = 20L;
+			User user = user(userId);
+
+			Folder folder = Folder.create(user, null, "backend");
+			ReflectionTestUtils.setField(folder, "id", folderId);
+
+			Folder targetParent = Folder.create(user, null, "root");
+			ReflectionTestUtils.setField(targetParent, "id", targetParentId);
+
+			FolderMoveCommand command = new FolderMoveCommand(userId, folderId, targetParentId);
+
+			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(folder));
+			given(folderRepository.findByIdAndDeletedAtIsNull(targetParentId)).willReturn(Optional.of(targetParent));
+			given(folderRepository.findTreeRows(userId)).willReturn(List.of(
+					new FolderTreeRow(folderId, null, "backend"),
+					new FolderTreeRow(targetParentId, null, "root")
+			));
+			given(folderRepository.existsChildFolder(userId, targetParentId, "backend")).willReturn(true);
+
+			// when & then
+			assertThatThrownBy(() -> folderService.moveFolder(command))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_NAME_DUPLICATED);
+
+			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
+			verify(folderRepository).findByIdAndDeletedAtIsNull(targetParentId);
+			verify(folderRepository).findTreeRows(userId);
+			verify(folderRepository).existsChildFolder(userId, targetParentId, "backend");
+			verifyNoMoreInteractions(folderRepository);
+			verifyNoInteractions(noteRepository, userRepository);
 		}
 	}
 }
