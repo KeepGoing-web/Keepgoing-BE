@@ -158,7 +158,7 @@ public class FolderRepositoryTest {
 
 		@Test
 		@DisplayName("existsByOwner_IdAndParent_IdAndDeletedAtIsNull: 자식 폴더가 없으면 false를 반환한다")
-		void existActiveChildFolder_returnsFalseWhenNoChildExist() {
+		void existsActiveChildFolder_returnsFalseWhenNoChildExist() {
 			// given
 			Folder parent = folderRepository.save(Folder.create(user1, null, "root"));
 
@@ -174,7 +174,7 @@ public class FolderRepositoryTest {
 
 		@Test
 		@DisplayName("existsByOwner_IdAndParent_IdAndDeletedAtIsNull: 삭제된 자식 폴더만 있으면 false를 반환한다")
-		void existActiveChildFolder_returnsFalseWhenOnlyDeletedChildExists() {
+		void existsActiveChildFolder_returnsFalseWhenOnlyDeletedChildExists() {
 			// given
 			Folder parent = folderRepository.save(Folder.create(user1, null, "root"));
 			Folder deletedChild = folderRepository.save(Folder.create(user1, parent, "child"));
