@@ -43,6 +43,7 @@ docs/perf/results/
 
 .omx/
 .omc/
+.omg/
 .agents/
 .claude/
 

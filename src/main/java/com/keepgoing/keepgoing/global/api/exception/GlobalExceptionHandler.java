@@ -74,7 +74,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleBadCredentials(BadCredentialsException ex) {
-        ErrorCode errorCode = ErrorCode.AUTH_INVALID_CREDENTIALS;
+        ErrorCode errorCode = ErrorCode.NOTE_CURRENT_PASSWORD_MISMATCH;
         ErrorDetail detail = ErrorDetail.of(
                 errorCode,
                 errorCode.getDefaultMessage()
