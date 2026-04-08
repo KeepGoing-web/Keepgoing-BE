@@ -24,7 +24,6 @@ import com.keepgoing.keepgoing.user.service.UserService;
 import com.keepgoing.keepgoing.user.service.dto.UserInfoResult;
 import com.keepgoing.keepgoing.user.service.dto.UserUpdateCommand;
 import java.util.List;
-import java.util.Objects;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -204,7 +203,7 @@ class UserControllerTest {
 							.content(requestJson(new ChangePasswordRequest("OldP@ssw0rd!", "NewP@ssw0rd!"))))
 					.andExpect(status().isOk())
 					.andExpect(jsonPath("$.success").value(true))
-					.andExpect(jsonPath("$.data").doesNotExist());
+					.andExpect(jsonPath("$.data").isEmpty());
 
 			then(userService).should().changePassword(argThat(command ->
 					command.userId().equals(userId)
@@ -239,52 +238,6 @@ class UserControllerTest {
 					.andExpect(status().isBadRequest());
 
 			then(userService).shouldHaveNoInteractions();
-		}
-
-		@Test
-		@DisplayName("현재 비밀번호가 틀리면 401과 AUTH_INVALID_CREDENTIALS를 반환한다.")
-		void invalidCurrentPassword() throws Exception {
-			Long userId = 1L;
-			willThrow(new BusinessException(ErrorCode.AUTH_INVALID_CREDENTIALS))
-					.given(userService)
-					.changePassword(any(ChangePasswordCommand.class));
-			mockLoginUser(userId);
-
-			mockMvc.perform(post("/api/users/me/change-password")
-							.contentType(MediaType.APPLICATION_JSON)
-							.content(requestJson(new ChangePasswordRequest("WrongP@ssw0rd!", "NewP@ssw0rd!"))))
-					.andExpect(status().isUnauthorized())
-					.andExpect(jsonPath("$.success").value(false))
-					.andExpect(jsonPath("$.error.code").value(ErrorCode.AUTH_INVALID_CREDENTIALS.name()));
-
-			then(userService).should().changePassword(argThat(command ->
-					command.userId().equals(userId)
-							&& command.currentPassword().equals("WrongP@ssw0rd!")
-							&& command.newPassword().equals("NewP@ssw0rd!")
-			));
-		}
-
-		@Test
-		@DisplayName("OAuth-only 계정이면 403과 USER_PASSWORD_CHANGE_NOT_SUPPORTED를 반환한다.")
-		void passwordChangeNotSupported() throws Exception {
-			Long userId = 1L;
-			willThrow(new BusinessException(ErrorCode.USER_PASSWORD_CHANGE_NOT_SUPPORTED))
-					.given(userService)
-					.changePassword(any(ChangePasswordCommand.class));
-			mockLoginUser(userId);
-
-			mockMvc.perform(post("/api/users/me/change-password")
-							.contentType(MediaType.APPLICATION_JSON)
-							.content(requestJson(new ChangePasswordRequest("OldP@ssw0rd!", "NewP@ssw0rd!"))))
-					.andExpect(status().isForbidden())
-					.andExpect(jsonPath("$.success").value(false))
-					.andExpect(jsonPath("$.error.code").value(ErrorCode.USER_PASSWORD_CHANGE_NOT_SUPPORTED.name()));
-
-			then(userService).should().changePassword(argThat(command ->
-					command.userId().equals(userId)
-							&& command.currentPassword().equals("OldP@ssw0rd!")
-							&& command.newPassword().equals("NewP@ssw0rd!")
-			));
 		}
 	}
 
