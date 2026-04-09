@@ -1,14 +1,11 @@
 package com.keepgoing.keepgoing.folder.repository;
 
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import com.keepgoing.keepgoing.folder.domain.Folder;
 import com.keepgoing.keepgoing.folder.repository.dto.FolderTreeRow;
 import com.keepgoing.keepgoing.global.config.JpaAuditingConfig;
 import com.keepgoing.keepgoing.user.domain.User;
 import com.keepgoing.keepgoing.user.repository.UserRepository;
-import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -16,6 +13,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
+
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
 @Import(JpaAuditingConfig.class)
@@ -131,6 +132,82 @@ public class FolderRepositoryTest {
 					.findFirst()
 					.orElseThrow();
 			assertThat(aaRow.parentId()).isEqualTo(rootA.getId());
+		}
+	}
+
+	@Nested
+	@DisplayName("ExistsFolders")
+	class ExistsFolders {
+
+		@Test
+		@DisplayName("existsByOwner_IdAndParent_IdAndDeletedAtIsNull: 활성 자식 폴더가 있으면 true를 반환한다.")
+		void existsActiveChildFolder_returnsTrue() {
+			// given
+			Folder parent = folderRepository.save(Folder.create(user1, null, "root"));
+			folderRepository.save(Folder.create(user1, parent, "child"));
+
+			// when
+			boolean result = folderRepository.existsByOwner_IdAndParent_IdAndDeletedAtIsNull(
+					user1.getId(),
+					parent.getId()
+			);
+
+			// then
+			assertThat(result).isTrue();
+		}
+
+		@Test
+		@DisplayName("existsByOwner_IdAndParent_IdAndDeletedAtIsNull: 자식 폴더가 없으면 false를 반환한다")
+		void existsActiveChildFolder_returnsFalseWhenNoChildExist() {
+			// given
+			Folder parent = folderRepository.save(Folder.create(user1, null, "root"));
+
+			// when
+			boolean result = folderRepository.existsByOwner_IdAndParent_IdAndDeletedAtIsNull(
+					user1.getId(),
+					parent.getId()
+			);
+
+			// then
+			assertThat(result).isFalse();
+		}
+
+		@Test
+		@DisplayName("existsByOwner_IdAndParent_IdAndDeletedAtIsNull: 삭제된 자식 폴더만 있으면 false를 반환한다")
+		void existsActiveChildFolder_returnsFalseWhenOnlyDeletedChildExists() {
+			// given
+			Folder parent = folderRepository.save(Folder.create(user1, null, "root"));
+			Folder deletedChild = folderRepository.save(Folder.create(user1, parent, "child"));
+			deletedChild.softDelete();
+			folderRepository.save(deletedChild);
+
+			// when
+			boolean result = folderRepository.existsByOwner_IdAndParent_IdAndDeletedAtIsNull(
+					user1.getId(),
+					parent.getId()
+			);
+
+			// then
+			assertThat(result).isFalse();
+		}
+
+		@Test
+		@DisplayName("existsByOwner_IdAndParent_IdAndDeletedAtIsNull: 다른 사용자의 자식 폴더는 제외한다")
+		void existsActiveChildFolder_returnsFalseWhenChildBelongsToAnotherUser() {
+			// given
+			Folder parent = folderRepository.save(Folder.create(user1, null, "root"));
+
+			Folder otherParent = folderRepository.save(Folder.create(user2, null, "other-root"));
+			folderRepository.save(Folder.create(user2, otherParent, "other-child"));
+
+			// when
+			boolean result = folderRepository.existsByOwner_IdAndParent_IdAndDeletedAtIsNull(
+					user1.getId(),
+					parent.getId()
+			);
+
+			// then
+			assertThat(result).isFalse();
 		}
 	}
 }

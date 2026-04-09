@@ -4,11 +4,13 @@ import com.keepgoing.keepgoing.folder.domain.Folder;
 import com.keepgoing.keepgoing.folder.repository.FolderRepository;
 import com.keepgoing.keepgoing.folder.repository.dto.FolderTreeRow;
 import com.keepgoing.keepgoing.folder.service.dto.FolderCreateCommand;
+import com.keepgoing.keepgoing.folder.service.dto.FolderMoveCommand;
 import com.keepgoing.keepgoing.folder.service.dto.FolderRenameCommand;
 import com.keepgoing.keepgoing.folder.service.dto.FolderSummaryResult;
 import com.keepgoing.keepgoing.folder.service.dto.FolderTreeNodeResult;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
+import com.keepgoing.keepgoing.note.repository.NoteRepository;
 import com.keepgoing.keepgoing.user.domain.User;
 import com.keepgoing.keepgoing.user.repository.UserRepository;
 import java.util.ArrayList;
@@ -17,6 +19,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +34,7 @@ public class FolderService {
 
 	private final UserRepository userRepository;
 	private final FolderRepository folderRepository;
+	private final NoteRepository noteRepository;
 	private static final int MAX_TREE_DEPTH = 200;
 
 	@Transactional
@@ -154,6 +158,82 @@ public class FolderService {
 				parent != null ? parent.getId() : null,
 				folder.getName()
 		);
+	}
+
+	@Transactional
+	public FolderSummaryResult moveFolder(FolderMoveCommand command) {
+		Folder folder = folderRepository.findByIdAndDeletedAtIsNull(command.folderId())
+				.orElseThrow(() -> new BusinessException(ErrorCode.FOLDER_NOT_FOUND));
+
+		Long userId = command.userId();
+		Long folderId = command.folderId();
+		Long targetParentId = command.parentId();
+		Long currentParentId = folder.getParent() != null ? folder.getParent().getId() : null;
+
+		folder.validateOwner(userId);
+
+		if (Objects.equals(folderId, targetParentId)) {
+			throw new BusinessException(ErrorCode.FOLDER_MOVE_INVALID);
+		}
+
+		if (Objects.equals(currentParentId, targetParentId)) {
+			return FolderSummaryResult.from(folder);
+		}
+
+		Folder targetParent = null;
+		if (targetParentId != null) {
+			targetParent = folderRepository.findByIdAndDeletedAtIsNull(targetParentId)
+					.orElseThrow(() -> new BusinessException(ErrorCode.FOLDER_NOT_FOUND));
+			targetParent.validateOwner(userId);
+			validateMoveTarget(userId, folderId, targetParentId);
+		}
+
+		if (isDuplicatedFolderName(userId, targetParent, folder.getName())) {
+			throw new BusinessException(ErrorCode.FOLDER_NAME_DUPLICATED);
+		}
+
+		folder.moveTo(targetParent);
+		return FolderSummaryResult.from(folder);
+	}
+
+	@Transactional
+	public void deleteFolder(Long userId, Long folderId) {
+		Folder folder = folderRepository.findByIdAndDeletedAtIsNull(folderId)
+				.orElseThrow(() -> new BusinessException(ErrorCode.FOLDER_NOT_FOUND));
+
+		folder.validateOwner(userId);
+
+		boolean hasChildren = folderRepository.existsByOwner_IdAndParent_IdAndDeletedAtIsNull(userId, folderId);
+		if (hasChildren) {
+			throw new BusinessException(ErrorCode.FOLDER_NOT_EMPTY);
+		}
+
+		boolean hasNotes = noteRepository.existsByFolder_IdAndDeletedAtIsNull(folderId);
+		if (hasNotes) {
+			throw new BusinessException(ErrorCode.FOLDER_NOT_EMPTY);
+		}
+
+		folder.softDelete();
+	}
+
+	private void validateMoveTarget(Long userId, Long folderId, Long targetParentId) {
+		Map<Long, Long> parentMap = new LinkedHashMap<>();
+		for (FolderTreeRow row : folderRepository.findTreeRows(userId)) {
+			parentMap.put(row.folderId(), row.parentId());
+		}
+
+		Set<Long> visited = new HashSet<>();
+		Long currentId = targetParentId;
+
+		while (currentId != null) {
+			if (!visited.add(currentId)) {
+				throw new BusinessException(ErrorCode.FOLDER_MOVE_INVALID);
+			}
+			if (currentId.equals(folderId)) {
+				throw new BusinessException(ErrorCode.FOLDER_MOVE_INVALID);
+			}
+			currentId = parentMap.get(currentId);
+		}
 	}
 
 	private String normalizeName(String raw) {

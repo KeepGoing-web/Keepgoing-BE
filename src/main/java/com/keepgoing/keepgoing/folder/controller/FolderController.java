@@ -1,11 +1,13 @@
 package com.keepgoing.keepgoing.folder.controller;
 
 import com.keepgoing.keepgoing.folder.controller.dto.FolderCreateRequest;
+import com.keepgoing.keepgoing.folder.controller.dto.FolderMoveRequest;
 import com.keepgoing.keepgoing.folder.controller.dto.FolderRenameRequest;
 import com.keepgoing.keepgoing.folder.controller.dto.FolderSummaryResponse;
 import com.keepgoing.keepgoing.folder.controller.dto.FolderTreeNodeResponse;
 import com.keepgoing.keepgoing.folder.service.FolderService;
 import com.keepgoing.keepgoing.folder.service.dto.FolderCreateCommand;
+import com.keepgoing.keepgoing.folder.service.dto.FolderMoveCommand;
 import com.keepgoing.keepgoing.folder.service.dto.FolderRenameCommand;
 import com.keepgoing.keepgoing.folder.service.dto.FolderSummaryResult;
 import com.keepgoing.keepgoing.folder.service.dto.FolderTreeNodeResult;
@@ -16,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -83,5 +86,27 @@ public class FolderController {
 		FolderSummaryResponse response = FolderSummaryResponse.from(result);
 
 		return ResponseEntity.ok(ApiResponse.success(response));
+	}
+
+	@PatchMapping("/{folderId}/parent")
+	public ResponseEntity<ApiResponse<FolderSummaryResponse>> moveFolder(
+			@PathVariable Long folderId,
+			@AuthenticationPrincipal Long userId,
+			@Valid @RequestBody FolderMoveRequest request
+	) {
+		FolderMoveCommand command = request.toCommand(userId, folderId);
+		FolderSummaryResult result = folderService.moveFolder(command);
+		FolderSummaryResponse response = FolderSummaryResponse.from(result);
+
+		return ResponseEntity.ok(ApiResponse.success(response));
+	}
+
+	@DeleteMapping("/{folderId}")
+	public ResponseEntity<Void> deleteFolder(
+			@PathVariable Long folderId,
+			@AuthenticationPrincipal Long userId
+	) {
+		folderService.deleteFolder(userId, folderId);
+		return ResponseEntity.noContent().build();
 	}
 }

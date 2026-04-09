@@ -18,6 +18,7 @@ import org.hibernate.SessionFactory;
 import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
@@ -246,6 +247,56 @@ class NoteRepositoryTest {
 
 		// then
 		assertThat(result).isEmpty();
+	}
+
+	@Nested
+	@DisplayName("ExistsNotes")
+	class ExistsNotes {
+
+		@Test
+		@DisplayName("existsByFolder_IdAndDeletedAtIsNull: 활성 노트가 있으면 true를 반환한다")
+		void existsActiveNoteInFolder_returnsTrue() {
+			// given
+			Folder folder = folderRepository.save(Folder.create(user1, null, "업무"));
+			noteRepository.save(Note.create(user1, folder, "title", "content",
+					NoteVisibility.PRIVATE, false));
+
+			// when
+			boolean result = noteRepository.existsByFolder_IdAndDeletedAtIsNull(folder.getId());
+
+			// then
+			assertThat(result).isTrue();
+		}
+
+		@Test
+		@DisplayName("existsByFolder_IdAndDeletedAtIsNull: 노트가 없으면 false를 반환한다")
+		void existsActiveNoteInFolder_returnsFalseWhenNoNoteExists() {
+			// given
+			Folder folder = folderRepository.save(Folder.create(user1, null, "업무"));
+
+			// when
+			boolean result = noteRepository.existsByFolder_IdAndDeletedAtIsNull(folder.getId());
+
+			// then
+			assertThat(result).isFalse();
+		}
+
+		@Test
+		@DisplayName("existsByFolder_IdAndDeletedAtIsNull: 삭제된 노트만 있으면 false를 반환한다")
+		void existsActiveNoteInFolder_returnsFalseWhenOnlyDeletedNoteExists() {
+			// given
+			Folder folder = folderRepository.save(Folder.create(user1, null, "업무"));
+			Note note = noteRepository.save(
+					Note.create(user1, folder, "title", "content", NoteVisibility.PRIVATE, false)
+			);
+			note.softDelete();
+
+			// when
+			boolean result = noteRepository.existsByFolder_IdAndDeletedAtIsNull(folder.getId());
+
+			// then
+			assertThat(result).isFalse();
+		}
 	}
 
 	private Statistics statistics() {
