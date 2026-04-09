@@ -76,8 +76,14 @@ public class Folder extends BaseEntity {
 		this.name = name;
 	}
 
-	public void moveTo(Folder parent) {
-		this.parent = parent;
+	public void moveTo(Folder targetParent) {
+		if (targetParent != null) {
+			if (this.owner == null || this.owner.getId() == null) {
+				throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
+			}
+			targetParent.validateOwner(this.owner.getId());
+		}
+		this.parent = targetParent;
 	}
 
 	public void softDelete() {
