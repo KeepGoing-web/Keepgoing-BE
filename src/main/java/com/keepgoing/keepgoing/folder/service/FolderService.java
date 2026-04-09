@@ -222,8 +222,13 @@ public class FolderService {
 			parentMap.put(row.folderId(), row.parentId());
 		}
 
+		Set<Long> visited = new HashSet<>();
 		Long currentId = targetParentId;
+
 		while (currentId != null) {
+			if (!visited.add(currentId)) {
+				throw new BusinessException(ErrorCode.FOLDER_MOVE_INVALID);
+			}
 			if (currentId.equals(folderId)) {
 				throw new BusinessException(ErrorCode.FOLDER_MOVE_INVALID);
 			}
