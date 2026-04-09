@@ -193,9 +193,28 @@ class SecurityConfigTest {
 		}
 
 		@Test
+		@DisplayName("GET /api/folders/tree, PATCH /api/folders/{folderId} 는 익명 사용자에게 401을 반환한다")
+		void folderSubpaths_requireAuthentication() throws Exception {
+			assertUnauthorized(get("/api/folders/tree"));
+			assertUnauthorized(patch("/api/folders/{folderId}", 1L)
+					.contentType(JSON)
+					.content("{\"name\":\"backend\"}"));
+		}
+
+		@Test
 		@DisplayName("GET /api/folders 는 인증 사용자에게 열려 있다")
 		void folders_allowAuthenticatedUser() throws Exception {
 			assertNotBlocked(get("/api/folders").with(authentication(authenticatedUser())));
+		}
+
+		@Test
+		@DisplayName("GET /api/folders/tree, PATCH /api/folders/{folderId} 는 인증 사용자에게 열려 있다")
+		void folderSubpaths_allowAuthenticatedUser() throws Exception {
+			assertNotBlocked(get("/api/folders/tree").with(authentication(authenticatedUser())));
+			assertNotBlocked(patch("/api/folders/{folderId}", 1L)
+					.with(authentication(authenticatedUser()))
+					.contentType(JSON)
+					.content("{\"name\":\"backend\"}"));
 		}
 	}
 
