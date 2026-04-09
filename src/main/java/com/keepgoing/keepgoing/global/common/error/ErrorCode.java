@@ -17,7 +17,7 @@ import org.springframework.http.HttpStatus;
 public enum ErrorCode {
 
 	// ===== Auth =====
-	NOTE_CURRENT_PASSWORD_MISMATCH(
+	AUTH_INVALID_CREDENTIALS(
 			HttpStatus.UNAUTHORIZED,
 			"AUTH_001",
 			"이메일 또는 비밀번호가 올바르지 않습니다."

@@ -3,7 +3,7 @@ package com.keepgoing.keepgoing.auth.controller;
 import static com.keepgoing.keepgoing.auth.AuthTestFixtures.signupRequestWithEmail;
 import static com.keepgoing.keepgoing.auth.AuthTestFixtures.toJson;
 import static com.keepgoing.keepgoing.auth.AuthTestFixtures.validLoginRequest;
-import static com.keepgoing.keepgoing.global.common.error.ErrorCode.NOTE_CURRENT_PASSWORD_MISMATCH;
+import static com.keepgoing.keepgoing.global.common.error.ErrorCode.AUTH_INVALID_CREDENTIALS;
 import static com.keepgoing.keepgoing.global.common.error.ErrorCode.AUTH_REFRESH_TOKEN_INVALID;
 import static com.keepgoing.keepgoing.global.common.error.ErrorCode.USER_ALREADY_EXISTS;
 import static com.keepgoing.keepgoing.global.common.error.ErrorCode.VALIDATION_FAILED;
@@ -215,7 +215,7 @@ class AuthControllerTest {
 							.contentType(MediaType.APPLICATION_JSON)
 							.content(json))
 					.andExpect(jsonPath("$.success").value(false))
-					.andExpect(jsonPath("$.error.code").value(NOTE_CURRENT_PASSWORD_MISMATCH.name()));
+					.andExpect(jsonPath("$.error.code").value(AUTH_INVALID_CREDENTIALS.name()));
 
 			then(authCookieManager).should(never()).addAccessToken(any(), anyString());
 			then(authCookieManager).should(never()).addRefreshToken(any(), anyString());
