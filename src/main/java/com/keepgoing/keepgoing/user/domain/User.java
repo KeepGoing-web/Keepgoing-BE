@@ -82,7 +82,7 @@ public class User extends BaseEntity {
 		return new User(
 				null,
 				email,
-				name,
+				normalizeAndValidateName(name),
 				UserRole.USER,
 				UserStatus.ACTIVE,
 				null
@@ -90,8 +90,16 @@ public class User extends BaseEntity {
 	}
 
 	public void changeName(String newName) {
-		if (newName == null || newName.isBlank())
+		this.name = normalizeAndValidateName(newName);
+	}
+
+	private static String normalizeAndValidateName(String rawName) {
+		String normalized = (rawName == null) ? null : rawName.trim();
+
+		if (normalized == null || normalized.isBlank() || normalized.length() > 100) {
 			throw new BusinessException(ErrorCode.INVALID_INPUT);
-		this.name = newName;
+		}
+
+		return normalized;
 	}
 }

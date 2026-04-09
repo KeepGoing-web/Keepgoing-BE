@@ -132,7 +132,7 @@ class UserControllerTest {
 
 			then(userService).should().updateMyProfile(argThat(command ->
 					command.userId().equals(userId)
-							&& command.name().equals("  새 이름  ")
+							&& command.name().equals("새 이름")
 			));
 		}
 

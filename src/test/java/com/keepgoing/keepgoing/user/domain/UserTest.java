@@ -11,23 +11,44 @@ import org.junit.jupiter.api.Test;
 
 class UserTest {
 
-	@Test
-	@DisplayName("create: 기본값과 필수 필드를 설정한다")
-	void create_setsRequiredFieldsAndDefaults() {
-		// given
-		String email = "test@example.com";
-		String name = "테스트유저";
+	@Nested
+	@DisplayName("create()")
+	class Create {
+		@Test
+		@DisplayName("기본값과 필수 필드를 설정한다")
+		void create_setsRequiredFieldsAndDefaults() {
+			// given
+			String email = "test@example.com";
+			String name = "테스트유저";
 
-		// when
-		User user = User.create(email, name);
+			// when
+			User user = User.create(email, name);
 
-		// then
-		assertThat(user.getId()).isNull();
-		assertThat(user.getEmail()).isEqualTo(email);
-		assertThat(user.getName()).isEqualTo(name);
-		assertThat(user.getRole()).isEqualTo(UserRole.USER);
-		assertThat(user.getStatus()).isEqualTo(UserStatus.ACTIVE);
-		assertThat(user.getLastLoginAt()).isNull();
+			// then
+			assertThat(user.getId()).isNull();
+			assertThat(user.getEmail()).isEqualTo(email);
+			assertThat(user.getName()).isEqualTo(name);
+			assertThat(user.getRole()).isEqualTo(UserRole.USER);
+			assertThat(user.getStatus()).isEqualTo(UserStatus.ACTIVE);
+			assertThat(user.getLastLoginAt()).isNull();
+		}
+
+		@Test
+		@DisplayName("이름 앞뒤 공백을 제거한 뒤 저장한다")
+		void create_trimsName() {
+			User user = User.create("test@example.com", "  테스트유저  ");
+
+			assertThat(user.getName()).isEqualTo("테스트유저");
+		}
+
+		@Test
+		@DisplayName("이름이 100자를 초과하면 INVALID_INPUT을 던진다")
+		void create_throwsWhenNameTooLong() {
+			assertThatThrownBy(() -> User.create("test@example.com", "가".repeat(101)))
+					.isInstanceOf(BusinessException.class)
+					.extracting("errorCode")
+					.isEqualTo(ErrorCode.INVALID_INPUT);
+		}
 	}
 
 	@Nested
@@ -61,6 +82,17 @@ class UserTest {
 			User user = User.create("test@example.com", "기존 이름");
 
 			assertThatThrownBy(() -> user.changeName("   "))
+					.isInstanceOf(BusinessException.class)
+					.extracting("errorCode")
+					.isEqualTo(ErrorCode.INVALID_INPUT);
+		}
+
+		@Test
+		@DisplayName("이름이 100자를 초과하면 INVALID_INPUT을 던진다")
+		void changeName_throwsWhenNameIsTooLong() {
+			User user = User.create("test@example.com", "기존 이름");
+
+			assertThatThrownBy(() -> user.changeName("가".repeat(101)))
 					.isInstanceOf(BusinessException.class)
 					.extracting("errorCode")
 					.isEqualTo(ErrorCode.INVALID_INPUT);

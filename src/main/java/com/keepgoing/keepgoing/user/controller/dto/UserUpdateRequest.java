@@ -9,6 +9,10 @@ public record UserUpdateRequest(
 		@Size(max = 100)
 		String name
 ) {
+	public UserUpdateRequest {
+		name = (name == null) ? null : name.trim();
+	}
+
 	public UserUpdateCommand toCommand(Long userId) {
 		return new UserUpdateCommand(
 				userId,

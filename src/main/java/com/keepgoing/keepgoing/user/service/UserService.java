@@ -35,8 +35,7 @@ public class UserService {
 		User user = userRepository.findById(command.userId())
 				.orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-		String newName = normalizeName(command.name());
-		user.changeName(newName);
+		user.changeName(command.name());
 		return UserInfoResult.from(user);
 	}
 
@@ -54,12 +53,5 @@ public class UserService {
 		}
 
 		credential.changePassword(passwordEncoder.encode(command.newPassword()));
-	}
-
-	private String normalizeName(String name) {
-		if (name == null) {
-			throw new BusinessException(ErrorCode.INVALID_INPUT);
-		}
-		return name.trim();
 	}
 }
