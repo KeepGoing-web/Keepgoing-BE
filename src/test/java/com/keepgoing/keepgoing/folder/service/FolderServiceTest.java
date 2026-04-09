@@ -1126,5 +1126,36 @@ class FolderServiceTest {
 			verifyNoMoreInteractions(folderRepository);
 			verifyNoInteractions(noteRepository, userRepository);
 		}
+
+		@Test
+		@DisplayName("부모 체인에 순환이 있으면 FOLDER_MOVE_INVALID 예외가 발생한다")
+		void moveFolder_throwsWhenTargetParentLineageContaionsCycle() {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			Long targetParentId = 20L;
+			User user = user(userId);
+
+			Folder folder = Folder.create(user, null, "root");
+			ReflectionTestUtils.setField(folder, "id", folderId);
+
+			Folder targetParent = Folder.create(user, null, "target");
+			ReflectionTestUtils.setField(folder, "id", folderId);
+
+			FolderMoveCommand command = new FolderMoveCommand(userId, folderId, targetParentId);
+
+			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(folder));
+			given(folderRepository.findByIdAndDeletedAtIsNull(targetParentId)).willReturn(Optional.of(targetParent));
+			given(folderRepository.findTreeRows(userId)).willReturn(List.of(
+					new FolderTreeRow(folderId, null, "root"),
+					new FolderTreeRow(20L, 30L, "target"),
+					new FolderTreeRow(30L, 20L, "cycle")
+			));
+
+			// when & then
+			assertThatThrownBy(() -> folderService.moveFolder(command))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_MOVE_INVALID);
+		}
 	}
 }
