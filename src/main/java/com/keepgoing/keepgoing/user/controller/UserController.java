@@ -1,7 +1,9 @@
 package com.keepgoing.keepgoing.user.controller;
 
+import com.keepgoing.keepgoing.user.controller.dto.ChangePasswordRequest;
 import com.keepgoing.keepgoing.user.controller.dto.UserInfoResponse;
 import com.keepgoing.keepgoing.user.controller.dto.UserUpdateRequest;
+import com.keepgoing.keepgoing.user.service.dto.ChangePasswordCommand;
 import com.keepgoing.keepgoing.user.service.dto.UserInfoResult;
 import com.keepgoing.keepgoing.global.api.response.ApiResponse;
 import com.keepgoing.keepgoing.user.service.UserService;
@@ -13,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -45,4 +48,16 @@ public class UserController {
 		return ResponseEntity.status(HttpStatus.OK)
 				.body(ApiResponse.success(UserInfoResponse.from(result)));
 	}
+
+	@PostMapping("/me/change-password")
+	public ResponseEntity<ApiResponse<Void>> changePassword(
+			@AuthenticationPrincipal Long userId,
+			@Valid @RequestBody ChangePasswordRequest request
+	) {
+		ChangePasswordCommand command = request.toCommand(userId);
+		userService.changePassword(command);
+
+		return ResponseEntity.ok(ApiResponse.success(null));
+	}
 }
+

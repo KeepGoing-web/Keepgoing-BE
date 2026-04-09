@@ -8,15 +8,18 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
+import com.keepgoing.keepgoing.user.controller.dto.ChangePasswordRequest;
 import com.keepgoing.keepgoing.user.controller.dto.UserUpdateRequest;
 import com.keepgoing.keepgoing.user.domain.UserRole;
 import com.keepgoing.keepgoing.global.security.jwt.JwtAuthenticationFilter;
+import com.keepgoing.keepgoing.user.service.dto.ChangePasswordCommand;
 import com.keepgoing.keepgoing.user.service.UserService;
 import com.keepgoing.keepgoing.user.service.dto.UserInfoResult;
 import com.keepgoing.keepgoing.user.service.dto.UserUpdateCommand;
@@ -185,7 +188,60 @@ class UserControllerTest {
 		}
 	}
 
-	private String requestJson(UserUpdateRequest request) throws Exception {
+	@Nested
+	@DisplayName("POST /api/users/me/change-password")
+	class PostChangePassword {
+
+		@Test
+		@DisplayName("성공 시 200과 success=true를 반환한다.")
+		void success() throws Exception {
+			Long userId = 1L;
+			mockLoginUser(userId);
+
+			mockMvc.perform(post("/api/users/me/change-password")
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(requestJson(new ChangePasswordRequest("OldP@ssw0rd!", "NewP@ssw0rd!"))))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.success").value(true))
+					.andExpect(jsonPath("$.data").isEmpty());
+
+			then(userService).should().changePassword(argThat(command ->
+					command.userId().equals(userId)
+							&& command.currentPassword().equals("OldP@ssw0rd!")
+							&& command.newPassword().equals("NewP@ssw0rd!")
+			));
+		}
+
+		@Test
+		@DisplayName("현재 비밀번호가 공백이면 400을 반환하고 서비스를 호출하지 않는다.")
+		void badRequestWhenCurrentPasswordIsBlank() throws Exception {
+			Long userId = 1L;
+			mockLoginUser(userId);
+
+			mockMvc.perform(post("/api/users/me/change-password")
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(requestJson(new ChangePasswordRequest("   ", "NewP@ssw0rd!"))))
+					.andExpect(status().isBadRequest());
+
+			then(userService).shouldHaveNoInteractions();
+		}
+
+		@Test
+		@DisplayName("새 비밀번호 형식이 잘못되면 400을 반환하고 서비스를 호출하지 않는다.")
+		void badRequestWhenNewPasswordInvalid() throws Exception {
+			Long userId = 1L;
+			mockLoginUser(userId);
+
+			mockMvc.perform(post("/api/users/me/change-password")
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(requestJson(new ChangePasswordRequest("OldP@ssw0rd!", "password"))))
+					.andExpect(status().isBadRequest());
+
+			then(userService).shouldHaveNoInteractions();
+		}
+	}
+
+	private String requestJson(Object request) throws Exception {
 		return objectMapper.writeValueAsString(request);
 	}
 
