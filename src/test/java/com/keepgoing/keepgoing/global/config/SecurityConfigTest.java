@@ -3,6 +3,7 @@ package com.keepgoing.keepgoing.global.config;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
@@ -135,8 +136,8 @@ class SecurityConfigTest {
 		@Test
 		@DisplayName("노트 공개 조회 경로는 익명 접근을 허용한다")
 		void noteReadEndpoints_allowAnonymous() throws Exception {
-			given(noteService.getNote(1L)).willReturn(noteDetail(1L));
-			given(noteService.searchNote(any(NoteSearchQuery.class)))
+			given(noteService.getNote(isNull(), eq(1L))).willReturn(noteDetail(1L));
+			given(noteService.searchPublicNotes(any(NoteSearchQuery.class)))
 					.willReturn(new PageImpl<>(List.of(noteSummary(1L))));
 
 			mockMvc.perform(get("/api/notes/{noteId}", 1L))
