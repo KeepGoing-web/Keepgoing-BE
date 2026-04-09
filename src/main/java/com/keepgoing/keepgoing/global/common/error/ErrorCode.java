@@ -192,8 +192,7 @@ public enum ErrorCode {
 			HttpStatus.BAD_REQUEST,
 			"FOLDER_005",
 			"허용되지 않는 폴더 이동입니다."
-			)
-	,
+	),
 	FOLDER_NOT_EMPTY(
 			HttpStatus.CONFLICT,
 			"FOLDER_006",
