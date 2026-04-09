@@ -18,6 +18,11 @@ public interface NoteRepository extends JpaRepository<Note, Long> {
 	Optional<Note> findById(Long id);
 
 	/**
+	 * 삭제되지 않은 노트가 해당 폴더에 하나 이상 존재하는지 확인한다.
+	 */
+	boolean existsByFolder_IdAndDeletedAtIsNull(Long folderId);
+
+	/**
 	 * authorId 로 필터해서, 전달받은 Pageable 조건(페이지/정렬)에 맞게 조회한다.
 	 */
 	@EntityGraph(attributePaths = {"author"})
