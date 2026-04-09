@@ -6,7 +6,6 @@ import static com.keepgoing.keepgoing.auth.AuthTestFixtures.validLoginRequest;
 import static com.keepgoing.keepgoing.global.common.error.ErrorCode.AUTH_INVALID_CREDENTIALS;
 import static com.keepgoing.keepgoing.global.common.error.ErrorCode.AUTH_REFRESH_TOKEN_INVALID;
 import static com.keepgoing.keepgoing.global.common.error.ErrorCode.USER_ALREADY_EXISTS;
-import static com.keepgoing.keepgoing.global.common.error.ErrorCode.USER_NOT_FOUND;
 import static com.keepgoing.keepgoing.global.common.error.ErrorCode.VALIDATION_FAILED;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -15,7 +14,6 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.never;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -29,15 +27,12 @@ import com.keepgoing.keepgoing.auth.controller.dto.SignupResponse;
 import com.keepgoing.keepgoing.auth.service.AuthService;
 import com.keepgoing.keepgoing.auth.service.dto.LoginCommand;
 import com.keepgoing.keepgoing.auth.service.dto.LoginResult;
-import com.keepgoing.keepgoing.auth.service.dto.MyInfoResult;
 import com.keepgoing.keepgoing.auth.service.dto.SignupCommand;
 import com.keepgoing.keepgoing.auth.service.dto.SignupResult;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.security.cookie.AuthCookieManager;
 import com.keepgoing.keepgoing.global.security.jwt.JwtAuthenticationFilter;
-import com.keepgoing.keepgoing.user.domain.UserRole;
 import jakarta.servlet.http.HttpServletResponse;
-import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -49,9 +44,6 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -69,7 +61,6 @@ import org.springframework.test.web.servlet.MockMvc;
 class AuthControllerTest {
 
 	private static final String EMAIL = "test@test.com";
-	public static final String NAME = "홍길동";
 	public static final String ACCESS_TOKEN = "access-token";
 	public static final String REFRESH_TOKEN = "refresh-token";
 	public static final String NEW_ACCESS_TOKEN = "new-access-token";
@@ -246,63 +237,6 @@ class AuthControllerTest {
 		}
 	}
 
-	@Nested
-	@DisplayName("GET /api/auth/me - 정보")
-	class MyInfo {
-
-		@Test
-		@DisplayName("성공 시 200과 사용자 정보를 반환한다.")
-		void success() throws Exception {
-			// given
-			Long userId = 1L;
-			MyInfoResult result = new MyInfoResult(userId, EMAIL, NAME, UserRole.USER);
-
-			given(authService.getMyInfo(any()))
-					.willReturn(result);
-
-			Authentication authenticated = UsernamePasswordAuthenticationToken.authenticated(
-					userId,
-					null,
-					List.of(new SimpleGrantedAuthority(UserRole.USER.toAuthority()))
-			);
-			SecurityContextHolder.getContext().setAuthentication(authenticated);
-
-			// when
-			mockMvc.perform(get("/api/auth/me"))
-					.andExpect(status().isOk())
-					.andExpect(jsonPath("$.success").value(true))
-					.andExpect(jsonPath("$.data.userId").value(1L))
-					.andExpect(jsonPath("$.data.name").value(NAME))
-					.andExpect(jsonPath("$.data.role").value(UserRole.USER.toString()));
-
-			then(authService).should().getMyInfo(userId);
-		}
-
-		@Test
-		@DisplayName("가입된 사용자가 없는 경우 404와 USER_NOT_FOUND 반환한다.")
-		void me_userNotFound() throws Exception {
-			// given
-			Long userId = 1L;
-			Authentication authenticated = UsernamePasswordAuthenticationToken.authenticated(
-					userId,
-					null,
-					List.of(new SimpleGrantedAuthority(UserRole.USER.toAuthority()))
-			);
-			SecurityContextHolder.getContext().setAuthentication(authenticated);
-
-			willThrow(new BusinessException(USER_NOT_FOUND))
-					.given(authService)
-					.getMyInfo(userId);
-
-			// when & then
-			mockMvc.perform(get("/api/auth/me"))
-					.andExpect(status().isNotFound())
-					.andExpect(jsonPath("$.success").value(false))
-					.andExpect(jsonPath("$.error.code").value(USER_NOT_FOUND.name()));
-
-			then(authService).should().getMyInfo(userId);
-		}
-	}
 
 	@Nested
 	@DisplayName("POST /api/auth/refresh")

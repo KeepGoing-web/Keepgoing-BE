@@ -2,12 +2,10 @@ package com.keepgoing.keepgoing.auth;
 
 import com.keepgoing.keepgoing.auth.controller.dto.LoginRequest;
 import com.keepgoing.keepgoing.auth.controller.dto.LoginResponse;
-import com.keepgoing.keepgoing.auth.controller.dto.MyInfoResponse;
 import com.keepgoing.keepgoing.auth.controller.dto.SignupRequest;
 import com.keepgoing.keepgoing.auth.controller.dto.SignupResponse;
 import com.keepgoing.keepgoing.auth.service.dto.LoginCommand;
 import com.keepgoing.keepgoing.auth.service.dto.LoginResult;
-import com.keepgoing.keepgoing.auth.service.dto.MyInfoResult;
 import com.keepgoing.keepgoing.auth.service.dto.SignupCommand;
 import com.keepgoing.keepgoing.auth.service.dto.SignupResult;
 import com.keepgoing.keepgoing.user.domain.User;
@@ -52,15 +50,6 @@ public class AuthMapper {
         return new LoginResponse(
                 dto.userId(),
                 dto.email()
-        );
-    }
-
-    public MyInfoResponse toResponse(MyInfoResult dto) {
-        return new MyInfoResponse(
-                dto.userId(),
-                dto.email(),
-                dto.name(),
-                dto.role()
         );
     }
 }

@@ -6,8 +6,8 @@ spring:
       client:
         registration:
           google:
-            client-id: ${OAUTH_GOOGLE_CLIENT_ID}
-            client-secret: ${OAUTH_GOOGLE_CLIENT_SECRET}
+            client-id: test-client
+            client-secret: test-secret
 
   datasource:
     url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
@@ -52,4 +52,3 @@ auth:
       name: refresh_token
       path: /api/auth
       max-age: 604800
-

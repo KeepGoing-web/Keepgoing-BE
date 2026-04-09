@@ -22,7 +22,7 @@ public record SignupRequest(
         String password,
 
         @NotBlank
-        @Size(min = 1, max = 50)
+        @Size(min = 1, max = 100)
         @Schema(description = "사용자 이름", example = "홍길동")
         String name
 ) {

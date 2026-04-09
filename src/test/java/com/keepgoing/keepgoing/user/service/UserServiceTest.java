@@ -1,0 +1,261 @@
+package com.keepgoing.keepgoing.user.service;
+
+import static com.keepgoing.keepgoing.support.UserFixture.user;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+
+import com.keepgoing.keepgoing.global.common.error.BusinessException;
+import com.keepgoing.keepgoing.global.common.error.ErrorCode;
+import com.keepgoing.keepgoing.support.UserFixture;
+import com.keepgoing.keepgoing.user.domain.User;
+import com.keepgoing.keepgoing.user.domain.UserPasswordCredential;
+import com.keepgoing.keepgoing.user.domain.UserRole;
+import com.keepgoing.keepgoing.user.repository.UserPasswordCredentialRepository;
+import com.keepgoing.keepgoing.user.repository.UserRepository;
+import com.keepgoing.keepgoing.user.service.dto.ChangePasswordCommand;
+import com.keepgoing.keepgoing.user.service.dto.UserInfoResult;
+import com.keepgoing.keepgoing.user.service.dto.UserUpdateCommand;
+import java.time.LocalDateTime;
+import java.util.Optional;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+@ExtendWith(MockitoExtension.class)
+class UserServiceTest {
+
+	@Mock
+	UserRepository userRepository;
+
+	@Mock
+	UserPasswordCredentialRepository credentialRepository;
+
+	@Mock
+	PasswordEncoder passwordEncoder;
+
+	@InjectMocks
+	UserService userService;
+
+	@Test
+	@DisplayName("내 정보 조회 시 사용자 기본 정보를 반환한다")
+	void getMyInfo_returnsUserInfo() {
+		Long userId = 1L;
+		User user = UserFixture.user(userId, "test@test.com", "홍길동");
+
+		given(userRepository.findById(userId)).willReturn(java.util.Optional.of(user));
+
+		UserInfoResult result = userService.getMyInfo(userId);
+
+		assertThat(result.userId()).isEqualTo(userId);
+		assertThat(result.email()).isEqualTo("test@test.com");
+		assertThat(result.name()).isEqualTo("홍길동");
+		assertThat(result.role()).isEqualTo(UserRole.USER);
+	}
+
+	@Test
+	@DisplayName("내 정보 조회 시 사용자가 없으면 USER_NOT_FOUND를 던진다")
+	void getMyInfo_throwsWhenUserMissing() {
+		Long userId = 1L;
+		given(userRepository.findById(userId)).willReturn(java.util.Optional.empty());
+
+		assertThatThrownBy(() -> userService.getMyInfo(userId))
+				.isInstanceOf(BusinessException.class)
+				.extracting("errorCode")
+				.isEqualTo(ErrorCode.USER_NOT_FOUND);
+	}
+
+	@Nested
+	@DisplayName("updateMyProfile()")
+	class UpdateMyProfile {
+
+		@Test
+		@DisplayName("이름 앞뒤 공백을 제거하고 사용자 이름을 수정한다")
+		void updateMyProfile_trimsAndUpdatesName() {
+			Long userId = 1L;
+			User user = user(userId, "test@test.com", "기존 이름");
+			UserUpdateCommand command = new UserUpdateCommand(userId, "  새 이름  ");
+
+			given(userRepository.findById(userId)).willReturn(Optional.of(user));
+
+			UserInfoResult result = userService.updateMyProfile(command);
+
+			assertThat(user.getName()).isEqualTo("새 이름");
+			assertThat(result.userId()).isEqualTo(userId);
+			assertThat(result.email()).isEqualTo("test@test.com");
+			assertThat(result.name()).isEqualTo("새 이름");
+			assertThat(result.role()).isEqualTo(UserRole.USER);
+			verify(userRepository).findById(userId);
+			verifyNoMoreInteractions(userRepository);
+		}
+
+		@Test
+		@DisplayName("사용자가 없으면 USER_NOT_FOUND를 던진다")
+		void updateMyProfile_throwsWhenUserMissing() {
+			Long userId = 1L;
+			UserUpdateCommand command = new UserUpdateCommand(userId, "새 이름");
+			given(userRepository.findById(userId)).willReturn(Optional.empty());
+
+			assertThatThrownBy(() -> userService.updateMyProfile(command))
+					.isInstanceOf(BusinessException.class)
+					.extracting("errorCode")
+					.isEqualTo(ErrorCode.USER_NOT_FOUND);
+
+			verify(userRepository).findById(userId);
+			verifyNoMoreInteractions(userRepository);
+		}
+
+		@Test
+		@DisplayName("이름이 null이면 INVALID_INPUT을 던진다")
+		void updateMyProfile_throwsWhenNameIsNull() {
+			Long userId = 1L;
+			User user = user(userId, "test@test.com", "기존 이름");
+			UserUpdateCommand command = new UserUpdateCommand(userId, null);
+			given(userRepository.findById(userId)).willReturn(java.util.Optional.of(user));
+
+			assertThatThrownBy(() -> userService.updateMyProfile(command))
+					.isInstanceOf(BusinessException.class)
+					.extracting("errorCode")
+					.isEqualTo(ErrorCode.INVALID_INPUT);
+
+			assertThat(user.getName()).isEqualTo("기존 이름");
+			verify(userRepository).findById(userId);
+			verifyNoMoreInteractions(userRepository);
+		}
+
+		@Test
+		@DisplayName("trim 이후 이름이 비면 INVALID_INPUT을 던진다")
+		void updateMyProfile_throwsWhenNameIsBlankAfterTrim() {
+			Long userId = 1L;
+			User user = user(userId, "test@test.com", "기존 이름");
+			UserUpdateCommand command = new UserUpdateCommand(userId, "   ");
+			given(userRepository.findById(userId)).willReturn(java.util.Optional.of(user));
+
+			assertThatThrownBy(() -> userService.updateMyProfile(command))
+					.isInstanceOf(BusinessException.class)
+					.extracting("errorCode")
+					.isEqualTo(ErrorCode.INVALID_INPUT);
+
+			assertThat(user.getName()).isEqualTo("기존 이름");
+			verify(userRepository).findById(userId);
+			verifyNoMoreInteractions(userRepository);
+		}
+	}
+
+	@Nested
+	@DisplayName("changePassword()")
+	class ChangePassword {
+
+		@Test
+		@DisplayName("현재 비밀번호가 일치하면 새 비밀번호로 변경한다")
+		void changePassword_updatesPassword() {
+			Long userId = 1L;
+			User user = user(userId, "test@test.com", "홍길동");
+			UserPasswordCredential credential = credential(user, "encoded-old");
+			LocalDateTime beforeChangedAt = credential.getPasswordChangedAt();
+			ChangePasswordCommand command = new ChangePasswordCommand(
+					userId,
+					"OldP@ssw0rd!",
+					"NewP@ssw0rd!"
+			);
+
+			given(userRepository.findById(userId)).willReturn(Optional.of(user));
+			given(credentialRepository.findByUser(user)).willReturn(Optional.of(credential));
+			given(passwordEncoder.matches(command.currentPassword(), "encoded-old")).willReturn(true);
+			given(passwordEncoder.encode(command.newPassword())).willReturn("encoded-new");
+
+			userService.changePassword(command);
+
+			assertThat(credential.getPasswordHash()).isEqualTo("encoded-new");
+			assertThat(credential.getPasswordChangedAt()).isAfterOrEqualTo(beforeChangedAt);
+			verify(userRepository).findById(userId);
+			verify(credentialRepository).findByUser(user);
+			verify(passwordEncoder).matches(command.currentPassword(), "encoded-old");
+			verify(passwordEncoder).encode(command.newPassword());
+			verifyNoMoreInteractions(userRepository, credentialRepository, passwordEncoder);
+		}
+
+		@Test
+		@DisplayName("사용자가 없으면 USER_NOT_FOUND를 던진다")
+		void changePassword_throwsWhenUserMissing() {
+			Long userId = 1L;
+			ChangePasswordCommand command = new ChangePasswordCommand(
+					userId,
+					"OldP@ssw0rd!",
+					"NewP@ssw0rd!"
+			);
+			given(userRepository.findById(userId)).willReturn(Optional.empty());
+
+			assertThatThrownBy(() -> userService.changePassword(command))
+					.isInstanceOf(BusinessException.class)
+					.extracting("errorCode")
+					.isEqualTo(ErrorCode.USER_NOT_FOUND);
+
+			verify(userRepository).findById(userId);
+			verifyNoMoreInteractions(userRepository, credentialRepository, passwordEncoder);
+		}
+
+		@Test
+		@DisplayName("비밀번호 계정이 없으면 USER_PASSWORD_CHANGE_NOT_SUPPORTED를 던진다")
+		void changePassword_throwsWhenPasswordCredentialMissing() {
+			Long userId = 1L;
+			User user = user(userId, "oauth@test.com", "홍길동");
+			ChangePasswordCommand command = new ChangePasswordCommand(
+					userId,
+					"OldP@ssw0rd!",
+					"NewP@ssw0rd!"
+			);
+
+			given(userRepository.findById(userId)).willReturn(Optional.of(user));
+			given(credentialRepository.findByUser(user)).willReturn(Optional.empty());
+
+			assertThatThrownBy(() -> userService.changePassword(command))
+					.isInstanceOf(BusinessException.class)
+					.extracting("errorCode")
+					.isEqualTo(ErrorCode.USER_PASSWORD_CHANGE_NOT_SUPPORTED);
+
+			verify(userRepository).findById(userId);
+			verify(credentialRepository).findByUser(user);
+			verifyNoMoreInteractions(userRepository, credentialRepository, passwordEncoder);
+		}
+
+		@Test
+		@DisplayName("현재 비밀번호가 일치하지 않으면 AUTH_INVALID_CREDENTIALS를 던진다")
+		void changePassword_throwsWhenCurrentPasswordMismatched() {
+			Long userId = 1L;
+			User user = user(userId, "test@test.com", "홍길동");
+			UserPasswordCredential credential = credential(user, "encoded-old");
+			ChangePasswordCommand command = new ChangePasswordCommand(
+					userId,
+					"WrongP@ssw0rd!",
+					"NewP@ssw0rd!"
+			);
+
+			given(userRepository.findById(userId)).willReturn(Optional.of(user));
+			given(credentialRepository.findByUser(user)).willReturn(Optional.of(credential));
+			given(passwordEncoder.matches(command.currentPassword(), "encoded-old")).willReturn(false);
+
+			assertThatThrownBy(() -> userService.changePassword(command))
+					.isInstanceOf(BusinessException.class)
+					.extracting("errorCode")
+					.isEqualTo(ErrorCode.USER_CURRENT_PASSWORD_MISMATCH);
+
+			assertThat(credential.getPasswordHash()).isEqualTo("encoded-old");
+			verify(userRepository).findById(userId);
+			verify(credentialRepository).findByUser(user);
+			verify(passwordEncoder).matches(command.currentPassword(), "encoded-old");
+			verifyNoMoreInteractions(userRepository, credentialRepository, passwordEncoder);
+		}
+
+		private UserPasswordCredential credential(User user, String passwordHash) {
+			return UserPasswordCredential.create(user, user.getEmail(), passwordHash);
+		}
+	}
+}
