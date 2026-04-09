@@ -19,11 +19,14 @@ import com.keepgoing.keepgoing.folder.controller.dto.FolderCreateRequest;
 import com.keepgoing.keepgoing.folder.controller.dto.FolderRenameRequest;
 import com.keepgoing.keepgoing.folder.service.FolderService;
 import com.keepgoing.keepgoing.folder.service.dto.FolderCreateCommand;
+import com.keepgoing.keepgoing.folder.service.dto.FolderMoveCommand;
 import com.keepgoing.keepgoing.folder.service.dto.FolderRenameCommand;
 import com.keepgoing.keepgoing.folder.service.dto.FolderSummaryResult;
 import com.keepgoing.keepgoing.folder.service.dto.FolderTreeNodeResult;
+import com.keepgoing.keepgoing.global.api.exception.GlobalExceptionHandler;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
+import com.keepgoing.keepgoing.global.config.JacksonConfig;
 import com.keepgoing.keepgoing.global.security.jwt.JwtAuthenticationFilter;
 import com.keepgoing.keepgoing.user.domain.UserRole;
 import java.util.List;
@@ -34,6 +37,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -44,6 +48,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(FolderController.class)
 @AutoConfigureMockMvc(addFilters = false)
+@Import({GlobalExceptionHandler.class, JacksonConfig.class})
 class FolderControllerTest {
 
 	public static final String DIRECTORY_NAME = "backend";
@@ -276,6 +281,204 @@ class FolderControllerTest {
 			mockMvc.perform(patch("/api/folders/{folderId}", folderId)
 							.contentType(MediaType.APPLICATION_JSON)
 							.content(objectMapper.writeValueAsString(request)))
+					.andExpect(status().isConflict())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value(ErrorCode.FOLDER_NAME_DUPLICATED.toString()));
+		}
+	}
+
+	@Nested
+	@DisplayName("PATCH /api/folders/{folderId}/parent")
+	class PatchFolderParent {
+
+		@Test
+		@DisplayName("유효한 요청이면 폴더를 다른 부모 아래로 이동한다.")
+		void moveFolder_returnsOk() throws Exception {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			Long parentId = 20L;
+			var result = new FolderSummaryResult(folderId, parentId, DIRECTORY_NAME);
+			mockLoginUser(userId);
+
+			given(folderService.moveFolder(any(FolderMoveCommand.class)))
+					.willReturn(result);
+
+			// when & then
+			mockMvc.perform(patch("/api/folders/{folderId}/parent", folderId)
+							.contentType(MediaType.APPLICATION_JSON)
+							.content("""
+									{"parentId": 20}
+									"""))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.success").value(true))
+					.andExpect(jsonPath("$.data.folderId").value(folderId))
+					.andExpect(jsonPath("$.data.parentId").value(parentId))
+					.andExpect(jsonPath("$.data.name").value(DIRECTORY_NAME));
+
+			verify(folderService).moveFolder(argThat(command ->
+					command.userId().equals(userId)
+							&& command.folderId().equals(folderId)
+							&& command.parentId().equals(parentId)
+			));
+		}
+
+		@Test
+		@DisplayName("parentId가 null이면 루트로 이동한다.")
+		void moveFolder_returnsOkWhenMovingToRoot() throws Exception {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			var result = new FolderSummaryResult(folderId, null, DIRECTORY_NAME);
+			mockLoginUser(userId);
+
+			given(folderService.moveFolder(any(FolderMoveCommand.class)))
+					.willReturn(result);
+
+			// when & then
+			mockMvc.perform(patch("/api/folders/{folderId}/parent", folderId)
+							.contentType(MediaType.APPLICATION_JSON)
+							.content("""
+									{"parentId": null}
+									"""))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.success").value(true))
+					.andExpect(jsonPath("$.data.folderId").value(folderId))
+					.andExpect(jsonPath("$.data.parentId").value(nullValue()))
+					.andExpect(jsonPath("$.data.name").value(DIRECTORY_NAME));
+
+			verify(folderService).moveFolder(argThat(command ->
+					command.userId().equals(userId)
+							&& command.folderId().equals(folderId)
+							&& command.parentId() == null
+			));
+		}
+
+		@Test
+		@DisplayName("parentId 필드가 없으면 400 Bad Request를 반환한다.")
+		void moveFolder_returnsBadRequestWhenParentIdIsMissing() throws Exception {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			mockLoginUser(userId);
+
+			// when & then
+			mockMvc.perform(patch("/api/folders/{folderId}/parent", folderId)
+							.contentType(MediaType.APPLICATION_JSON)
+							.content("{}"))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value("VALIDATION_FAILED"))
+					.andExpect(jsonPath("$.error.fieldErrors[0].field").value("parentId"));
+
+			verifyNoInteractions(folderService);
+		}
+
+		@Test
+		@DisplayName("parentId가 0 이하면 400 Bad Request를 반환한다.")
+		void moveFolder_returnsBadRequestWhenParentIdIsNotPositive() throws Exception {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			mockLoginUser(userId);
+
+			// when & then
+			mockMvc.perform(patch("/api/folders/{folderId}/parent", folderId)
+							.contentType(MediaType.APPLICATION_JSON)
+							.content("""
+									{"parentId": 0}
+									"""))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value("VALIDATION_FAILED"))
+					.andExpect(jsonPath("$.error.fieldErrors[0].field").value("parentId"));
+
+			verifyNoInteractions(folderService);
+		}
+
+		@Test
+		@DisplayName("폴더가 없으면 404 Not Found를 반환한다.")
+		void moveFolder_returnsNotFoundWhenFolderDoesNotExist() throws Exception {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			mockLoginUser(userId);
+
+			given(folderService.moveFolder(any(FolderMoveCommand.class)))
+					.willThrow(new BusinessException(ErrorCode.FOLDER_NOT_FOUND));
+
+			// when & then
+			mockMvc.perform(patch("/api/folders/{folderId}/parent", folderId)
+							.contentType(MediaType.APPLICATION_JSON)
+							.content("""
+									{"parentId": 20}
+									"""))
+					.andExpect(status().isNotFound())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value(ErrorCode.FOLDER_NOT_FOUND.toString()));
+		}
+
+		@Test
+		@DisplayName("접근 권한이 없으면 403 Forbidden을 반환한다.")
+		void moveFolder_returnsForbiddenWhenAccessDenied() throws Exception {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			mockLoginUser(userId);
+
+			given(folderService.moveFolder(any(FolderMoveCommand.class)))
+					.willThrow(new BusinessException(ErrorCode.FOLDER_ACCESS_DENIED));
+
+			// when & then
+			mockMvc.perform(patch("/api/folders/{folderId}/parent", folderId)
+							.contentType(MediaType.APPLICATION_JSON)
+							.content("""
+									{"parentId": 20}
+									"""))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value(ErrorCode.FOLDER_ACCESS_DENIED.toString()));
+		}
+
+		@Test
+		@DisplayName("허용되지 않는 이동이면 400 Bad Request를 반환한다.")
+		void moveFolder_returnsBadRequestWhenMoveIsInvalid() throws Exception {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			mockLoginUser(userId);
+
+			given(folderService.moveFolder(any(FolderMoveCommand.class)))
+					.willThrow(new BusinessException(ErrorCode.FOLDER_MOVE_INVALID));
+
+			// when & then
+			mockMvc.perform(patch("/api/folders/{folderId}/parent", folderId)
+							.contentType(MediaType.APPLICATION_JSON)
+							.content("""
+									{"parentId": 20}
+									"""))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value(ErrorCode.FOLDER_MOVE_INVALID.toString()));
+		}
+
+		@Test
+		@DisplayName("같은 이름의 폴더가 이미 있으면 409 Conflict를 반환한다.")
+		void moveFolder_returnsConflictWhenFolderNameDuplicated() throws Exception {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			mockLoginUser(userId);
+
+			given(folderService.moveFolder(any(FolderMoveCommand.class)))
+					.willThrow(new BusinessException(ErrorCode.FOLDER_NAME_DUPLICATED));
+
+			// when & then
+			mockMvc.perform(patch("/api/folders/{folderId}/parent", folderId)
+							.contentType(MediaType.APPLICATION_JSON)
+							.content("""
+									{"parentId": 20}
+									"""))
 					.andExpect(status().isConflict())
 					.andExpect(jsonPath("$.success").value(false))
 					.andExpect(jsonPath("$.error.code").value(ErrorCode.FOLDER_NAME_DUPLICATED.toString()));

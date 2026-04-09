@@ -188,9 +188,14 @@ public enum ErrorCode {
 			"FOLDER_004",
 			"허용되지 않는 폴더 이름입니다."
 	),
+	FOLDER_MOVE_INVALID(
+			HttpStatus.BAD_REQUEST,
+			"FOLDER_005",
+			"허용되지 않는 폴더 이동입니다."
+	),
 	FOLDER_NOT_EMPTY(
 			HttpStatus.CONFLICT,
-			"FOLDER_005",
+			"FOLDER_006",
 			"하위 폴더 또는 노트가 남아 있어 삭제할 수 없습니다."
 	)
 	;

@@ -166,6 +166,46 @@ class FolderTest {
 	}
 
 	@Test
+	@DisplayName("같은 사용자의 부모 폴더로 이동한다")
+	void moveTo_changesParentWhenOwnerMatched() {
+		User owner = user(1L);
+		Folder parent = Folder.create(owner, null, "root");
+		Folder folder = Folder.create(owner, null, "move");
+
+		folder.moveTo(parent);
+
+		assertThat(folder.getParent()).isEqualTo(parent);
+	}
+
+	@Test
+	@DisplayName("다른 사용자의 부모 폴더로는 이동할 수 없다")
+	void moveTo_throwsWhenParentOwnerDoesNotMatch() {
+		User owner = user(1L);
+		User otherOwner = user(2L);
+
+		Folder parent = Folder.create(otherOwner, null, "root");
+		Folder folder = Folder.create(owner, null, "move");
+
+		assertThatThrownBy(() -> folder.moveTo(parent))
+				.isInstanceOf(BusinessException.class)
+				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_ACCESS_DENIED);
+	}
+
+	@Test
+	@DisplayName("소유자 ID가 없으면 부모 폴더로 이동할 수 없다")
+	void moveTo_throwsWhenOwnerIdIsNull() {
+		User owner = user(1L);
+		Folder parent = Folder.create(owner, null, "root");
+		Folder folder = Folder.create(owner, null, "move");
+
+		ReflectionTestUtils.setField(owner, "id", null);
+
+		assertThatThrownBy(() -> folder.moveTo(parent))
+				.isInstanceOf(BusinessException.class)
+				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.INTERNAL_SERVER_ERROR);
+	}
+
+	@Test
 	@DisplayName("폴더를 소프트 삭제한다")
 	void softDelete_marksFolderAtDeleted() {
 		User owner = user(1L);
