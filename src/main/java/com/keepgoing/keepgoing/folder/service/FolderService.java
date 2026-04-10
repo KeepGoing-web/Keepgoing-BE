@@ -14,6 +14,7 @@ import com.keepgoing.keepgoing.note.repository.NoteRepository;
 import com.keepgoing.keepgoing.user.domain.User;
 import com.keepgoing.keepgoing.user.repository.UserRepository;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -35,6 +36,7 @@ public class FolderService {
 	private final UserRepository userRepository;
 	private final FolderRepository folderRepository;
 	private final NoteRepository noteRepository;
+	private final FolderLockService folderLockService;
 	private static final int MAX_TREE_DEPTH = 200;
 
 	@Transactional
@@ -52,8 +54,7 @@ public class FolderService {
 
 		Folder parent = null;
 		if (parentId != null) {
-			parent = folderRepository.findByIdAndDeletedAtIsNull(parentId)
-					.orElseThrow(() -> new BusinessException(ErrorCode.FOLDER_NOT_FOUND));
+			parent = folderLockService.lockActiveFolder(parentId);
 		}
 
 		Folder newFolder = Folder.create(user, parent, folderName);
@@ -95,7 +96,7 @@ public class FolderService {
 			nodes.put(r.folderId(), new Node(r.folderId(), r.parentId(), r.name()));
 		}
 
-		// 2) parentId 기반으로 children 연결
+		// 2) targetParentId 기반으로 children 연결
 		List<Node> roots = new ArrayList<>();
 		for (Node node : nodes.values()) {
 			Long parentId = node.parentId;
@@ -167,7 +168,7 @@ public class FolderService {
 
 		Long userId = command.userId();
 		Long folderId = command.folderId();
-		Long targetParentId = command.parentId();
+		Long targetParentId = command.targetParentId();
 		Long currentParentId = folder.getParent() != null ? folder.getParent().getId() : null;
 
 		folder.validateOwner(userId);
@@ -180,13 +181,11 @@ public class FolderService {
 			return FolderSummaryResult.from(folder);
 		}
 
-		Folder targetParent = null;
-		if (targetParentId != null) {
-			targetParent = folderRepository.findByIdAndDeletedAtIsNull(targetParentId)
-					.orElseThrow(() -> new BusinessException(ErrorCode.FOLDER_NOT_FOUND));
-			targetParent.validateOwner(userId);
-			validateMoveTarget(userId, folderId, targetParentId);
-		}
+		Map<Long, Folder> lockedFolders = folderLockService.lockActiveFolders(
+				Arrays.asList(currentParentId, targetParentId)
+		);
+
+		Folder targetParent = resolveTargetParent(lockedFolders, folderId, targetParentId, userId);
 
 		if (isDuplicatedFolderName(userId, targetParent, folder.getName())) {
 			throw new BusinessException(ErrorCode.FOLDER_NAME_DUPLICATED);
@@ -198,8 +197,7 @@ public class FolderService {
 
 	@Transactional
 	public void deleteFolder(Long userId, Long folderId) {
-		Folder folder = folderRepository.findByIdAndDeletedAtIsNull(folderId)
-				.orElseThrow(() -> new BusinessException(ErrorCode.FOLDER_NOT_FOUND));
+		Folder folder = folderLockService.lockActiveFolder(folderId);
 
 		folder.validateOwner(userId);
 
@@ -214,6 +212,33 @@ public class FolderService {
 		}
 
 		folder.softDelete();
+	}
+
+	private String normalizeName(String raw) {
+		return raw == null ? "" : raw.trim();
+	}
+
+	private boolean isDuplicatedFolderName(Long userId, Folder parent, String folderName) {
+		return (parent == null)
+				? folderRepository.existsRootFolder(userId, folderName)
+				: folderRepository.existsChildFolder(userId, parent.getId(), folderName);
+	}
+
+	private Folder resolveTargetParent(
+			Map<Long, Folder> lockedFolders,
+			Long folderId,
+			Long targetParentId,
+			Long userId
+	) {
+		if (targetParentId == null) {
+			return null;
+		}
+
+		Folder targetParent = lockedFolders.get(targetParentId);
+		targetParent.validateOwner(userId);
+		validateMoveTarget(userId, folderId, targetParentId);
+
+		return targetParent;
 	}
 
 	private void validateMoveTarget(Long userId, Long folderId, Long targetParentId) {
@@ -234,16 +259,6 @@ public class FolderService {
 			}
 			currentId = parentMap.get(currentId);
 		}
-	}
-
-	private String normalizeName(String raw) {
-		return raw == null ? "" : raw.trim();
-	}
-
-	private boolean isDuplicatedFolderName(Long userId, Folder parent, String folderName) {
-		return (parent == null)
-				? folderRepository.existsRootFolder(userId, folderName)
-				: folderRepository.existsChildFolder(userId, parent.getId(), folderName);
 	}
 
 	private static class Node {
