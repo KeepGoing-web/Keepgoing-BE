@@ -1,0 +1,30 @@
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: false
+    open-in-view: false
+
+  flyway:
+    enabled: false
+
+cors:
+  allowed-origins:
+    - ${CORS_ALLOWED_ORIGIN}
+  max-age: 3600
+
+oauth:
+  redirect-uri: ${OAUTH_REDIRECT_URI}
+
+auth:
+  cookie:
+    secure: true
+    same-site: Lax
