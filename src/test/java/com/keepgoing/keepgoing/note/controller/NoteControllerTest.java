@@ -676,7 +676,7 @@ public class NoteControllerTest {
 			verify(noteService).moveNote(captor.capture());
 			assertThat(captor.getValue().noteId()).isEqualTo(noteId);
 			assertThat(captor.getValue().userId()).isEqualTo(userId);
-			assertThat(captor.getValue().folderId()).isEqualTo(folderId);
+			assertThat(captor.getValue().targetFolderId()).isEqualTo(folderId);
 		}
 
 		@Test
@@ -716,7 +716,7 @@ public class NoteControllerTest {
 
 			ArgumentCaptor<NoteMoveCommand> captor = ArgumentCaptor.forClass(NoteMoveCommand.class);
 			verify(noteService).moveNote(captor.capture());
-			assertThat(captor.getValue().folderId()).isNull();
+			assertThat(captor.getValue().targetFolderId()).isNull();
 		}
 
 		@Test

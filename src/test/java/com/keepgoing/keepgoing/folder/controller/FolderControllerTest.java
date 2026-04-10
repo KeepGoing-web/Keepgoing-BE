@@ -172,7 +172,7 @@ class FolderControllerTest {
 	}
 
 	@Nested
-	@DisplayName("PATCH /api/folders/{folderId}")
+	@DisplayName("PATCH /api/folders/{targetFolderId}")
 	class PatchFolders {
 
 		@Test
@@ -288,7 +288,7 @@ class FolderControllerTest {
 	}
 
 	@Nested
-	@DisplayName("PATCH /api/folders/{folderId}/parent")
+	@DisplayName("PATCH /api/folders/{targetFolderId}/parent")
 	class PatchFolderParent {
 
 		@Test
@@ -319,7 +319,7 @@ class FolderControllerTest {
 			verify(folderService).moveFolder(argThat(command ->
 					command.userId().equals(userId)
 							&& command.folderId().equals(folderId)
-							&& command.parentId().equals(parentId)
+							&& command.targetParentId().equals(parentId)
 			));
 		}
 
@@ -350,7 +350,7 @@ class FolderControllerTest {
 			verify(folderService).moveFolder(argThat(command ->
 					command.userId().equals(userId)
 							&& command.folderId().equals(folderId)
-							&& command.parentId() == null
+							&& command.targetParentId() == null
 			));
 		}
 
@@ -577,7 +577,7 @@ class FolderControllerTest {
 	}
 
 	@Nested
-	@DisplayName("DELETE /api/folders/{folderId}")
+	@DisplayName("DELETE /api/folders/{targetFolderId}")
 	class DeleteFolder {
 
 		@Test
