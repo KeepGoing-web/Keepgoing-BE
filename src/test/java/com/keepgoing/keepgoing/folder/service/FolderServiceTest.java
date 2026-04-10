@@ -23,7 +23,9 @@ import com.keepgoing.keepgoing.note.repository.NoteRepository;
 import com.keepgoing.keepgoing.user.domain.User;
 import com.keepgoing.keepgoing.user.repository.UserRepository;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -47,6 +49,9 @@ class FolderServiceTest {
 
 	@Mock
 	NoteRepository noteRepository;
+
+	@Mock
+	FolderLockService folderLockService;
 
 	@InjectMocks
 	FolderService folderService;
@@ -132,7 +137,7 @@ class FolderServiceTest {
 			FolderCreateCommand command = new FolderCreateCommand(userId, parentId, DIRECTORY_NAME);
 
 			given(userRepository.findById(userId)).willReturn(Optional.of(user));
-			given(folderRepository.findByIdAndDeletedAtIsNull(parentId)).willReturn(Optional.of(parent));
+			given(folderLockService.lockActiveFolder(parentId)).willReturn(parent);
 			given(folderRepository.existsChildFolder(userId, parentId, DIRECTORY_NAME)).willReturn(false);
 
 			Folder saved = Folder.create(user, parent, DIRECTORY_NAME);
@@ -148,10 +153,10 @@ class FolderServiceTest {
 			assertThat(result.name()).isEqualTo(DIRECTORY_NAME);
 
 			verify(userRepository).findById(userId);
-			verify(folderRepository).findByIdAndDeletedAtIsNull(parentId);
+			verify(folderLockService).lockActiveFolder(parentId);
 			verify(folderRepository).existsChildFolder(userId, parentId, DIRECTORY_NAME);
 			verify(folderRepository).save(any(Folder.class));
-			verifyNoMoreInteractions(userRepository, folderRepository);
+			verifyNoMoreInteractions(userRepository, folderRepository, folderLockService);
 		}
 
 		@Test
@@ -183,15 +188,16 @@ class FolderServiceTest {
 			FolderCreateCommand command = new FolderCreateCommand(userId, parentId, DIRECTORY_NAME);
 
 			given(userRepository.findById(userId)).willReturn(Optional.of(user));
-			given(folderRepository.findByIdAndDeletedAtIsNull(parentId)).willReturn(Optional.empty());
+			given(folderLockService.lockActiveFolder(parentId))
+					.willThrow(new BusinessException(ErrorCode.FOLDER_NOT_FOUND));
 
 			// when & then
 			assertThatThrownBy(() -> folderService.createFolder(command))
 					.isInstanceOf(BusinessException.class)
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_NOT_FOUND);
 			verify(userRepository).findById(userId);
-			verify(folderRepository).findByIdAndDeletedAtIsNull(parentId);
-			verifyNoMoreInteractions(userRepository, folderRepository);
+			verify(folderLockService).lockActiveFolder(parentId);
+			verifyNoMoreInteractions(userRepository, folderRepository, folderLockService);
 		}
 
 		@Test
@@ -210,7 +216,7 @@ class FolderServiceTest {
 			FolderCreateCommand command = new FolderCreateCommand(userId, parentId, DIRECTORY_NAME);
 
 			given(userRepository.findById(userId)).willReturn(Optional.of(user));
-			given(folderRepository.findByIdAndDeletedAtIsNull(parentId)).willReturn(Optional.of(parent));
+			given(folderLockService.lockActiveFolder(parentId)).willReturn(parent);
 
 			// when & then
 			assertThatThrownBy(() -> folderService.createFolder(command))
@@ -218,8 +224,8 @@ class FolderServiceTest {
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_ACCESS_DENIED);
 
 			verify(userRepository).findById(userId);
-			verify(folderRepository).findByIdAndDeletedAtIsNull(parentId);
-			verifyNoMoreInteractions(userRepository, folderRepository);
+			verify(folderLockService).lockActiveFolder(parentId);
+			verifyNoMoreInteractions(userRepository, folderRepository, folderLockService);
 		}
 
 		@Test
@@ -278,7 +284,7 @@ class FolderServiceTest {
 			FolderCreateCommand command = new FolderCreateCommand(userId, parentId, DIRECTORY_NAME);
 
 			given(userRepository.findById(userId)).willReturn(Optional.of(user));
-			given(folderRepository.findByIdAndDeletedAtIsNull(parentId)).willReturn(Optional.of(parent));
+			given(folderLockService.lockActiveFolder(parentId)).willReturn(parent);
 			given(folderRepository.existsChildFolder(userId, parentId, DIRECTORY_NAME)).willReturn(true);
 
 			// when & then
@@ -287,9 +293,9 @@ class FolderServiceTest {
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_NAME_DUPLICATED);
 
 			verify(userRepository).findById(userId);
-			verify(folderRepository).findByIdAndDeletedAtIsNull(parentId);
+			verify(folderLockService).lockActiveFolder(parentId);
 			verify(folderRepository).existsChildFolder(userId, parentId, DIRECTORY_NAME);
-			verifyNoMoreInteractions(userRepository, folderRepository);
+			verifyNoMoreInteractions(userRepository, folderRepository, folderLockService);
 		}
 	}
 
@@ -405,7 +411,7 @@ class FolderServiceTest {
 	class GetFolderTree {
 
 		@Test
-		@DisplayName("전체 폴더를 1번 조회해서 parentId 기반 트리 구조로 조립한다.")
+		@DisplayName("전체 폴더를 1번 조회해서 targetParentId 기반 트리 구조로 조립한다.")
 		void getFolderTree_buildsTreeFromRows() {
 			// given
 			Long userId = 1L;
@@ -466,7 +472,7 @@ class FolderServiceTest {
 		void getFolderTree_treatsOrphanAsRootWhenParentMissing() {
 			// given
 			Long userId = 1L;
-			// parentId=999는 rows에 없음
+			// targetParentId=999는 rows에 없음
 			given(folderRepository.findTreeRows(userId)).willReturn(List.of(
 					new FolderTreeRow(1L, null, "A"),
 					new FolderTreeRow(2L, 999L, "Orphan")
@@ -675,7 +681,7 @@ class FolderServiceTest {
 			Folder folder = Folder.create(user, null, "root");
 			ReflectionTestUtils.setField(folder, "id", folderId);
 
-			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(folder));
+			given(folderLockService.lockActiveFolder(folderId)).willReturn(folder);
 			given(folderRepository.existsByOwner_IdAndParent_IdAndDeletedAtIsNull(userId, folderId)).willReturn(false);
 
 			// when
@@ -687,10 +693,10 @@ class FolderServiceTest {
 			assertThat(folder.isDeleted()).isTrue();
 			assertThat(folder.getDeletedAt()).isNotNull();
 
-			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
+			verify(folderLockService).lockActiveFolder(folderId);
 			verify(folderRepository).existsByOwner_IdAndParent_IdAndDeletedAtIsNull(userId, folderId);
 			verify(noteRepository).existsByFolder_IdAndDeletedAtIsNull(folderId);
-			verifyNoMoreInteractions(folderRepository, noteRepository);
+			verifyNoMoreInteractions(folderRepository, noteRepository, folderLockService);
 		}
 
 		@Test
@@ -700,15 +706,16 @@ class FolderServiceTest {
 			Long userId = 1L;
 			Long folderId = 10L;
 
-			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.empty());
+			given(folderLockService.lockActiveFolder(folderId))
+					.willThrow(new BusinessException(ErrorCode.FOLDER_NOT_FOUND));
 
 			// when & then
 			assertThatThrownBy(() -> folderService.deleteFolder(userId, folderId))
 					.isInstanceOf(BusinessException.class)
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_NOT_FOUND);
 
-			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
-			verifyNoMoreInteractions(folderRepository, noteRepository);
+			verify(folderLockService).lockActiveFolder(folderId);
+			verifyNoMoreInteractions(folderRepository, noteRepository, folderLockService);
 		}
 
 		@Test
@@ -722,14 +729,14 @@ class FolderServiceTest {
 			Folder folder = Folder.create(other, null, "root");
 			ReflectionTestUtils.setField(folder, "id", folderId);
 
-			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(folder));
+			given(folderLockService.lockActiveFolder(folderId)).willReturn(folder);
 
 			// when & then
 			assertThatThrownBy(() -> folderService.deleteFolder(userId, folderId))
 					.isInstanceOf(BusinessException.class)
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_ACCESS_DENIED);
-			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
-			verifyNoMoreInteractions(folderRepository, noteRepository);
+			verify(folderLockService).lockActiveFolder(folderId);
+			verifyNoMoreInteractions(folderRepository, noteRepository, folderLockService);
 		}
 
 		@Test
@@ -743,16 +750,16 @@ class FolderServiceTest {
 			Folder folder = Folder.create(user, null, "root");
 			ReflectionTestUtils.setField(folder, "id", folderId);
 
-			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(folder));
+			given(folderLockService.lockActiveFolder(folderId)).willReturn(folder);
 			given(folderRepository.existsByOwner_IdAndParent_IdAndDeletedAtIsNull(userId, folderId)).willReturn(true);
 
 			// when & then
 			assertThatThrownBy(() -> folderService.deleteFolder(userId, folderId))
 					.isInstanceOf(BusinessException.class)
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_NOT_EMPTY);
-			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
+			verify(folderLockService).lockActiveFolder(folderId);
 			verify(folderRepository).existsByOwner_IdAndParent_IdAndDeletedAtIsNull(userId, folderId);
-			verifyNoMoreInteractions(folderRepository, noteRepository);
+			verifyNoMoreInteractions(folderRepository, noteRepository, folderLockService);
 		}
 
 		@Test
@@ -766,7 +773,7 @@ class FolderServiceTest {
 			Folder folder = Folder.create(user, null, "root");
 			ReflectionTestUtils.setField(folder, "id", folderId);
 
-			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(folder));
+			given(folderLockService.lockActiveFolder(folderId)).willReturn(folder);
 			given(folderRepository.existsByOwner_IdAndParent_IdAndDeletedAtIsNull(userId, folderId)).willReturn(false);
 			given(noteRepository.existsByFolder_IdAndDeletedAtIsNull(folderId)).willReturn(true);
 
@@ -774,10 +781,10 @@ class FolderServiceTest {
 			assertThatThrownBy(() -> folderService.deleteFolder(userId, folderId))
 					.isInstanceOf(BusinessException.class)
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_NOT_EMPTY);
-			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
+			verify(folderLockService).lockActiveFolder(folderId);
 			verify(folderRepository).existsByOwner_IdAndParent_IdAndDeletedAtIsNull(userId, folderId);
 			verify(noteRepository).existsByFolder_IdAndDeletedAtIsNull(folderId);
-			verifyNoMoreInteractions(folderRepository, noteRepository);
+			verifyNoMoreInteractions(folderRepository, noteRepository, folderLockService);
 		}
 	}
 
@@ -803,7 +810,8 @@ class FolderServiceTest {
 			FolderMoveCommand command = new FolderMoveCommand(userId, folderId, targetParentId);
 
 			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(folder));
-			given(folderRepository.findByIdAndDeletedAtIsNull(targetParentId)).willReturn(Optional.of(targetParent));
+			given(folderLockService.lockActiveFolders(Arrays.asList(null, targetParentId)))
+					.willReturn(Map.of(targetParentId, targetParent));
 			given(folderRepository.findTreeRows(userId)).willReturn(List.of(
 					new FolderTreeRow(folderId, null, "backend"),
 					new FolderTreeRow(targetParentId, null, "root")
@@ -820,10 +828,56 @@ class FolderServiceTest {
 			assertThat(folder.getParent()).isEqualTo(targetParent);
 
 			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
-			verify(folderRepository).findByIdAndDeletedAtIsNull(targetParentId);
+			verify(folderLockService).lockActiveFolders(Arrays.asList(null, targetParentId));
 			verify(folderRepository).findTreeRows(userId);
 			verify(folderRepository).existsChildFolder(userId, targetParentId, "backend");
-			verifyNoMoreInteractions(folderRepository);
+			verifyNoMoreInteractions(folderRepository, folderLockService);
+			verifyNoInteractions(noteRepository, userRepository);
+		}
+
+		@Test
+		@DisplayName("하위 폴더를 다른 부모 아래로 이동할 때 현재 부모와 대상 부모를 함께 잠근다")
+		void moveFolder_locksCurrentParentAndTargetParentTogether() {
+			// given
+			Long userId = 1L;
+			Long folderId = 10L;
+			Long currentParentId = 20L;
+			Long targetParentId = 30L;
+			User user = user(userId);
+
+			Folder currentParent = Folder.create(user, null, "current");
+			ReflectionTestUtils.setField(currentParent, "id", currentParentId);
+
+			Folder targetParent = Folder.create(user, null, "target");
+			ReflectionTestUtils.setField(targetParent, "id", targetParentId);
+
+			Folder folder = Folder.create(user, currentParent, "backend");
+			ReflectionTestUtils.setField(folder, "id", folderId);
+
+			FolderMoveCommand command = new FolderMoveCommand(userId, folderId, targetParentId);
+
+			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(folder));
+			given(folderLockService.lockActiveFolders(Arrays.asList(currentParentId, targetParentId)))
+					.willReturn(Map.of(currentParentId, currentParent, targetParentId, targetParent));
+			given(folderRepository.findTreeRows(userId)).willReturn(List.of(
+					new FolderTreeRow(folderId, currentParentId, "backend"),
+					new FolderTreeRow(currentParentId, null, "current"),
+					new FolderTreeRow(targetParentId, null, "target")
+			));
+			given(folderRepository.existsChildFolder(userId, targetParentId, "backend")).willReturn(false);
+
+			// when
+			FolderSummaryResult result = folderService.moveFolder(command);
+
+			// then
+			assertThat(result.parentId()).isEqualTo(targetParentId);
+			assertThat(folder.getParent()).isEqualTo(targetParent);
+
+			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
+			verify(folderLockService).lockActiveFolders(Arrays.asList(currentParentId, targetParentId));
+			verify(folderRepository).findTreeRows(userId);
+			verify(folderRepository).existsChildFolder(userId, targetParentId, "backend");
+			verifyNoMoreInteractions(folderRepository, folderLockService);
 			verifyNoInteractions(noteRepository, userRepository);
 		}
 
@@ -845,6 +899,8 @@ class FolderServiceTest {
 			FolderMoveCommand command = new FolderMoveCommand(userId, folderId, null);
 
 			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(folder));
+			given(folderLockService.lockActiveFolders(Arrays.asList(currentParentId, null)))
+					.willReturn(Map.of(currentParentId, currentParent));
 			given(folderRepository.existsRootFolder(userId, "backend")).willReturn(false);
 
 			// when
@@ -857,8 +913,9 @@ class FolderServiceTest {
 			assertThat(folder.getParent()).isNull();
 
 			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
+			verify(folderLockService).lockActiveFolders(Arrays.asList(currentParentId, null));
 			verify(folderRepository).existsRootFolder(userId, "backend");
-			verifyNoMoreInteractions(folderRepository);
+			verifyNoMoreInteractions(folderRepository, folderLockService);
 			verifyNoInteractions(noteRepository, userRepository);
 		}
 
@@ -953,7 +1010,8 @@ class FolderServiceTest {
 			FolderMoveCommand command = new FolderMoveCommand(userId, folderId, targetParentId);
 
 			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(folder));
-			given(folderRepository.findByIdAndDeletedAtIsNull(targetParentId)).willReturn(Optional.empty());
+			given(folderLockService.lockActiveFolders(Arrays.asList(null, targetParentId)))
+					.willThrow(new BusinessException(ErrorCode.FOLDER_NOT_FOUND));
 
 			// when & then
 			assertThatThrownBy(() -> folderService.moveFolder(command))
@@ -961,8 +1019,8 @@ class FolderServiceTest {
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_NOT_FOUND);
 
 			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
-			verify(folderRepository).findByIdAndDeletedAtIsNull(targetParentId);
-			verifyNoMoreInteractions(folderRepository);
+			verify(folderLockService).lockActiveFolders(Arrays.asList(null, targetParentId));
+			verifyNoMoreInteractions(folderRepository, folderLockService);
 			verifyNoInteractions(noteRepository, userRepository);
 		}
 
@@ -985,7 +1043,8 @@ class FolderServiceTest {
 			FolderMoveCommand command = new FolderMoveCommand(userId, folderId, targetParentId);
 
 			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(folder));
-			given(folderRepository.findByIdAndDeletedAtIsNull(targetParentId)).willReturn(Optional.of(targetParent));
+			given(folderLockService.lockActiveFolders(Arrays.asList(null, targetParentId)))
+					.willReturn(Map.of(targetParentId, targetParent));
 
 			// when & then
 			assertThatThrownBy(() -> folderService.moveFolder(command))
@@ -993,8 +1052,8 @@ class FolderServiceTest {
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_ACCESS_DENIED);
 
 			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
-			verify(folderRepository).findByIdAndDeletedAtIsNull(targetParentId);
-			verifyNoMoreInteractions(folderRepository);
+			verify(folderLockService).lockActiveFolders(Arrays.asList(null, targetParentId));
+			verifyNoMoreInteractions(folderRepository, folderLockService);
 			verifyNoInteractions(noteRepository, userRepository);
 		}
 
@@ -1040,7 +1099,8 @@ class FolderServiceTest {
 			FolderMoveCommand command = new FolderMoveCommand(userId, folderId, targetParentId);
 
 			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(folder));
-			given(folderRepository.findByIdAndDeletedAtIsNull(targetParentId)).willReturn(Optional.of(targetParent));
+			given(folderLockService.lockActiveFolders(Arrays.asList(null, targetParentId)))
+					.willReturn(Map.of(targetParentId, targetParent));
 			given(folderRepository.findTreeRows(userId)).willReturn(List.of(
 					new FolderTreeRow(folderId, null, "backend"),
 					new FolderTreeRow(targetParentId, folderId, "child")
@@ -1052,9 +1112,9 @@ class FolderServiceTest {
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_MOVE_INVALID);
 
 			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
-			verify(folderRepository).findByIdAndDeletedAtIsNull(targetParentId);
+			verify(folderLockService).lockActiveFolders(Arrays.asList(null, targetParentId));
 			verify(folderRepository).findTreeRows(userId);
-			verifyNoMoreInteractions(folderRepository);
+			verifyNoMoreInteractions(folderRepository, folderLockService);
 			verifyNoInteractions(noteRepository, userRepository);
 		}
 
@@ -1076,6 +1136,8 @@ class FolderServiceTest {
 			FolderMoveCommand command = new FolderMoveCommand(userId, folderId, null);
 
 			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(folder));
+			given(folderLockService.lockActiveFolders(Arrays.asList(currentParentId, null)))
+					.willReturn(Map.of(currentParentId, currentParent));
 			given(folderRepository.existsRootFolder(userId, "backend")).willReturn(true);
 
 			// when & then
@@ -1084,8 +1146,9 @@ class FolderServiceTest {
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_NAME_DUPLICATED);
 
 			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
+			verify(folderLockService).lockActiveFolders(Arrays.asList(currentParentId, null));
 			verify(folderRepository).existsRootFolder(userId, "backend");
-			verifyNoMoreInteractions(folderRepository);
+			verifyNoMoreInteractions(folderRepository, folderLockService);
 			verifyNoInteractions(noteRepository, userRepository);
 		}
 
@@ -1107,7 +1170,8 @@ class FolderServiceTest {
 			FolderMoveCommand command = new FolderMoveCommand(userId, folderId, targetParentId);
 
 			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(folder));
-			given(folderRepository.findByIdAndDeletedAtIsNull(targetParentId)).willReturn(Optional.of(targetParent));
+			given(folderLockService.lockActiveFolders(Arrays.asList(null, targetParentId)))
+					.willReturn(Map.of(targetParentId, targetParent));
 			given(folderRepository.findTreeRows(userId)).willReturn(List.of(
 					new FolderTreeRow(folderId, null, "backend"),
 					new FolderTreeRow(targetParentId, null, "root")
@@ -1120,10 +1184,10 @@ class FolderServiceTest {
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_NAME_DUPLICATED);
 
 			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
-			verify(folderRepository).findByIdAndDeletedAtIsNull(targetParentId);
+			verify(folderLockService).lockActiveFolders(Arrays.asList(null, targetParentId));
 			verify(folderRepository).findTreeRows(userId);
 			verify(folderRepository).existsChildFolder(userId, targetParentId, "backend");
-			verifyNoMoreInteractions(folderRepository);
+			verifyNoMoreInteractions(folderRepository, folderLockService);
 			verifyNoInteractions(noteRepository, userRepository);
 		}
 
@@ -1145,7 +1209,8 @@ class FolderServiceTest {
 			FolderMoveCommand command = new FolderMoveCommand(userId, folderId, targetParentId);
 
 			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(folder));
-			given(folderRepository.findByIdAndDeletedAtIsNull(targetParentId)).willReturn(Optional.of(targetParent));
+			given(folderLockService.lockActiveFolders(Arrays.asList(null, targetParentId)))
+					.willReturn(Map.of(targetParentId, targetParent));
 			given(folderRepository.findTreeRows(userId)).willReturn(List.of(
 					new FolderTreeRow(folderId, null, "root"),
 					new FolderTreeRow(20L, 30L, "target"),
@@ -1156,6 +1221,12 @@ class FolderServiceTest {
 			assertThatThrownBy(() -> folderService.moveFolder(command))
 					.isInstanceOf(BusinessException.class)
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_MOVE_INVALID);
+
+			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
+			verify(folderLockService).lockActiveFolders(Arrays.asList(null, targetParentId));
+			verify(folderRepository).findTreeRows(userId);
+			verifyNoMoreInteractions(folderRepository, folderLockService);
+			verifyNoInteractions(noteRepository, userRepository);
 		}
 	}
 }
