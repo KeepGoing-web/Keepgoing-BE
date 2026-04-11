@@ -66,10 +66,12 @@ services:
     depends_on:
       app:
         condition: service_healthy
+    environment:
+      NGINX_ENVSUBST_TEMPLATE_DIR: /etc/nginx/templates-http
     ports:
       - "${NGINX_HTTP_PORT:-80}:80"
     volumes:
-      - ./infra/nginx/keepgoing.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./infra/nginx/keepgoing.conf:/etc/nginx/templates-http/default.conf.template:ro
     logging:
       driver: json-file
       options:
