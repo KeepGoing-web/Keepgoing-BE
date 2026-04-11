@@ -279,6 +279,17 @@ class SecurityConfigTest {
 		}
 	}
 
+	@Nested
+	@DisplayName("Actuator 정책")
+	class ActuatorPolicy {
+
+		@Test
+		@DisplayName("GET /actuator/health 는 익명 접근을 허용한다")
+		void health_allowAnonymous() throws Exception {
+			assertNotBlocked(get("/actuator/health"));
+		}
+	}
+
 	private void assertNotBlocked(MockHttpServletRequestBuilder requestBuilder) throws Exception {
 		mockMvc.perform(requestBuilder)
 				.andExpect(notBlockedBySecurity());
@@ -327,6 +338,10 @@ class SecurityConfigTest {
 	static class ProbeController {
 		@GetMapping("/__probe")
 		void probe() {
+		}
+
+		@GetMapping("/actuator/health")
+		void health() {
 		}
 	}
 }
