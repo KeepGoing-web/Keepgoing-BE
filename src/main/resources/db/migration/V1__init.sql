@@ -11,9 +11,9 @@ CREATE TABLE users (
     name          VARCHAR(100) NOT NULL,
     role          VARCHAR(10)  NOT NULL DEFAULT 'USER',
     status        VARCHAR(10)  NOT NULL DEFAULT 'ACTIVE',
-    last_login_at TIMESTAMP(6) WITH TIME ZONE,
-    created_at    TIMESTAMP(6) WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at    TIMESTAMP(6) WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_login_at TIMESTAMP(6) WITHOUT TIME ZONE,
+    created_at    TIMESTAMP(6) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at    TIMESTAMP(6) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uq_users_email UNIQUE (email),
     CONSTRAINT chk_users_role CHECK (role IN ('USER', 'ADMIN')),
     CONSTRAINT chk_users_status CHECK (status IN ('ACTIVE', 'SUSPENDED'))
@@ -25,9 +25,9 @@ CREATE TABLE folders (
     owner_id   BIGINT NOT NULL,
     parent_id  BIGINT,
     name       VARCHAR(120) NOT NULL,
-    deleted_at TIMESTAMP(6) WITH TIME ZONE,
-    created_at TIMESTAMP(6) WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP(6) WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP(6) WITHOUT TIME ZONE,
+    created_at TIMESTAMP(6) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP(6) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_folders_owner  FOREIGN KEY (owner_id) REFERENCES users(id),
     CONSTRAINT fk_folders_parent FOREIGN KEY (parent_id) REFERENCES folders(id)
 );
@@ -41,9 +41,9 @@ CREATE TABLE notes (
     content        TEXT NOT NULL,
     visibility     VARCHAR(20) NOT NULL DEFAULT 'PRIVATE',
     ai_collectable BOOLEAN NOT NULL DEFAULT FALSE,
-    deleted_at     TIMESTAMP(6) WITH TIME ZONE,
-    created_at     TIMESTAMP(6) WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at     TIMESTAMP(6) WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at     TIMESTAMP(6) WITHOUT TIME ZONE,
+    created_at     TIMESTAMP(6) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at     TIMESTAMP(6) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_notes_author FOREIGN KEY (author_id) REFERENCES users(id),
     CONSTRAINT fk_notes_folder FOREIGN KEY (folder_id) REFERENCES folders(id),
     CONSTRAINT chk_notes_visibility CHECK (visibility IN ('PUBLIC', 'PRIVATE', 'UNLISTED'))
@@ -57,8 +57,8 @@ CREATE TABLE user_oauth_accounts (
     provider_user_id VARCHAR(190) NOT NULL,
     email            VARCHAR(320),
     avatar_url       VARCHAR(500),
-    created_at       TIMESTAMP(6) WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at       TIMESTAMP(6) WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at       TIMESTAMP(6) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at       TIMESTAMP(6) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uq_user_oauth_provider_user UNIQUE (provider, provider_user_id),
     CONSTRAINT fk_user_oauth_accounts_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT chk_user_oauth_provider     CHECK (provider IN ('GOOGLE', 'KAKAO'))
@@ -69,7 +69,7 @@ CREATE TABLE user_password_credentials (
     user_id             BIGINT PRIMARY KEY,
     login_id            VARCHAR(320) NOT NULL,
     password_hash       VARCHAR(255) NOT NULL,
-    password_changed_at TIMESTAMP(6) WITH TIME ZONE NOT NULL,
+    password_changed_at TIMESTAMP(6) WITHOUT TIME ZONE NOT NULL,
     CONSTRAINT uq_user_password_login_id        UNIQUE (login_id),
     CONSTRAINT fk_user_password_credentials_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );

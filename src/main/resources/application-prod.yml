@@ -14,7 +14,7 @@ spring:
     open-in-view: false
 
   flyway:
-    enabled: false
+    enabled: ${SPRING_FLYWAY_ENABLED:true}
 
 server:
   forward-headers-strategy: framework
