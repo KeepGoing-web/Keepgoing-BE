@@ -1,0 +1,17 @@
+.git
+.github
+.gradle
+.idea
+.omx
+.omc
+.omg
+.claude
+build
+var
+backups
+docs/perf/results
+*.log
+.env
+.env.prod
+.env.app
+.env.db

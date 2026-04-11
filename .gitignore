@@ -32,6 +32,9 @@ build/
 .settings/
 
 .env
+.env.prod
+.env.app
+.env.db
 .envrc
 application-oauth.yml
 
