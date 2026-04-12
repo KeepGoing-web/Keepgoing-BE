@@ -122,7 +122,7 @@ class NoteTest {
 		}
 
 		@Test
-		@DisplayName("폴더 owner와 작성자가 다르면 FOLDER_ACCESS_DENIED 예외가 발생한다.")
+		@DisplayName("폴더 소유자와 작성자가 다르면 해당 폴더로 노트를 만들 수 없다.")
 		void create_throwsWhenFolderOwnerDoesNotMatchAuthor() {
 			// given
 			Long authorId = 1L;
@@ -165,7 +165,7 @@ class NoteTest {
 		}
 
 		@Test
-		@DisplayName("제목이 비어있으면 INVALID_INPUT 예외가 발생한다.")
+		@DisplayName("제목이 비어 있으면 노트를 만들 수 없다.")
 		void create_throwsWhenTitleIsBlank() {
 			// given
 			User author = user(1L, "test@test.com", "test");
@@ -184,7 +184,7 @@ class NoteTest {
 		}
 
 		@Test
-		@DisplayName("본문이 비어있으면 INVALID_INPUT 예외가 발생한다.")
+		@DisplayName("본문이 비어 있으면 노트를 만들 수 없다.")
 		void create_throwsWhenContentIsBlank() {
 			// given
 			User author = user(1L, "test@test.com", "test");
@@ -352,7 +352,7 @@ class NoteTest {
 	}
 
 	@Test
-	@DisplayName("changeFolder: 작성자가 아니면 NOTE_ACCESS_DENIED 예외가 발생한다")
+	@DisplayName("changeFolder: 다른 사용자가 이동을 시도하면 예외가 발생한다")
 	void changeFolder_throwsWhenRequesterIsNotAuthor() {
 		// given
 		User author = user(1L, "author@test.com", "author");
@@ -366,7 +366,7 @@ class NoteTest {
 	}
 
 	@Test
-	@DisplayName("changeFolder: 다른 사용자의 폴더면 FOLDER_ACCESS_DENIED 예외가 발생한다")
+	@DisplayName("changeFolder: 다른 사용자의 폴더로는 이동할 수 없다")
 	void changeFolder_throwsWhenTargetFolderOwnedByAnotherUser() {
 		// given
 		User author = user(1L, "author@test.com", "author");

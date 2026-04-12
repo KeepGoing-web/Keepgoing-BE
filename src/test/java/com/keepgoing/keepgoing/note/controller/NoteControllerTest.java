@@ -407,7 +407,7 @@ public class NoteControllerTest {
 		}
 
 		@Test
-		@DisplayName("없는 게시글이면 NOTE_NOT_FOUND 에러 응답")
+		@DisplayName("없는 노트를 조회하면 찾을 수 없음을 응답한다")
 		void returnsNotFoundWhenNoteDoesNotExist() throws Exception {
 			Long noteId = 999L;
 
@@ -547,7 +547,7 @@ public class NoteControllerTest {
 		}
 
 		@Test
-		@DisplayName("작성자가 아니면 NOTE_ACCESS_DENIED 에러 반환")
+		@DisplayName("다른 사용자가 노트 수정을 요청하면 권한 오류를 응답한다")
 		void accessDenied() throws Exception {
 			// given
 			Long noteId = 1L;
@@ -605,7 +605,7 @@ public class NoteControllerTest {
 		}
 
 		@Test
-		@DisplayName("작성자가 아니면 NOTE_ACCESS_DENIED 에러 반환")
+		@DisplayName("다른 사용자가 노트 삭제를 요청하면 권한 오류를 응답한다")
 		void accessDenied() throws Exception {
 			// given
 			Long noteId = 1L;
@@ -760,7 +760,7 @@ public class NoteControllerTest {
 		}
 
 		@Test
-		@DisplayName("노트가 없으면 NOTE_NOT_FOUND 에러를 반환한다")
+		@DisplayName("없는 노트의 이동을 요청하면 찾을 수 없음을 응답한다")
 		void returnsNotFoundWhenNoteDoesNotExist() throws Exception {
 			// given
 			Long userId = 1L;
@@ -783,7 +783,7 @@ public class NoteControllerTest {
 		}
 
 		@Test
-		@DisplayName("작성자가 아니면 NOTE_ACCESS_DENIED 에러를 반환한다")
+		@DisplayName("다른 사용자가 노트 이동을 요청하면 권한 오류를 응답한다")
 		void returnsForbiddenWhenRequesterIsNotAuthor() throws Exception {
 			// given
 			Long userId = 1L;
@@ -806,7 +806,7 @@ public class NoteControllerTest {
 		}
 
 		@Test
-		@DisplayName("대상 폴더가 없으면 FOLDER_NOT_FOUND 에러를 반환한다")
+		@DisplayName("없는 폴더로 이동을 요청하면 찾을 수 없음을 응답한다")
 		void returnsNotFoundWhenFolderDoesNotExist() throws Exception {
 			// given
 			Long userId = 1L;
@@ -829,7 +829,7 @@ public class NoteControllerTest {
 		}
 
 		@Test
-		@DisplayName("다른 사용자의 폴더면 FOLDER_ACCESS_DENIED 에러를 반환한다")
+		@DisplayName("다른 사용자의 폴더로 이동을 요청하면 권한 오류를 응답한다")
 		void returnsForbiddenWhenFolderOwnedByAnotherUser() throws Exception {
 			// given
 			Long userId = 1L;
@@ -911,7 +911,7 @@ public class NoteControllerTest {
 		}
 
 		@Test
-		@DisplayName("keyword가 공백이면 400 + NOTE_SEARCH_KEYWORD_REQUIRED 반환")
+		@DisplayName("검색어가 공백이면 공개 노트 검색 요청을 거절한다")
 		void blankKeywordReturns400() throws Exception {
 			given(noteService.searchPublicNotes(any(NoteSearchQuery.class)))
 					.willThrow(new BusinessException(ErrorCode.NOTE_SEARCH_KEYWORD_REQUIRED));
@@ -1002,7 +1002,7 @@ public class NoteControllerTest {
 		}
 
 		@Test
-		@DisplayName("keyword가 공백이면 400 + NOTE_SEARCH_KEYWORD_REQUIRED 반환")
+		@DisplayName("검색어가 공백이면 내 노트 검색 요청을 거절한다")
 		void blankKeywordReturns400() throws Exception {
 			// given
 			Long userId = 1L;
