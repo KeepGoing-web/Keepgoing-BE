@@ -549,7 +549,7 @@ class NoteServiceTest {
 		}
 
 		@Test
-		@DisplayName("없는 노트의 제목 변경을 요청하면 예외가 발생한다")
+		@DisplayName("없는 노트의 이동을 요청하면 예외가 발생한다")
 		void throwsWhenNoteNotFound() {
 			Long userId = 1L;
 			Long noteId = 10L;
