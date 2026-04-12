@@ -10,6 +10,7 @@ import com.keepgoing.keepgoing.note.repository.NoteRepository;
 import com.keepgoing.keepgoing.note.service.dto.NoteCreateCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteDetailResult;
 import com.keepgoing.keepgoing.note.service.dto.NoteMoveCommand;
+import com.keepgoing.keepgoing.note.service.dto.NoteRenameCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteSearchQuery;
 import com.keepgoing.keepgoing.note.service.dto.NoteSummaryResult;
 import com.keepgoing.keepgoing.note.service.dto.NoteUpdateCommand;
@@ -148,6 +149,18 @@ public class NoteService {
 				  .orElseThrow(() -> new BusinessException(ErrorCode.FOLDER_NOT_FOUND));
 
 		note.changeFolder(command.userId(), targetFolder);
+		return NoteDetailResult.from(note);
+	}
+
+	/**
+	 * 노트 이름 변경
+	 */
+	@Transactional
+	public NoteDetailResult renameNote(NoteRenameCommand command) {
+		Note note = noteRepository.findById(command.noteId())
+				.orElseThrow(() -> new BusinessException(ErrorCode.NOTE_NOT_FOUND));
+
+		note.renameTitle(command.userId(), command.title());
 		return NoteDetailResult.from(note);
 	}
 

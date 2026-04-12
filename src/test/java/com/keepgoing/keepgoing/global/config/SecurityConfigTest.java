@@ -248,6 +248,9 @@ class SecurityConfigTest {
 			assertUnauthorized(patch("/api/notes/{noteId}/folder", 1L)
 					.contentType(JSON)
 					.content(EMPTY_JSON));
+			assertUnauthorized(patch("/api/notes/{noteId}/title", 1L)
+					.contentType(JSON)
+					.content(EMPTY_JSON));
 			assertUnauthorized(delete("/api/notes/{noteId}", 1L));
 		}
 

@@ -20,6 +20,7 @@ import com.keepgoing.keepgoing.note.repository.NoteRepository;
 import com.keepgoing.keepgoing.note.service.dto.NoteCreateCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteDetailResult;
 import com.keepgoing.keepgoing.note.service.dto.NoteMoveCommand;
+import com.keepgoing.keepgoing.note.service.dto.NoteRenameCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteSearchQuery;
 import com.keepgoing.keepgoing.note.service.dto.NoteSummaryResult;
 import com.keepgoing.keepgoing.note.service.dto.NoteUpdateCommand;
@@ -515,6 +516,68 @@ class NoteServiceTest {
 			given(noteRepository.findById(noteId)).willReturn(Optional.of(note));
 
 			assertThatThrownBy(() -> noteService.deleteNote(requesterId, noteId))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_ACCESS_DENIED);
+			verify(noteRepository).findById(noteId);
+			verifyNoMoreInteractions(noteRepository);
+			verifyNoInteractions(userRepository, folderRepository);
+		}
+	}
+
+	@Nested
+	@DisplayName("노트 제목 변경")
+	class RenameNote {
+
+		@Test
+		@DisplayName("작성자가 맞으면 제목이 변경된다")
+		void renamesWhenAuthorMatches() {
+			Long userId = 1L;
+			Long noteId = 10L;
+			User author = user(userId);
+			Note note = Note.create(author, null, "기존 제목", "내용", NoteVisibility.PRIVATE, true);
+			NoteRenameCommand command = new NoteRenameCommand(noteId, userId, "새 제목");
+
+			given(noteRepository.findById(noteId)).willReturn(Optional.of(note));
+
+			NoteDetailResult result = noteService.renameNote(command);
+
+			assertThat(note.getTitle()).isEqualTo("새 제목");
+			assertThat(result.title()).isEqualTo("새 제목");
+			verify(noteRepository).findById(noteId);
+			verifyNoMoreInteractions(noteRepository);
+			verifyNoInteractions(userRepository, folderRepository);
+		}
+
+		@Test
+		@DisplayName("없는 노트의 제목 변경을 요청하면 예외가 발생한다")
+		void throwsWhenNoteNotFound() {
+			Long userId = 1L;
+			Long noteId = 10L;
+			NoteRenameCommand command = new NoteRenameCommand(noteId, userId, "새 제목");
+
+			given(noteRepository.findById(noteId)).willReturn(Optional.empty());
+
+			assertThatThrownBy(() -> noteService.renameNote(command))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_NOT_FOUND);
+			verify(noteRepository).findById(noteId);
+			verifyNoMoreInteractions(noteRepository);
+			verifyNoInteractions(userRepository, folderRepository);
+		}
+
+		@Test
+		@DisplayName("다른 사용자가 제목 변경을 요청하면 예외가 발생한다")
+		void throwsWhenRequesterIsNotAuthor() {
+			Long requesterId = 1L;
+			Long authorId = 2L;
+			Long noteId = 10L;
+			User author = user(authorId);
+			Note note = Note.create(author, null, "기존 제목", "내용", NoteVisibility.PRIVATE, true);
+			NoteRenameCommand command = new NoteRenameCommand(noteId, requesterId, "새 제목");
+
+			given(noteRepository.findById(noteId)).willReturn(Optional.of(note));
+
+			assertThatThrownBy(() -> noteService.renameNote(command))
 					.isInstanceOf(BusinessException.class)
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_ACCESS_DENIED);
 			verify(noteRepository).findById(noteId);

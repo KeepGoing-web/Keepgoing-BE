@@ -379,4 +379,76 @@ class NoteTest {
 				.isInstanceOf(BusinessException.class)
 				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_ACCESS_DENIED);
 	}
+
+	@Nested
+	@DisplayName("renameTitle")
+	class RenameTitle {
+
+		@Test
+		@DisplayName("작성자가 요청하면 제목이 변경된다")
+		void changesTitleWhenRequesterIsAuthor() {
+			User author = user(1L, "author@test.com", "author");
+			Note note = Note.create(author, null, TITLE, CONTENT, NoteVisibility.PRIVATE, false);
+
+			note.renameTitle(author.getId(), "새 제목");
+
+			assertThat(note.getTitle()).isEqualTo("새 제목");
+		}
+
+		@Test
+		@DisplayName("다른 사용자가 제목 변경을 시도하면 예외가 발생한다")
+		void throwsWhenRequesterIsNotAuthor() {
+			User author = user(1L, "author@test.com", "author");
+			Note note = Note.create(author, null, TITLE, CONTENT, NoteVisibility.PRIVATE, false);
+
+			assertThatThrownBy(() -> note.renameTitle(2L, "새 제목"))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_ACCESS_DENIED);
+		}
+
+		@Test
+		@DisplayName("제목을 공백으로 바꾸려고 하면 예외가 발생한다")
+		void throwsWhenTitleIsBlank() {
+			User author = user(1L, "author@test.com", "author");
+			Note note = Note.create(author, null, TITLE, CONTENT, NoteVisibility.PRIVATE, false);
+
+			assertThatThrownBy(() -> note.renameTitle(author.getId(), " "))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_INPUT);
+		}
+
+		@Test
+		@DisplayName("제목이 길이 제한을 넘으면 예외가 발생한다")
+		void throwsWhenTitleIsTooLong() {
+			User author = user(1L, "author@test.com", "author");
+			Note note = Note.create(author, null, TITLE, CONTENT, NoteVisibility.PRIVATE, false);
+
+			assertThatThrownBy(() -> note.renameTitle(author.getId(), "a".repeat(201)))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_INPUT);
+		}
+
+		@Test
+		@DisplayName("제목을 null로 바꾸려고 하면 예외가 발생한다")
+		void throwsWhenTitleIsNull() {
+			User author = user(1L, "author@test.com", "author");
+			Note note = Note.create(author, null, TITLE, CONTENT, NoteVisibility.PRIVATE, false);
+
+			assertThatThrownBy(() -> note.renameTitle(author.getId(), null))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_INPUT);
+		}
+
+		@Test
+		@DisplayName("제목 길이가 200자면 변경할 수 있다")
+		void changesTitleWhenLengthIsExactly200() {
+			User author = user(1L, "author@test.com", "author");
+			Note note = Note.create(author, null, TITLE, CONTENT, NoteVisibility.PRIVATE, false);
+			String newTitle = "a".repeat(200);
+
+			note.renameTitle(author.getId(), newTitle);
+
+			assertThat(note.getTitle()).isEqualTo(newTitle);
+		}
+	}
 }
