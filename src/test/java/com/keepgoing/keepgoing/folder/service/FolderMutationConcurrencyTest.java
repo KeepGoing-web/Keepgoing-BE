@@ -48,6 +48,9 @@ public class FolderMutationConcurrencyTest {
 
 	private User user;
 	private Long userId;
+	private static final long READY_TIMEOUT_SECONDS = 5L;
+	private static final long DONE_TIMEOUT_SECONDS = 10L;
+	private static final long TERMINATION_TIMEOUT_SECONDS = 5L;
 
 	@BeforeEach
 	void setUp() {
@@ -108,10 +111,7 @@ public class FolderMutationConcurrencyTest {
 			}
 		});
 
-		readyLatch.await();
-		startLatch.countDown();
-		doneLatch.await(10, TimeUnit.SECONDS);
-		executor.shutdown();
+		awaitConcurrentTasks(readyLatch, startLatch, doneLatch, executor);
 
 		assertThat(deleteSuccess.get() + createSuccess.get()).isEqualTo(1);
 		assertThat(failureCount.get()).isEqualTo(1);
@@ -158,10 +158,7 @@ public class FolderMutationConcurrencyTest {
 			}
 		});
 
-		readyLatch.await();
-		startLatch.countDown();
-		doneLatch.await(10, TimeUnit.SECONDS);
-		executor.shutdown();
+		awaitConcurrentTasks(readyLatch, startLatch, doneLatch, executor);
 
 		assertThat(deleteSuccess.get() + createSuccess.get()).isEqualTo(1);
 		assertThat(failureCount.get()).isEqualTo(1);
@@ -220,10 +217,7 @@ public class FolderMutationConcurrencyTest {
 			}
 		});
 
-		readyLatch.await();
-		startLatch.countDown();
-		doneLatch.await(10, TimeUnit.SECONDS);
-		executor.shutdown();
+		awaitConcurrentTasks(readyLatch, startLatch, doneLatch, executor);
 
 		assertThat(deleteSuccess.get() + moveSuccess.get()).isEqualTo(1);
 		assertThat(failureCount.get()).isEqualTo(1);
@@ -273,10 +267,7 @@ public class FolderMutationConcurrencyTest {
 			}
 		});
 
-		readyLatch.await();
-		startLatch.countDown();
-		doneLatch.await(10, TimeUnit.SECONDS);
-		executor.shutdown();
+		awaitConcurrentTasks(readyLatch, startLatch, doneLatch, executor);
 
 		assertThat(deleteSuccess.get() + moveSuccess.get()).isEqualTo(1);
 		assertThat(failureCount.get()).isEqualTo(1);
@@ -334,10 +325,7 @@ public class FolderMutationConcurrencyTest {
 			}
 		});
 
-		readyLatch.await();
-		startLatch.countDown();
-		doneLatch.await(10, TimeUnit.SECONDS);
-		executor.shutdown();
+		awaitConcurrentTasks(readyLatch, startLatch, doneLatch, executor);
 
 		NoteDetailResult note = noteService.getNote(userId, noteId);
 		boolean sourceDeleted = folderRepository.findById(sourceFolderId)
@@ -396,10 +384,7 @@ public class FolderMutationConcurrencyTest {
 			}
 		});
 
-		readyLatch.await();
-		startLatch.countDown();
-		doneLatch.await(10, TimeUnit.SECONDS);
-		executor.shutdown();
+		awaitConcurrentTasks(readyLatch, startLatch, doneLatch, executor);
 
 		List<FolderSummaryResult> rootFolders = folderService.getFolders(userId, null);
 		boolean sourceDeleted = folderRepository.findById(sourceParentId)
@@ -413,5 +398,29 @@ public class FolderMutationConcurrencyTest {
 				assertThat(folder.folderId()).isEqualTo(childFolderId)
 		);
 		assertThat(sourceDeleted).isEqualTo(deleteSuccess.get() == 1);
+	}
+
+	private void awaitConcurrentTasks(
+			CountDownLatch readyLatch,
+			CountDownLatch startLatch,
+			CountDownLatch doneLatch,
+			ExecutorService executor
+	) throws InterruptedException {
+		try {
+			assertThat(readyLatch.await(READY_TIMEOUT_SECONDS, TimeUnit.SECONDS))
+					.as("worker threads did not become ready in time")
+					.isTrue();
+
+			startLatch.countDown();
+
+			assertThat(doneLatch.await(DONE_TIMEOUT_SECONDS, TimeUnit.SECONDS))
+					.as("concurrent tasks did not finish in time")
+					.isTrue();
+		} finally {
+			executor.shutdownNow();
+			assertThat(executor.awaitTermination(TERMINATION_TIMEOUT_SECONDS, TimeUnit.SECONDS))
+					.as("executor did not terminate in time")
+					.isTrue();
+		}
 	}
 }
