@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import com.keepgoing.keepgoing.folder.domain.Folder;
 import com.keepgoing.keepgoing.folder.repository.FolderRepository;
+import com.keepgoing.keepgoing.folder.service.FolderLockService;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import com.keepgoing.keepgoing.note.domain.Note;
@@ -25,7 +26,9 @@ import com.keepgoing.keepgoing.note.service.dto.NoteSummaryResult;
 import com.keepgoing.keepgoing.note.service.dto.NoteUpdateCommand;
 import com.keepgoing.keepgoing.user.domain.User;
 import com.keepgoing.keepgoing.user.repository.UserRepository;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -55,6 +58,9 @@ class NoteServiceTest {
 
 	@Mock
 	FolderRepository folderRepository;
+
+	@Mock
+	FolderLockService folderLockService;
 
 	@InjectMocks
 	NoteService noteService;
@@ -144,8 +150,7 @@ class NoteServiceTest {
 					.build();
 
 			given(userRepository.findById(command.userId())).willReturn(Optional.of(author));
-			given(folderRepository.findByIdAndDeletedAtIsNull(command.folderId()))
-					.willReturn(Optional.of(folder));
+			given(folderLockService.lockActiveFolder(command.folderId())).willReturn(folder);
 			given(noteRepository.save(any(Note.class)))
 					.willAnswer(invocation -> invocation.getArgument(0));
 
@@ -170,9 +175,9 @@ class NoteServiceTest {
 			assertThat(result.visibility()).isEqualTo(command.visibility());
 			assertThat(result.aiCollectable()).isEqualTo(command.aiCollectable());
 			verify(userRepository).findById(userId);
-			verify(folderRepository).findByIdAndDeletedAtIsNull(folder.getId());
+			verify(folderLockService).lockActiveFolder(folder.getId());
 			verify(noteRepository).save(any(Note.class));
-			verifyNoMoreInteractions(userRepository, noteRepository, folderRepository);
+			verifyNoMoreInteractions(userRepository, noteRepository, folderRepository, folderLockService);
 		}
 
 		@Test
@@ -190,14 +195,15 @@ class NoteServiceTest {
 					.build();
 
 			given(userRepository.findById(command.userId())).willReturn(Optional.of(author));
-			given(folderRepository.findByIdAndDeletedAtIsNull(2L)).willReturn(Optional.empty());
+			given(folderLockService.lockActiveFolder(2L))
+					.willThrow(new BusinessException(ErrorCode.FOLDER_NOT_FOUND));
 
 			assertThatThrownBy(() -> noteService.createNote(command))
 					.isInstanceOf(BusinessException.class)
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_NOT_FOUND);
 			verify(userRepository).findById(command.userId());
-			verify(folderRepository).findByIdAndDeletedAtIsNull(2L);
-			verifyNoMoreInteractions(userRepository, folderRepository);
+			verify(folderLockService).lockActiveFolder(2L);
+			verifyNoMoreInteractions(userRepository, folderRepository, folderLockService);
 			verifyNoInteractions(noteRepository);
 		}
 
@@ -220,14 +226,14 @@ class NoteServiceTest {
 					.build();
 
 			given(userRepository.findById(command.userId())).willReturn(Optional.of(author));
-			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(folder));
+			given(folderLockService.lockActiveFolder(folderId)).willReturn(folder);
 
 			assertThatThrownBy(() -> noteService.createNote(command))
 					.isInstanceOf(BusinessException.class)
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_ACCESS_DENIED);
 			verify(userRepository).findById(command.userId());
-			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
-			verifyNoMoreInteractions(userRepository, folderRepository);
+			verify(folderLockService).lockActiveFolder(folderId);
+			verifyNoMoreInteractions(userRepository, folderRepository, folderLockService);
 			verifyNoInteractions(noteRepository);
 		}
 	}
@@ -539,15 +545,43 @@ class NoteServiceTest {
 			NoteMoveCommand command = new NoteMoveCommand(noteId, userId, folderId);
 
 			given(noteRepository.findById(noteId)).willReturn(Optional.of(note));
-			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(folder));
+			given(folderLockService.lockActiveFolders(Arrays.asList(null, folderId)))
+					.willReturn(Map.of(folderId, folder));
 
 			NoteDetailResult result = noteService.moveNote(command);
 
 			assertThat(note.getFolder()).isEqualTo(folder);
 			assertThat(result.folderId()).isEqualTo(folderId);
 			verify(noteRepository).findById(noteId);
-			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
-			verifyNoMoreInteractions(noteRepository, folderRepository);
+			verify(folderLockService).lockActiveFolders(Arrays.asList(null, folderId));
+			verifyNoMoreInteractions(noteRepository, folderRepository, folderLockService);
+			verifyNoInteractions(userRepository);
+		}
+
+		@Test
+		@DisplayName("폴더 간 이동 시 source 와 target 폴더를 함께 잠근다")
+		void moveNote_locksSourceAndTargetFoldersTogether() {
+			Long userId = 1L;
+			Long noteId = 10L;
+			Long sourceFolderId = 20L;
+			Long targetFolderId = 30L;
+			User author = user(userId);
+			Folder sourceFolder = folder(author, sourceFolderId);
+			Folder targetFolder = folder(author, targetFolderId);
+			Note note = Note.create(author, sourceFolder, "title", "content", NoteVisibility.PRIVATE, true);
+			NoteMoveCommand command = new NoteMoveCommand(noteId, userId, targetFolderId);
+
+			given(noteRepository.findById(noteId)).willReturn(Optional.of(note));
+			given(folderLockService.lockActiveFolders(Arrays.asList(sourceFolderId, targetFolderId)))
+					.willReturn(Map.of(sourceFolderId, sourceFolder, targetFolderId, targetFolder));
+
+			NoteDetailResult result = noteService.moveNote(command);
+
+			assertThat(note.getFolder()).isEqualTo(targetFolder);
+			assertThat(result.folderId()).isEqualTo(targetFolderId);
+			verify(noteRepository).findById(noteId);
+			verify(folderLockService).lockActiveFolders(Arrays.asList(sourceFolderId, targetFolderId));
+			verifyNoMoreInteractions(noteRepository, folderRepository, folderLockService);
 			verifyNoInteractions(userRepository);
 		}
 
@@ -563,14 +597,17 @@ class NoteServiceTest {
 			NoteMoveCommand command = new NoteMoveCommand(noteId, userId, null);
 
 			given(noteRepository.findById(noteId)).willReturn(Optional.of(note));
+			given(folderLockService.lockActiveFolders(Arrays.asList(existingFolderId, null)))
+					.willReturn(Map.of(existingFolderId, existingFolder));
 
 			NoteDetailResult result = noteService.moveNote(command);
 
 			assertThat(note.getFolder()).isNull();
 			assertThat(result.folderId()).isNull();
 			verify(noteRepository).findById(noteId);
-			verifyNoMoreInteractions(noteRepository);
-			verifyNoInteractions(folderRepository, userRepository);
+			verify(folderLockService).lockActiveFolders(Arrays.asList(existingFolderId, null));
+			verifyNoMoreInteractions(noteRepository, folderRepository, folderLockService);
+			verifyNoInteractions(userRepository);
 		}
 
 		@Test
@@ -602,14 +639,15 @@ class NoteServiceTest {
 			NoteMoveCommand command = new NoteMoveCommand(noteId, userId, folderId);
 
 			given(noteRepository.findById(noteId)).willReturn(Optional.of(note));
-			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.empty());
+			given(folderLockService.lockActiveFolders(Arrays.asList(null, folderId)))
+					.willThrow(new BusinessException(ErrorCode.FOLDER_NOT_FOUND));
 
 			assertThatThrownBy(() -> noteService.moveNote(command))
 					.isInstanceOf(BusinessException.class)
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_NOT_FOUND);
 			verify(noteRepository).findById(noteId);
-			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
-			verifyNoMoreInteractions(noteRepository, folderRepository);
+			verify(folderLockService).lockActiveFolders(Arrays.asList(null, folderId));
+			verifyNoMoreInteractions(noteRepository, folderRepository, folderLockService);
 			verifyNoInteractions(userRepository);
 		}
 
@@ -624,13 +662,16 @@ class NoteServiceTest {
 			NoteMoveCommand command = new NoteMoveCommand(noteId, requesterId, null);
 
 			given(noteRepository.findById(noteId)).willReturn(Optional.of(note));
+			given(folderLockService.lockActiveFolders(Arrays.asList(null, null)))
+					.willReturn(Map.of());
 
 			assertThatThrownBy(() -> noteService.moveNote(command))
 					.isInstanceOf(BusinessException.class)
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_ACCESS_DENIED);
 			verify(noteRepository).findById(noteId);
-			verifyNoMoreInteractions(noteRepository);
-			verifyNoInteractions(folderRepository, userRepository);
+			verify(folderLockService).lockActiveFolders(Arrays.asList(null, null));
+			verifyNoMoreInteractions(noteRepository, folderRepository, folderLockService);
+			verifyNoInteractions(userRepository);
 		}
 
 		@Test
@@ -647,14 +688,15 @@ class NoteServiceTest {
 			NoteMoveCommand command = new NoteMoveCommand(noteId, userId, folderId);
 
 			given(noteRepository.findById(noteId)).willReturn(Optional.of(note));
-			given(folderRepository.findByIdAndDeletedAtIsNull(folderId)).willReturn(Optional.of(otherFolder));
+			given(folderLockService.lockActiveFolders(Arrays.asList(null, folderId)))
+					.willReturn(Map.of(folderId, otherFolder));
 
 			assertThatThrownBy(() -> noteService.moveNote(command))
 					.isInstanceOf(BusinessException.class)
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_ACCESS_DENIED);
 			verify(noteRepository).findById(noteId);
-			verify(folderRepository).findByIdAndDeletedAtIsNull(folderId);
-			verifyNoMoreInteractions(noteRepository, folderRepository);
+			verify(folderLockService).lockActiveFolders(Arrays.asList(null, folderId));
+			verifyNoMoreInteractions(noteRepository, folderRepository, folderLockService);
 			verifyNoInteractions(userRepository);
 		}
 	}

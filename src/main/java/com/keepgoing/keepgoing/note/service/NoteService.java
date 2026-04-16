@@ -2,6 +2,7 @@ package com.keepgoing.keepgoing.note.service;
 
 import com.keepgoing.keepgoing.folder.domain.Folder;
 import com.keepgoing.keepgoing.folder.repository.FolderRepository;
+import com.keepgoing.keepgoing.folder.service.FolderLockService;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import com.keepgoing.keepgoing.note.domain.Note;
@@ -15,6 +16,9 @@ import com.keepgoing.keepgoing.note.service.dto.NoteSummaryResult;
 import com.keepgoing.keepgoing.note.service.dto.NoteUpdateCommand;
 import com.keepgoing.keepgoing.user.domain.User;
 import com.keepgoing.keepgoing.user.repository.UserRepository;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -28,6 +32,7 @@ public class NoteService {
 	private final NoteRepository noteRepository;
 	private final UserRepository userRepository;
 	private final FolderRepository folderRepository;
+	private final FolderLockService folderLockService;
 
 	/**
 	 * 노트 생성
@@ -39,8 +44,7 @@ public class NoteService {
 
 		Folder folder = null;
 		if (command.folderId() != null) {
-			folder = folderRepository.findByIdAndDeletedAtIsNull(command.folderId())
-					.orElseThrow(() -> new BusinessException(ErrorCode.FOLDER_NOT_FOUND));
+			folder = folderLockService.lockActiveFolder(command.folderId());
 		}
 
 		Note note = Note.create(
@@ -141,11 +145,14 @@ public class NoteService {
 		Note note = noteRepository.findById(command.noteId())
 				.orElseThrow(() -> new BusinessException(ErrorCode.NOTE_NOT_FOUND));
 
-		Long targetFolderId = command.folderId();
-		Folder targetFolder = (targetFolderId == null)
-				? null
-				: folderRepository.findByIdAndDeletedAtIsNull(targetFolderId)
-				  .orElseThrow(() -> new BusinessException(ErrorCode.FOLDER_NOT_FOUND));
+		Long sourceFolderId = note.getFolder() != null ? note.getFolder().getId() : null;
+		Long targetFolderId = command.targetFolderId();
+
+		Map<Long, Folder> lockedFolders = folderLockService.lockActiveFolders(
+				Arrays.asList(sourceFolderId, targetFolderId)
+		);
+
+		Folder targetFolder = (targetFolderId == null) ? null : lockedFolders.get(targetFolderId);
 
 		note.changeFolder(command.userId(), targetFolder);
 		return NoteDetailResult.from(note);

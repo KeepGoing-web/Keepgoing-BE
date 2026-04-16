@@ -2,9 +2,12 @@ package com.keepgoing.keepgoing.folder.repository;
 
 import com.keepgoing.keepgoing.folder.domain.Folder;
 import com.keepgoing.keepgoing.folder.repository.dto.FolderTreeRow;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -67,4 +70,23 @@ public interface FolderRepository extends JpaRepository<Folder, Long> {
 			order by f.name asc
 			""")
 	List<FolderTreeRow> findTreeRows(@Param("ownerId") Long ownerId);
+
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("""
+			select f
+			from Folder f
+			where f.id = :targetFolderId
+			  and f.deletedAt is null 
+			""")
+	Optional<Folder> findForUpdate(@Param("targetFolderId") Long targetFolderId);
+
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("""
+			select f
+			from Folder f
+			where f.id in :targetFolderIds
+			  and f.deletedAt is null
+			order by f.id asc
+			""")
+	List<Folder> findAllForUpdate(@Param("targetFolderIds") Collection<Long> targetFolderIds);
 }
