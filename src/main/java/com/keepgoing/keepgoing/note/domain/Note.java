@@ -175,4 +175,15 @@ public class Note extends BaseEntity {
 		}
 		this.folder = targetFolder;
 	}
+
+	/**
+	 * 제목 변경
+	 */
+	public void renameTitle(Long requesterId, String newTitle) {
+		validateAuthor(requesterId);
+
+		if (newTitle == null || newTitle.isBlank() || newTitle.length() > 200)
+			throw new BusinessException(ErrorCode.INVALID_INPUT);
+		this.title = newTitle;
+	}
 }

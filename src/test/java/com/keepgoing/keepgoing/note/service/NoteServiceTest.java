@@ -21,6 +21,7 @@ import com.keepgoing.keepgoing.note.repository.NoteRepository;
 import com.keepgoing.keepgoing.note.service.dto.NoteCreateCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteDetailResult;
 import com.keepgoing.keepgoing.note.service.dto.NoteMoveCommand;
+import com.keepgoing.keepgoing.note.service.dto.NoteRenameCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteSearchQuery;
 import com.keepgoing.keepgoing.note.service.dto.NoteSummaryResult;
 import com.keepgoing.keepgoing.note.service.dto.NoteUpdateCommand;
@@ -113,7 +114,7 @@ class NoteServiceTest {
 		}
 
 		@Test
-		@DisplayName("유저가 없으면 USER_NOT_FOUND 예외가 발생한다")
+		@DisplayName("없는 사용자가 노트 생성을 요청하면 예외가 발생한다")
 		void throwsWhenUserNotFound() {
 			Long userId = 1L;
 			NoteCreateCommand command = new NoteCreateCommand(
@@ -181,7 +182,7 @@ class NoteServiceTest {
 		}
 
 		@Test
-		@DisplayName("존재하지 않는 폴더면 FOLDER_NOT_FOUND 예외가 발생한다")
+		@DisplayName("없는 폴더로 노트를 만들려고 하면 예외가 발생한다")
 		void throwsWhenFolderNotFound() {
 			Long userId = 1L;
 			User author = user(userId);
@@ -208,7 +209,7 @@ class NoteServiceTest {
 		}
 
 		@Test
-		@DisplayName("다른 사용자의 폴더면 FOLDER_ACCESS_DENIED 예외가 발생한다")
+		@DisplayName("다른 사용자의 폴더로 노트를 만들려고 하면 예외가 발생한다")
 		void throwsWhenFolderOwnedByAnotherUser() {
 			Long userId = 1L;
 			Long otherUserId = 2L;
@@ -281,7 +282,7 @@ class NoteServiceTest {
 		}
 
 		@Test
-		@DisplayName("익명 사용자가 비공개 노트를 조회하면 NOTE_ACCESS_DENIED 예외가 발생한다")
+		@DisplayName("익명 사용자가 비공개 노트를 조회하려고 하면 예외가 발생한다")
 		void throwsWhenAnonymousViewerRequestsPrivateNote() {
 			Long noteId = 1L;
 			User author = user(2L);
@@ -317,7 +318,7 @@ class NoteServiceTest {
 		}
 
 		@Test
-		@DisplayName("다른 사용자가 비공개 노트를 조회하면 NOTE_ACCESS_DENIED 예외가 발생한다")
+		@DisplayName("다른 사용자가 비공개 노트를 조회하려고 하면 예외가 발생한다")
 		void throwsWhenDifferentViewerRequestsPrivateNote() {
 			Long noteId = 1L;
 			Long viewerId = 1L;
@@ -335,7 +336,7 @@ class NoteServiceTest {
 		}
 
 		@Test
-		@DisplayName("게시글이 없으면 NOTE_NOT_FOUND 예외가 발생한다")
+		@DisplayName("없는 노트를 조회하려고 하면 예외가 발생한다")
 		void throwsWhenNotFound() {
 			Long viewerId = 1L;
 			Long noteId = 1L;
@@ -420,7 +421,7 @@ class NoteServiceTest {
 		}
 
 		@Test
-		@DisplayName("게시글이 없으면 NOTE_NOT_FOUND 예외가 발생한다")
+		@DisplayName("없는 노트를 수정하려고 하면 예외가 발생한다")
 		void throwsWhenNoteNotFound() {
 			Long userId = 1L;
 			Long noteId = 10L;
@@ -444,7 +445,7 @@ class NoteServiceTest {
 		}
 
 		@Test
-		@DisplayName("작성자가 아니면 NOTE_ACCESS_DENIED 예외가 발생한다")
+		@DisplayName("다른 사용자가 노트 수정을 요청하면 예외가 발생한다")
 		void throwsWhenNotAuthor() {
 			Long requesterId = 1L;
 			Long authorId = 2L;
@@ -494,7 +495,7 @@ class NoteServiceTest {
 		}
 
 		@Test
-		@DisplayName("게시글이 없으면 NOTE_NOT_FOUND 예외가 발생한다")
+		@DisplayName("없는 노트를 삭제하려고 하면 예외가 발생한다")
 		void throwsWhenNoteNotFound() {
 			Long userId = 1L;
 			Long noteId = 10L;
@@ -510,7 +511,7 @@ class NoteServiceTest {
 		}
 
 		@Test
-		@DisplayName("작성자가 아니면 NOTE_ACCESS_DENIED 예외가 발생한다")
+		@DisplayName("다른 사용자가 노트 삭제를 요청하면 예외가 발생한다")
 		void throwsWhenNotAuthor() {
 			Long requesterId = 1L;
 			Long authorId = 2L;
@@ -521,6 +522,68 @@ class NoteServiceTest {
 			given(noteRepository.findById(noteId)).willReturn(Optional.of(note));
 
 			assertThatThrownBy(() -> noteService.deleteNote(requesterId, noteId))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_ACCESS_DENIED);
+			verify(noteRepository).findById(noteId);
+			verifyNoMoreInteractions(noteRepository);
+			verifyNoInteractions(userRepository, folderRepository);
+		}
+	}
+
+	@Nested
+	@DisplayName("노트 제목 변경")
+	class RenameNote {
+
+		@Test
+		@DisplayName("작성자가 맞으면 제목이 변경된다")
+		void renamesWhenAuthorMatches() {
+			Long userId = 1L;
+			Long noteId = 10L;
+			User author = user(userId);
+			Note note = Note.create(author, null, "기존 제목", "내용", NoteVisibility.PRIVATE, true);
+			NoteRenameCommand command = new NoteRenameCommand(noteId, userId, "새 제목");
+
+			given(noteRepository.findById(noteId)).willReturn(Optional.of(note));
+
+			NoteDetailResult result = noteService.renameNote(command);
+
+			assertThat(note.getTitle()).isEqualTo("새 제목");
+			assertThat(result.title()).isEqualTo("새 제목");
+			verify(noteRepository).findById(noteId);
+			verifyNoMoreInteractions(noteRepository);
+			verifyNoInteractions(userRepository, folderRepository);
+		}
+
+		@Test
+		@DisplayName("없는 노트의 이동을 요청하면 예외가 발생한다")
+		void throwsWhenNoteNotFound() {
+			Long userId = 1L;
+			Long noteId = 10L;
+			NoteRenameCommand command = new NoteRenameCommand(noteId, userId, "새 제목");
+
+			given(noteRepository.findById(noteId)).willReturn(Optional.empty());
+
+			assertThatThrownBy(() -> noteService.renameNote(command))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_NOT_FOUND);
+			verify(noteRepository).findById(noteId);
+			verifyNoMoreInteractions(noteRepository);
+			verifyNoInteractions(userRepository, folderRepository);
+		}
+
+		@Test
+		@DisplayName("다른 사용자가 제목 변경을 요청하면 예외가 발생한다")
+		void throwsWhenRequesterIsNotAuthor() {
+			Long requesterId = 1L;
+			Long authorId = 2L;
+			Long noteId = 10L;
+			User author = user(authorId);
+			Note note = Note.create(author, null, "기존 제목", "내용", NoteVisibility.PRIVATE, true);
+			NoteRenameCommand command = new NoteRenameCommand(noteId, requesterId, "새 제목");
+
+			given(noteRepository.findById(noteId)).willReturn(Optional.of(note));
+
+			assertThatThrownBy(() -> noteService.renameNote(command))
 					.isInstanceOf(BusinessException.class)
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_ACCESS_DENIED);
 			verify(noteRepository).findById(noteId);
@@ -611,7 +674,7 @@ class NoteServiceTest {
 		}
 
 		@Test
-		@DisplayName("노트가 없으면 NOTE_NOT_FOUND 예외가 발생한다")
+		@DisplayName("없는 노트의 제목 변경을 요청하면 예외가 발생한다")
 		void throwsWhenNoteNotFound() {
 			Long noteId = 10L;
 			Long userId = 1L;
@@ -629,7 +692,7 @@ class NoteServiceTest {
 		}
 
 		@Test
-		@DisplayName("대상 폴더가 없으면 FOLDER_NOT_FOUND 예외가 발생한다")
+		@DisplayName("없는 폴더로 노트를 이동하려고 하면 예외가 발생한다")
 		void throwsWhenFolderNotFound() {
 			Long userId = 1L;
 			Long noteId = 10L;
@@ -652,7 +715,7 @@ class NoteServiceTest {
 		}
 
 		@Test
-		@DisplayName("작성자가 아니면 NOTE_ACCESS_DENIED 예외가 발생한다")
+		@DisplayName("다른 사용자가 노트 이동을 요청하면 예외가 발생한다")
 		void throwsWhenRequesterIsNotAuthor() {
 			Long requesterId = 1L;
 			Long authorId = 2L;
@@ -675,7 +738,7 @@ class NoteServiceTest {
 		}
 
 		@Test
-		@DisplayName("다른 사용자의 폴더면 FOLDER_ACCESS_DENIED 예외가 발생한다")
+		@DisplayName("다른 사용자의 폴더로 노트를 이동하려고 하면 예외가 발생한다")
 		void throwsWhenTargetFolderOwnedByAnotherUser() {
 			Long userId = 1L;
 			Long otherUserId = 2L;
@@ -732,7 +795,7 @@ class NoteServiceTest {
 		}
 
 		@Test
-		@DisplayName("keyword가 비어있으면 NOTE_SEARCH_KEYWORD_REQUIRED 예외가 발생한다")
+		@DisplayName("검색어가 비어 있으면 내 노트 검색을 진행할 수 없다")
 		void throwsWhenKeywordBlank() {
 			Long userId = 1L;
 			Pageable pageable = PageRequest.of(0, 10);
@@ -801,7 +864,7 @@ class NoteServiceTest {
 		}
 
 		@Test
-		@DisplayName("keyword가 비어있으면 NOTE_SEARCH_KEYWORD_REQUIRED 예외가 발생한다")
+		@DisplayName("검색어가 비어 있으면 공개 노트 검색을 진행할 수 없다")
 		void throwsWhenKeywordBlank() {
 			Pageable pageable = PageRequest.of(0, 10);
 			NoteSearchQuery query = new NoteSearchQuery("   ", pageable);

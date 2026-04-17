@@ -5,12 +5,14 @@ import com.keepgoing.keepgoing.global.api.response.PagedResponse;
 import com.keepgoing.keepgoing.note.controller.dto.NoteCreateRequest;
 import com.keepgoing.keepgoing.note.controller.dto.NoteDetailResponse;
 import com.keepgoing.keepgoing.note.controller.dto.NoteMoveRequest;
+import com.keepgoing.keepgoing.note.controller.dto.NoteRenameRequest;
 import com.keepgoing.keepgoing.note.controller.dto.NoteSummaryResponse;
 import com.keepgoing.keepgoing.note.controller.dto.NoteUpdateRequest;
 import com.keepgoing.keepgoing.note.service.NoteService;
 import com.keepgoing.keepgoing.note.service.dto.NoteCreateCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteDetailResult;
 import com.keepgoing.keepgoing.note.service.dto.NoteMoveCommand;
+import com.keepgoing.keepgoing.note.service.dto.NoteRenameCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteSearchQuery;
 import com.keepgoing.keepgoing.note.service.dto.NoteSummaryResult;
 import com.keepgoing.keepgoing.note.service.dto.NoteUpdateCommand;
@@ -183,6 +185,23 @@ public class NoteController {
 		NoteDetailResult noteDetailResult = noteService.moveNote(command);
 
 		NoteDetailResponse response = NoteDetailResponse.from(noteDetailResult);
+
+		return ResponseEntity.ok(ApiResponse.success(response));
+	}
+
+	/**
+	 * 노트 제목 변경
+	 */
+	@PatchMapping("/{noteId}/title")
+	public ResponseEntity<ApiResponse<NoteDetailResponse>> renameNote(
+			@PathVariable Long noteId,
+			@Valid @RequestBody NoteRenameRequest request,
+			@AuthenticationPrincipal Long userId
+	) {
+		NoteRenameCommand command = request.toCommand(noteId, userId);
+
+		NoteDetailResult result = noteService.renameNote(command);
+		NoteDetailResponse response = NoteDetailResponse.from(result);
 
 		return ResponseEntity.ok(ApiResponse.success(response));
 	}

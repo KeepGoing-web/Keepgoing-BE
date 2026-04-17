@@ -25,12 +25,14 @@ import com.keepgoing.keepgoing.global.config.JacksonConfig;
 import com.keepgoing.keepgoing.global.security.cookie.CookieConfig;
 import com.keepgoing.keepgoing.global.security.jwt.JwtProvider;
 import com.keepgoing.keepgoing.note.controller.dto.NoteCreateRequest;
-import com.keepgoing.keepgoing.note.service.dto.NoteMoveCommand;
+import com.keepgoing.keepgoing.note.controller.dto.NoteRenameRequest;
 import com.keepgoing.keepgoing.note.controller.dto.NoteUpdateRequest;
 import com.keepgoing.keepgoing.note.domain.NoteVisibility;
 import com.keepgoing.keepgoing.note.service.NoteService;
 import com.keepgoing.keepgoing.note.service.dto.NoteCreateCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteDetailResult;
+import com.keepgoing.keepgoing.note.service.dto.NoteMoveCommand;
+import com.keepgoing.keepgoing.note.service.dto.NoteRenameCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteSearchQuery;
 import com.keepgoing.keepgoing.note.service.dto.NoteSummaryResult;
 import com.keepgoing.keepgoing.note.service.dto.NoteUpdateCommand;
@@ -407,7 +409,7 @@ public class NoteControllerTest {
 		}
 
 		@Test
-		@DisplayName("없는 게시글이면 NOTE_NOT_FOUND 에러 응답")
+		@DisplayName("없는 노트를 조회하면 찾을 수 없음을 응답한다")
 		void returnsNotFoundWhenNoteDoesNotExist() throws Exception {
 			Long noteId = 999L;
 
@@ -547,7 +549,7 @@ public class NoteControllerTest {
 		}
 
 		@Test
-		@DisplayName("작성자가 아니면 NOTE_ACCESS_DENIED 에러 반환")
+		@DisplayName("다른 사용자가 노트 수정을 요청하면 권한 오류를 응답한다")
 		void accessDenied() throws Exception {
 			// given
 			Long noteId = 1L;
@@ -605,7 +607,7 @@ public class NoteControllerTest {
 		}
 
 		@Test
-		@DisplayName("작성자가 아니면 NOTE_ACCESS_DENIED 에러 반환")
+		@DisplayName("다른 사용자가 노트 삭제를 요청하면 권한 오류를 응답한다")
 		void accessDenied() throws Exception {
 			// given
 			Long noteId = 1L;
@@ -760,7 +762,7 @@ public class NoteControllerTest {
 		}
 
 		@Test
-		@DisplayName("노트가 없으면 NOTE_NOT_FOUND 에러를 반환한다")
+		@DisplayName("없는 노트의 이동을 요청하면 찾을 수 없음을 응답한다")
 		void returnsNotFoundWhenNoteDoesNotExist() throws Exception {
 			// given
 			Long userId = 1L;
@@ -783,7 +785,7 @@ public class NoteControllerTest {
 		}
 
 		@Test
-		@DisplayName("작성자가 아니면 NOTE_ACCESS_DENIED 에러를 반환한다")
+		@DisplayName("다른 사용자가 노트 이동을 요청하면 권한 오류를 응답한다")
 		void returnsForbiddenWhenRequesterIsNotAuthor() throws Exception {
 			// given
 			Long userId = 1L;
@@ -806,7 +808,7 @@ public class NoteControllerTest {
 		}
 
 		@Test
-		@DisplayName("대상 폴더가 없으면 FOLDER_NOT_FOUND 에러를 반환한다")
+		@DisplayName("없는 폴더로 이동을 요청하면 찾을 수 없음을 응답한다")
 		void returnsNotFoundWhenFolderDoesNotExist() throws Exception {
 			// given
 			Long userId = 1L;
@@ -829,7 +831,7 @@ public class NoteControllerTest {
 		}
 
 		@Test
-		@DisplayName("다른 사용자의 폴더면 FOLDER_ACCESS_DENIED 에러를 반환한다")
+		@DisplayName("다른 사용자의 폴더로 이동을 요청하면 권한 오류를 응답한다")
 		void returnsForbiddenWhenFolderOwnedByAnotherUser() throws Exception {
 			// given
 			Long userId = 1L;
@@ -849,6 +851,134 @@ public class NoteControllerTest {
 					.andExpect(status().isForbidden())
 					.andExpect(jsonPath("$.success").value(false))
 					.andExpect(jsonPath("$.error.code").value("FOLDER_ACCESS_DENIED"));
+		}
+	}
+
+	@Nested
+	@DisplayName("PATCH /api/notes/{noteId}/title")
+	class Rename {
+
+		@Test
+		@DisplayName("노트 제목 변경 성공")
+		void success() throws Exception {
+			Long userId = 1L;
+			Long noteId = 10L;
+			NoteRenameRequest request = new NoteRenameRequest("새 제목");
+
+			NoteDetailResult result = new NoteDetailResult(
+					noteId,
+					null,
+					userId,
+					"새 제목",
+					"기존 내용",
+					NoteVisibility.PRIVATE,
+					false,
+					null,
+					null
+			);
+
+			given(noteService.renameNote(any(NoteRenameCommand.class)))
+					.willReturn(result);
+
+			SecurityContextHolder.getContext()
+					.setAuthentication(new UsernamePasswordAuthenticationToken(userId, null, List.of()));
+
+			mockMvc.perform(patch("/api/notes/{noteId}/title", noteId)
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(objectMapper.writeValueAsString(request)))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.success").value(true))
+					.andExpect(jsonPath("$.data.noteId").value(noteId))
+					.andExpect(jsonPath("$.data.userId").value(userId))
+					.andExpect(jsonPath("$.data.title").value("새 제목"));
+
+			ArgumentCaptor<NoteRenameCommand> captor = ArgumentCaptor.forClass(NoteRenameCommand.class);
+			verify(noteService).renameNote(captor.capture());
+			assertThat(captor.getValue().noteId()).isEqualTo(noteId);
+			assertThat(captor.getValue().userId()).isEqualTo(userId);
+			assertThat(captor.getValue().title()).isEqualTo("새 제목");
+		}
+
+		@Test
+		@DisplayName("제목을 공백으로 보내면 입력값 검증 오류를 응답한다")
+		void returnsBadRequestWhenTitleIsBlank() throws Exception {
+			Long userId = 1L;
+			Long noteId = 10L;
+			NoteRenameRequest request = new NoteRenameRequest(" ");
+
+			SecurityContextHolder.getContext()
+					.setAuthentication(new UsernamePasswordAuthenticationToken(userId, null, List.of()));
+
+			mockMvc.perform(patch("/api/notes/{noteId}/title", noteId)
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(objectMapper.writeValueAsString(request)))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value("VALIDATION_FAILED"))
+					.andExpect(jsonPath("$.error.fieldErrors[0].field").value("title"));
+		}
+
+		@Test
+		@DisplayName("제목이 길이 제한을 넘으면 입력값 검증 오류를 응답한다")
+		void returnsBadRequestWhenTitleIsTooLong() throws Exception {
+			Long userId = 1L;
+			Long noteId = 10L;
+			NoteRenameRequest request = new NoteRenameRequest("a".repeat(201));
+
+			SecurityContextHolder.getContext()
+					.setAuthentication(new UsernamePasswordAuthenticationToken(userId, null, List.of()));
+
+			mockMvc.perform(patch("/api/notes/{noteId}/title", noteId)
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(objectMapper.writeValueAsString(request)))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value("VALIDATION_FAILED"))
+					.andExpect(jsonPath("$.error.fieldErrors[0].field").value("title"));
+		}
+
+		@Test
+		@DisplayName("다른 사용자가 제목 변경을 요청하면 권한 오류를 응답한다")
+		void returnsForbiddenWhenRequesterIsNotAuthor() throws Exception {
+			Long userId = 1L;
+			Long noteId = 10L;
+
+			given(noteService.renameNote(any(NoteRenameCommand.class)))
+					.willThrow(new BusinessException(ErrorCode.NOTE_ACCESS_DENIED));
+
+			SecurityContextHolder.getContext()
+					.setAuthentication(new UsernamePasswordAuthenticationToken(userId, null, List.of()));
+
+			mockMvc.perform(patch("/api/notes/{noteId}/title", noteId)
+							.contentType(MediaType.APPLICATION_JSON)
+							.content("""
+									{"title":"남의 제목"}
+									"""))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value("NOTE_ACCESS_DENIED"));
+		}
+
+		@Test
+		@DisplayName("없는 노트의 제목 변경을 요청하면 찾을 수 없음을 응답한다")
+		void returnsNotFoundWhenNoteDoesNotExist() throws Exception {
+			Long userId = 1L;
+			Long noteId = 10L;
+
+			given(noteService.renameNote(any(NoteRenameCommand.class)))
+					.willThrow(new BusinessException(ErrorCode.NOTE_NOT_FOUND));
+
+			SecurityContextHolder.getContext()
+					.setAuthentication(new UsernamePasswordAuthenticationToken(userId, null, List.of()));
+
+			mockMvc.perform(patch("/api/notes/{noteId}/title", noteId)
+							.contentType(MediaType.APPLICATION_JSON)
+							.content("""
+									{"title":"새 제목"}
+									"""))
+					.andExpect(status().isNotFound())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value("NOTE_NOT_FOUND"));
 		}
 	}
 
@@ -911,7 +1041,7 @@ public class NoteControllerTest {
 		}
 
 		@Test
-		@DisplayName("keyword가 공백이면 400 + NOTE_SEARCH_KEYWORD_REQUIRED 반환")
+		@DisplayName("검색어가 공백이면 공개 노트 검색 요청을 거절한다")
 		void blankKeywordReturns400() throws Exception {
 			given(noteService.searchPublicNotes(any(NoteSearchQuery.class)))
 					.willThrow(new BusinessException(ErrorCode.NOTE_SEARCH_KEYWORD_REQUIRED));
@@ -1002,7 +1132,7 @@ public class NoteControllerTest {
 		}
 
 		@Test
-		@DisplayName("keyword가 공백이면 400 + NOTE_SEARCH_KEYWORD_REQUIRED 반환")
+		@DisplayName("검색어가 공백이면 내 노트 검색 요청을 거절한다")
 		void blankKeywordReturns400() throws Exception {
 			// given
 			Long userId = 1L;

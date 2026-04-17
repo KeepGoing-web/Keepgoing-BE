@@ -122,7 +122,7 @@ class NoteTest {
 		}
 
 		@Test
-		@DisplayName("폴더 owner와 작성자가 다르면 FOLDER_ACCESS_DENIED 예외가 발생한다.")
+		@DisplayName("폴더 소유자와 작성자가 다르면 해당 폴더로 노트를 만들 수 없다.")
 		void create_throwsWhenFolderOwnerDoesNotMatchAuthor() {
 			// given
 			Long authorId = 1L;
@@ -165,7 +165,7 @@ class NoteTest {
 		}
 
 		@Test
-		@DisplayName("제목이 비어있으면 INVALID_INPUT 예외가 발생한다.")
+		@DisplayName("제목이 비어 있으면 노트를 만들 수 없다.")
 		void create_throwsWhenTitleIsBlank() {
 			// given
 			User author = user(1L, "test@test.com", "test");
@@ -184,7 +184,7 @@ class NoteTest {
 		}
 
 		@Test
-		@DisplayName("본문이 비어있으면 INVALID_INPUT 예외가 발생한다.")
+		@DisplayName("본문이 비어 있으면 노트를 만들 수 없다.")
 		void create_throwsWhenContentIsBlank() {
 			// given
 			User author = user(1L, "test@test.com", "test");
@@ -352,7 +352,7 @@ class NoteTest {
 	}
 
 	@Test
-	@DisplayName("changeFolder: 작성자가 아니면 NOTE_ACCESS_DENIED 예외가 발생한다")
+	@DisplayName("changeFolder: 다른 사용자가 이동을 시도하면 예외가 발생한다")
 	void changeFolder_throwsWhenRequesterIsNotAuthor() {
 		// given
 		User author = user(1L, "author@test.com", "author");
@@ -366,7 +366,7 @@ class NoteTest {
 	}
 
 	@Test
-	@DisplayName("changeFolder: 다른 사용자의 폴더면 FOLDER_ACCESS_DENIED 예외가 발생한다")
+	@DisplayName("changeFolder: 다른 사용자의 폴더로는 이동할 수 없다")
 	void changeFolder_throwsWhenTargetFolderOwnedByAnotherUser() {
 		// given
 		User author = user(1L, "author@test.com", "author");
@@ -378,5 +378,77 @@ class NoteTest {
 		assertThatThrownBy(() -> note.changeFolder(author.getId(), otherFolder))
 				.isInstanceOf(BusinessException.class)
 				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_ACCESS_DENIED);
+	}
+
+	@Nested
+	@DisplayName("renameTitle")
+	class RenameTitle {
+
+		@Test
+		@DisplayName("작성자가 요청하면 제목이 변경된다")
+		void changesTitleWhenRequesterIsAuthor() {
+			User author = user(1L, "author@test.com", "author");
+			Note note = Note.create(author, null, TITLE, CONTENT, NoteVisibility.PRIVATE, false);
+
+			note.renameTitle(author.getId(), "새 제목");
+
+			assertThat(note.getTitle()).isEqualTo("새 제목");
+		}
+
+		@Test
+		@DisplayName("다른 사용자가 제목 변경을 시도하면 예외가 발생한다")
+		void throwsWhenRequesterIsNotAuthor() {
+			User author = user(1L, "author@test.com", "author");
+			Note note = Note.create(author, null, TITLE, CONTENT, NoteVisibility.PRIVATE, false);
+
+			assertThatThrownBy(() -> note.renameTitle(2L, "새 제목"))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_ACCESS_DENIED);
+		}
+
+		@Test
+		@DisplayName("제목을 공백으로 바꾸려고 하면 예외가 발생한다")
+		void throwsWhenTitleIsBlank() {
+			User author = user(1L, "author@test.com", "author");
+			Note note = Note.create(author, null, TITLE, CONTENT, NoteVisibility.PRIVATE, false);
+
+			assertThatThrownBy(() -> note.renameTitle(author.getId(), " "))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_INPUT);
+		}
+
+		@Test
+		@DisplayName("제목이 길이 제한을 넘으면 예외가 발생한다")
+		void throwsWhenTitleIsTooLong() {
+			User author = user(1L, "author@test.com", "author");
+			Note note = Note.create(author, null, TITLE, CONTENT, NoteVisibility.PRIVATE, false);
+
+			assertThatThrownBy(() -> note.renameTitle(author.getId(), "a".repeat(201)))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_INPUT);
+		}
+
+		@Test
+		@DisplayName("제목을 null로 바꾸려고 하면 예외가 발생한다")
+		void throwsWhenTitleIsNull() {
+			User author = user(1L, "author@test.com", "author");
+			Note note = Note.create(author, null, TITLE, CONTENT, NoteVisibility.PRIVATE, false);
+
+			assertThatThrownBy(() -> note.renameTitle(author.getId(), null))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_INPUT);
+		}
+
+		@Test
+		@DisplayName("제목 길이가 200자면 변경할 수 있다")
+		void changesTitleWhenLengthIsExactly200() {
+			User author = user(1L, "author@test.com", "author");
+			Note note = Note.create(author, null, TITLE, CONTENT, NoteVisibility.PRIVATE, false);
+			String newTitle = "a".repeat(200);
+
+			note.renameTitle(author.getId(), newTitle);
+
+			assertThat(note.getTitle()).isEqualTo(newTitle);
+		}
 	}
 }
