@@ -1,4 +1,4 @@
--- docs/perf/seed_notes_100k_pg.sql
+-- docs/postgres/perf/seed_notes_100k_pg.sql
 -- perf@example.com 사용자 기준으로 notes 100,000건 생성
 -- keyword 'spring' 10% 포함
 
