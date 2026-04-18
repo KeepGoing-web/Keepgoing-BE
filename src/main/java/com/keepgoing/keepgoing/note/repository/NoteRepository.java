@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -62,4 +63,16 @@ public interface NoteRepository extends JpaRepository<Note, Long> {
 	Page<Note> searchMyNotes(@Param("authorId") Long authorId,
 	                         @Param("keyword") String keyword,
 	                         Pageable pageable);
+
+	@Query("""
+        SELECT n
+        FROM Note n
+        WHERE n.author.id = :authorId
+          AND (LOWER(n.title) LIKE CONCAT('%', LOWER(:keyword), '%')
+               OR LOWER(n.content) LIKE CONCAT('%', LOWER(:keyword), '%'))
+          ORDER BY n.createdAt DESC, n.id DESC
+        """)
+	Slice<Note> searchMyNotesSlice(@Param("authorId") Long authorId,
+	                               @Param("keyword") String keyword,
+	                               Pageable pageable);
 }

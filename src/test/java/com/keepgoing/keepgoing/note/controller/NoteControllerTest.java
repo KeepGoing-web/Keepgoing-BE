@@ -48,6 +48,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.SliceImpl;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
 import org.springframework.http.MediaType;
@@ -1024,5 +1026,102 @@ public class NoteControllerTest {
 					.andExpect(jsonPath("$.error.code").value("NOTE_SEARCH_KEYWORD_REQUIRED"));
 		}
 
+	}
+
+	@Nested
+	@DisplayName("GET /api/notes/me/search-slice")
+	class SearchSlice {
+
+		@Test
+		@DisplayName("검색 성공 시 200 OK 및 hasNext를 반환")
+		void success() throws Exception {
+			// given
+			Long userId = 1L;
+			SecurityContextHolder.getContext()
+					.setAuthentication(
+							new UsernamePasswordAuthenticationToken(userId, null, List.of())
+					);
+
+			Pageable pageable = PageRequest.of(0, 10);
+
+			List<NoteSummaryResult> results = List.of(
+					new NoteSummaryResult(1L, 10L, "spring 제목", NoteVisibility.PUBLIC, true, null),
+					new NoteSummaryResult(2L, null, "기타 제목", NoteVisibility.PRIVATE, false, null)
+			);
+
+			Slice<NoteSummaryResult> slice = new SliceImpl<>(results, pageable, true);
+
+			given(noteService.searchMyNotesSlice(eq(userId), any(NoteSearchQuery.class)))
+					.willReturn(slice);
+
+			// when & then
+			mockMvc.perform(get("/api/notes/me/search-slice")
+							.param("keyword", "spring")
+							.param("page", "0")
+							.param("size", "10"))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.success").value(true))
+					.andExpect(jsonPath("$.data.contents").isArray())
+					.andExpect(jsonPath("$.data.contents.length()").value(2))
+					.andExpect(jsonPath("$.data.contents[0].title").value("spring 제목"))
+					.andExpect(jsonPath("$.data.contents[0].folderId").value(10L))
+					.andExpect(jsonPath("$.data.contents[1].folderId").isEmpty())
+					.andExpect(jsonPath("$.data.hasNext").value(true));
+
+			verify(noteService).searchMyNotesSlice(eq(userId), any(NoteSearchQuery.class));
+		}
+
+		@Test
+		@DisplayName("size가 MAX_PAGE_SIZE보다 크면 상한(100)으로 제한된다")
+		void clampsPageSize() throws Exception {
+			// given
+			Long userId = 1L;
+			SecurityContextHolder.getContext()
+					.setAuthentication(
+							new UsernamePasswordAuthenticationToken(userId, null, List.of())
+					);
+
+			given(noteService.searchMyNotesSlice(eq(userId), any(NoteSearchQuery.class)))
+					.willReturn(new SliceImpl<>(List.of(), PageRequest.of(0, 100), false));
+
+			// when
+			mockMvc.perform(get("/api/notes/me/search-slice")
+							.param("keyword", "spring")
+							.param("page", "0")
+							.param("size", "1000"))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.success").value(true));
+
+			// then
+			ArgumentCaptor<NoteSearchQuery> captor = ArgumentCaptor.forClass(NoteSearchQuery.class);
+			verify(noteService).searchMyNotesSlice(eq(userId), captor.capture());
+
+			NoteSearchQuery passed = captor.getValue();
+			assertThat(passed.keyword()).isEqualTo("spring");
+			assertThat(passed.pageable().getPageSize()).isEqualTo(100);
+		}
+
+		@Test
+		@DisplayName("keyword가 공백이면 400 + NOTE_SEARCH_KEYWORD_REQUIRED 반환")
+		void blankKeywordReturns400() throws Exception {
+			// given
+			Long userId = 1L;
+			SecurityContextHolder.getContext()
+					.setAuthentication(
+							new UsernamePasswordAuthenticationToken(userId, null, List.of())
+					);
+
+			given(noteService.searchMyNotesSlice(eq(userId), any(NoteSearchQuery.class)))
+					.willThrow(new BusinessException(ErrorCode.NOTE_SEARCH_KEYWORD_REQUIRED));
+
+			// when & then
+			mockMvc.perform(get("/api/notes/me/search-slice")
+							.param("keyword", "   ")
+							.param("page", "0")
+							.param("size", "10"))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value("NOTE_SEARCH_KEYWORD_REQUIRED"));
+		}
 	}
 }

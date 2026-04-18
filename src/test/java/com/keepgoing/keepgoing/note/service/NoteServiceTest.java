@@ -42,6 +42,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.SliceImpl;
 import org.springframework.data.domain.Sort;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -763,6 +765,80 @@ class NoteServiceTest {
 			assertThat(result.getTotalElements()).isEqualTo(1);
 			ArgumentCaptor<String> keywordCaptor = ArgumentCaptor.forClass(String.class);
 			verify(noteRepository).searchMyNotes(eq(userId), keywordCaptor.capture(), any(Pageable.class));
+			assertThat(keywordCaptor.getValue()).isEqualTo("spring");
+			verifyNoMoreInteractions(noteRepository);
+			verifyNoInteractions(userRepository, folderRepository);
+		}
+	}
+
+	@Nested
+	@DisplayName("내 노트 슬라이스 검색")
+	class SearchMyNotesSlice {
+
+		@Test
+		@DisplayName("keyword가 있으면 검색 결과를 슬라이스로 반환한다")
+		void returnsSliceWhenKeywordProvided() {
+			// given
+			Long userId = 1L;
+			User user = user(userId);
+			Folder folder = folder(user, 10L);
+			Note note = Note.create(user, folder, "spring 제목", "내용", NoteVisibility.PUBLIC, true);
+			Pageable pageable = PageRequest.of(0, 1);
+			Slice<Note> noteSlice = new SliceImpl<>(List.of(note), pageable, true);
+			NoteSearchQuery query = new NoteSearchQuery("spring", pageable);
+
+			given(noteRepository.searchMyNotesSlice(eq(userId), eq("spring"), any(Pageable.class)))
+					.willReturn(noteSlice);
+
+			// when
+			Slice<NoteSummaryResult> result = noteService.searchMyNotesSlice(userId, query);
+
+			// then
+			assertThat(result.hasNext()).isTrue();
+			assertThat(result.getContent()).hasSize(1);
+			assertThat(result.getContent().get(0).folderId()).isEqualTo(10L);
+			verify(noteRepository).searchMyNotesSlice(eq(userId), eq("spring"), any(Pageable.class));
+			verifyNoMoreInteractions(noteRepository);
+			verifyNoInteractions(userRepository, folderRepository);
+		}
+
+		@Test
+		@DisplayName("keyword가 비어있으면 NOTE_SEARCH_KEYWORD_REQUIRED 예외가 발생한다")
+		void throwsWhenKeywordBlank() {
+			// given
+			Long userId = 1L;
+			Pageable pageable = PageRequest.of(0, 10);
+			NoteSearchQuery query = new NoteSearchQuery("   ", pageable);
+
+			// when & then
+			assertThatThrownBy(() -> noteService.searchMyNotesSlice(userId, query))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_SEARCH_KEYWORD_REQUIRED);
+
+			verifyNoInteractions(noteRepository, userRepository, folderRepository);
+		}
+
+		@Test
+		@DisplayName("keyword 앞뒤 공백은 trim되어 검색된다")
+		void trimsKeywordBeforeSearching() {
+			// given
+			Long userId = 1L;
+			User user = user(userId);
+			Note note = Note.create(user, null, "spring 제목", "내용", NoteVisibility.PUBLIC, true);
+			Pageable pageable = PageRequest.of(0, 10);
+			Slice<Note> noteSlice = new SliceImpl<>(List.of(note), pageable, false);
+			NoteSearchQuery query = new NoteSearchQuery("  spring  ", pageable);
+
+			given(noteRepository.searchMyNotesSlice(eq(userId), eq("spring"), any(Pageable.class)))
+					.willReturn(noteSlice);
+
+			// when
+			Slice<NoteSummaryResult> result = noteService.searchMyNotesSlice(userId, query);
+
+			// then
+			assertThat(result.hasNext()).isFalse();
+			ArgumentCaptor<String> keywordCaptor = ArgumentCaptor.forClass(String.class);
+			verify(noteRepository).searchMyNotesSlice(eq(userId), keywordCaptor.capture(), any(Pageable.class));
 			assertThat(keywordCaptor.getValue()).isEqualTo("spring");
 			verifyNoMoreInteractions(noteRepository);
 			verifyNoInteractions(userRepository, folderRepository);
