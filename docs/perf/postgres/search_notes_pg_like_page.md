@@ -26,7 +26,7 @@
 - 기대: HTTP 200 + `success=true` + `totalElements > 0`
 
 <p align="center">
-  <img src="images/curl_like_200.png" width="720" alt="LIKE API smoke (200, totalElements>0)">
+  <img src="images/curl_like_page_200.png" width="720" alt="LIKE API smoke (200, totalElements>0)">
 </p>
 
 ## 실험 대상
@@ -65,8 +65,12 @@
 - matched notes: `10,000`
 
 근거 캡처:
-- ![seed count](/docs/perf/postgres/images/total_and_matched_notes.png)
-- ![user](/docs/perf/postgres/images/user.png)
+<p align="center">
+  <img src="images/total_and_matched_notes.png" width="720" alt="seed count">
+</p>
+<p align="center">
+  <img src="images/user.png" width="720" alt="user">
+</p>
 
 ---
 
@@ -93,7 +97,9 @@
 - 즉, 첫 페이지 최신순 조회 기준에서는 content query 자체가 병목으로 보이지 않는다.
 
 근거 캡처:
-- ![content explain](/docs/perf/postgres/images/explain_content_like.png)
+<p align="center">
+  <img src="images/explain_content_like_page.png" width="720" alt="content explain">
+</p>
 
 ### 2. count query
 
@@ -117,7 +123,9 @@
   매칭 후보를 heap에서 다시 확인하는 구조라 후보 집합이 커질수록 비용이 커질 수 있다.
 
 근거 캡처:
-- ![count explain](/docs/perf/postgres/images/explain_count_like.png)
+<p align="center">
+  <img src="images/explain_count_like_page.png" width="720" alt="count explain">
+</p>
 
 ### EXPLAIN 관찰 요약
 
@@ -137,6 +145,14 @@ count query가 더 큰 비용을 차지할 수 있음을 보여준다.
 
 ## k6 결과
 
+### 실행 커맨드
+
+```bash
+BASE_URL=http://localhost:8080 COOKIE_HEADER="$ACCESS_COOKIE" \
+k6 run --summary-export docs/perf/postgres/results/notes_like_page_run1.json \
+perf/search_my_notes_postgres_like_page.js
+```
+
 ### phase=measure 기준 요약
 
 | run | avg (ms) | p95 (ms) | req/s | fail |
@@ -151,29 +167,20 @@ count query가 더 큰 비용을 차지할 수 있음을 보여준다.
 - p95: `66.15 ~ 70.70 ms`
 - req/s: `7.25 ~ 7.25`
 
-### 실행 커맨드
+>#### 지표 해석
+>`avg`: 평균 응답시간(중심 지표) 
+> `p95`: 상위 5% 느린 응답 경계(체감 품질)
+> `req/s`: measure 구간 기준 처리량
+> `fail`: 실패율(비교 전제)
 
-```bash
-BASE_URL=http://localhost:8080 COOKIE_HEADER="$ACCESS_COOKIE" \
-k6 run --summary-export docs/perf/postgres/results/notes_like_page_run1.json \
-perf/search_my_notes_postgres.js
-```
-
-<p align="center">
-  <img src="images/k6_like.png" width="720" alt="k6 결과 (PostgreSQL, LIKE + pg_trgm + Page)">
-</p>
-
-#### 지표 해석
-
-- `avg`: 평균 응답시간(중심 지표)
-- `p95`: 상위 5% 느린 응답 경계(체감 품질)
-- `req/s`: measure 구간 기준 처리량
-- `fail`: 실패율(비교 전제)
-
-### 반복 측정 관찰
+### 결과 해석
 
 - 3회 모두 `fail 0%`로 안정적으로 수행되었다.
 - avg와 p95 편차가 작아, 현재 baseline은 로컬 환경에서도 비교적 안정적인 편이다.
+
+<p align="center">
+  <img src="images/k6_like_page.png" width="720" alt="k6 결과 (PostgreSQL, LIKE + pg_trgm + Page)">
+</p>
 
 ## 결론
 
