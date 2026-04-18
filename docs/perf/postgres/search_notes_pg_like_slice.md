@@ -80,7 +80,8 @@ content query 외에 `count query`를 추가로 실행했다.
 
 근거:
 - [NoteRepositoryTest.java](../../../src/test/java/com/keepgoing/keepgoing/note/repository/NoteRepositoryTest.java)
-
+    - void searchMyNotes_executesContentAndCountQueries() 
+    - void searchMyNotesSlice_executesOnlyContentQuery()
 ---
 
 ## EXPLAIN (ANALYZE, BUFFERS)
