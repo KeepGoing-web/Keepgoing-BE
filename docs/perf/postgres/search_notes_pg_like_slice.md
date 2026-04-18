@@ -127,7 +127,7 @@ count query를 제거하면서 전체 요청 비용은 오히려 크게 줄어�
 ```bash
 BASE_URL=http://localhost:8080 COOKIE_HEADER="$ACCESS_COOKIE" \
 k6 run --summary-export docs/perf/postgres/results/notes_like_slice_run1.json \
-perf/search_my_notes_postgres_slice.js
+perf/search_my_notes_pg_like_slice.js
 ```
 
 ### phase=measure 기준 요약

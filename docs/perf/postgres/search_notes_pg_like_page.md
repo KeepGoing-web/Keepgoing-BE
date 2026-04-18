@@ -150,7 +150,7 @@ count query가 더 큰 비용을 차지할 수 있음을 보여준다.
 ```bash
 BASE_URL=http://localhost:8080 COOKIE_HEADER="$ACCESS_COOKIE" \
 k6 run --summary-export docs/perf/postgres/results/notes_like_page_run1.json \
-perf/search_my_notes_postgres_like_page.js
+perf/search_my_notes_pg_like_page.js
 ```
 
 ### phase=measure 기준 요약
