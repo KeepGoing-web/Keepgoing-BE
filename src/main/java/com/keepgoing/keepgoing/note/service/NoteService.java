@@ -23,6 +23,7 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -125,6 +126,13 @@ public class NoteService {
 				.map(NoteSummaryResult::from);
 	}
 
+	@Transactional(readOnly = true)
+	public Slice<NoteSummaryResult> searchMyNotesSlice(Long userId, NoteSearchQuery query) {
+		validateSearchQuery(query);
+
+		return noteRepository.searchMyNotesSlice(userId, query.keyword(), query.pageable())
+				.map(NoteSummaryResult::from);
+	}
 
 	/**
 	 * 전체(공개) 검색

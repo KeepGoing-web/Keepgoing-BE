@@ -184,7 +184,7 @@ WHERE p.author_id = 3
 - 실행 커맨드:
 ```bash
 VARIANT=FULLTEXT MODE=SCORE TOKEN="$TOKEN" KEYWORD="spring" \
-  k6 run --summary-export "docs/perf/results/fulltext_score_spring_run1.json" perf/search_my_posts.js
+  k6 run --summary-export "docs/perf/results/fulltext_score_spring_run1.json" perf/search_my_posts_mysql.js
 ```
 
 ### 측정 결과 (phase=measure) - run3
