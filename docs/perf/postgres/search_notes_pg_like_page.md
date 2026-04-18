@@ -139,17 +139,17 @@ count query가 더 큰 비용을 차지할 수 있음을 보여준다.
 
 ### phase=measure 기준 요약
 
-| run | avg (ms) | p95 (ms) | req/s(전체 실행 기준) | fail |
+| run | avg (ms) | p95 (ms) | req/s | fail |
 |---:|---:|---:|---:|---:|
-| 1 | 48.08 | 70.70 | 9.75 | 0.00% |
-| 2 | 39.42 | 66.15 | 9.75 | 0.00% |
-| 3 | 47.74 | 69.26 | 9.75 | 0.00% |
-| mean | 45.08 | 68.70 | 9.75 | 0.00% |
+| 1 | 48.08 | 70.70 | 7.25 | 0.00% |
+| 2 | 39.42 | 66.15 | 7.25 | 0.00% |
+| 3 | 47.74 | 69.26 | 7.25 | 0.00% |
+| mean | 45.08 | 68.70 | 7.25 | 0.00% |
 
 편차 범위:
 - avg: `39.42 ~ 48.08 ms`
 - p95: `66.15 ~ 70.70 ms`
-- req/s: `9.75 ~ 9.75`
+- req/s: `7.25 ~ 7.25`
 
 ### 실행 커맨드
 
@@ -159,11 +159,6 @@ k6 run --summary-export docs/perf/postgres/results/notes_like_page_run1.json \
 perf/search_my_notes_postgres.js
 ```
 
-참고:
-- `avg`, `p95`, `fail`은 `phase=measure` 기준이다.
-- `req/s`는 summary-export에 저장된 전체 실행(warmup + measure) 기준 값을 사용했다.
-- 따라서 `req/s`는 참고 지표로 해석하고, 핵심 비교 지표는 `avg/p95/fail`로 본다.
-
 <p align="center">
   <img src="images/k6_like.png" width="720" alt="k6 결과 (PostgreSQL, LIKE + pg_trgm + Page)">
 </p>
@@ -172,7 +167,7 @@ perf/search_my_notes_postgres.js
 
 - `avg`: 평균 응답시간(중심 지표)
 - `p95`: 상위 5% 느린 응답 경계(체감 품질)
-- `req/s`: 전체 실행 기준 처리량 참고 지표
+- `req/s`: measure 구간 기준 처리량
 - `fail`: 실패율(비교 전제)
 
 ### 반복 측정 관찰
@@ -183,7 +178,7 @@ perf/search_my_notes_postgres.js
 ## 결론
 
 - 현재 PostgreSQL baseline에서 `/api/notes/me/search`의 체감 응답시간은 안정적이다.
-- `phase=measure` 기준 3회 평균은 `avg 45.08 ms / p95 68.70 ms / fail 0%`였다.
+- `phase=measure` 기준 3회 평균은 `avg 45.08 ms / p95 68.70 ms / req/s 7.25 / fail 0%`였다.
 - content query는 `author_id + created_at DESC` 인덱스를 잘 활용해 매우 빠르게 수행됐다.
 - 반면 `Page` 응답을 위한 count query는 `pg_trgm` 인덱스를 사용하고도
   content query보다 훨씬 큰 비용을 보였다.
