@@ -43,6 +43,7 @@ application-oauth.yml
 !gradle/wrapper/gradle-wrapper.properties
 
 docs/perf/mysql/results/
+docs/perf/postgres/results/
 
 .omx/
 .omc/
