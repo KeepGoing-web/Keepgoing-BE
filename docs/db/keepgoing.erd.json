@@ -4,8 +4,8 @@
   "settings": {
     "width": 20000,
     "height": 20000,
-    "scrollTop": -8238.1667,
-    "scrollLeft": -9022.3333,
+    "scrollTop": -8562.1667,
+    "scrollLeft": -8538.3333,
     "zoomLevel": 1,
     "show": 495,
     "database": 4,
@@ -38,7 +38,8 @@
       "resume_jobs_table",
       "user_oauth_accounts_table",
       "user_password_credentials_table",
-      "folders_table"
+      "folders_table",
+      "activity_events_table"
     ],
     "relationshipIds": [
       "rel_users_blogs",
@@ -49,7 +50,9 @@
       "rel_upc_user",
       "rel_users_folders",
       "rel_folders_parent",
-      "rel_folders_blogs"
+      "rel_folders_blogs",
+      "rel_users_activity_events",
+      "rel_notes_activity_events"
     ],
     "indexIds": [],
     "memoIds": []
@@ -122,15 +125,15 @@
           "blogs_deleted_at"
         ],
         "ui": {
-          "x": 9055.065,
-          "y": 8695.7145,
+          "x": 9053.065,
+          "y": 8675.7145,
           "zIndex": 3,
           "widthName": 60,
           "widthComment": 142,
           "color": "#27AE60"
         },
         "meta": {
-          "updateAt": 1774010851196,
+          "updateAt": 1776407161295,
           "createAt": 1699999999999
         }
       },
@@ -154,15 +157,15 @@
           "uV0x_vb1mF-4bLjCtLiwQ"
         ],
         "ui": {
-          "x": 8728.58706632632,
-          "y": 9263.323484958277,
+          "x": 8396.5871,
+          "y": 8769.3235,
           "zIndex": 4,
           "widthName": 84,
           "widthComment": 139,
           "color": "#9B59B6"
         },
         "meta": {
-          "updateAt": 1774010812916,
+          "updateAt": 1776407117244,
           "createAt": 1699999999999
         }
       },
@@ -322,15 +325,48 @@
         ],
         "ui": {
           "x": 9717.3003,
-          "y": 8407.987,
+          "y": 8412.987,
           "zIndex": 5,
           "widthName": 60,
           "widthComment": 140,
           "color": "#F5A623"
         },
         "meta": {
-          "updateAt": 1774010847147,
+          "updateAt": 1776407152811,
           "createAt": 1774010688368
+        }
+      },
+      "activity_events_table": {
+        "id": "activity_events_table",
+        "name": "activity_events",
+        "comment": "개인 대시보드 잔디/통계용 활동 이벤트 원장",
+        "columnIds": [
+          "activity_events_id",
+          "activity_events_user_id",
+          "activity_events_note_id",
+          "activity_events_type",
+          "activity_events_activity_date",
+          "activity_events_created_at"
+        ],
+        "seqColumnIds": [
+          "activity_events_id",
+          "activity_events_user_id",
+          "activity_events_note_id",
+          "activity_events_type",
+          "activity_events_activity_date",
+          "activity_events_created_at"
+        ],
+        "ui": {
+          "x": 8672,
+          "y": 9016,
+          "zIndex": 7,
+          "widthName": 86,
+          "widthComment": 209,
+          "color": "#E67E22"
+        },
+        "meta": {
+          "updateAt": 1776407166597,
+          "createAt": 1776406593048
         }
       }
     },
@@ -1434,6 +1470,126 @@
           "updateAt": 1774010688368,
           "createAt": 1774010688368
         }
+      },
+      "activity_events_id": {
+        "id": "activity_events_id",
+        "tableId": "activity_events_table",
+        "name": "id",
+        "comment": "활동 이벤트 고유 ID",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 11,
+        "ui": {
+          "keys": 1,
+          "widthName": 60,
+          "widthComment": 97,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1776406593048,
+          "createAt": 1776406593048
+        }
+      },
+      "activity_events_user_id": {
+        "id": "activity_events_user_id",
+        "tableId": "activity_events_table",
+        "name": "user_id",
+        "comment": "활동 주체 사용자 ID (FK)",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 10,
+        "ui": {
+          "keys": 2,
+          "widthName": 60,
+          "widthComment": 124,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1776406593048,
+          "createAt": 1776406593048
+        }
+      },
+      "activity_events_note_id": {
+        "id": "activity_events_note_id",
+        "tableId": "activity_events_table",
+        "name": "note_id",
+        "comment": "관련 노트 ID (FK)",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 10,
+        "ui": {
+          "keys": 2,
+          "widthName": 60,
+          "widthComment": 90,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1776406593048,
+          "createAt": 1776406593048
+        }
+      },
+      "activity_events_type": {
+        "id": "activity_events_type",
+        "tableId": "activity_events_table",
+        "name": "type",
+        "comment": "활동 종류 (NOTE_CREATED/NOTE_UPDATED)",
+        "dataType": "VARCHAR(30)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 250,
+          "widthDataType": 83,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1776406593048,
+          "createAt": 1776406593048
+        }
+      },
+      "activity_events_activity_date": {
+        "id": "activity_events_activity_date",
+        "tableId": "activity_events_table",
+        "name": "activity_date",
+        "comment": "KST 기준 집계 날짜",
+        "dataType": "DATE",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 74,
+          "widthComment": 97,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1776406593048,
+          "createAt": 1776406593048
+        }
+      },
+      "activity_events_created_at": {
+        "id": "activity_events_created_at",
+        "tableId": "activity_events_table",
+        "name": "created_at",
+        "comment": "이벤트 row 생성 시각",
+        "dataType": "DATETIME",
+        "default": "CURRENT_TIMESTAMP",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 63,
+          "widthComment": 105,
+          "widthDataType": 61,
+          "widthDefault": 133
+        },
+        "meta": {
+          "updateAt": 1776406593048,
+          "createAt": 1776406593048
+        }
       }
     },
     "relationshipEntities": {
@@ -1456,8 +1612,8 @@
           "columnIds": [
             "blogs_author_id"
           ],
-          "x": 9783.065,
-          "y": 8917.7145,
+          "x": 9781.065,
+          "y": 8897.7145,
           "direction": 2
         },
         "meta": {
@@ -1475,17 +1631,17 @@
           "columnIds": [
             "blogs_id"
           ],
-          "x": 9419.065,
-          "y": 8991.7145,
-          "direction": 8
+          "x": 9053.065,
+          "y": 8823.7145,
+          "direction": 1
         },
         "end": {
           "tableId": "blog_revisions_table",
           "columnIds": [
             "blog_revisions_blog_id"
           ],
-          "x": 9247.58706632632,
-          "y": 9351.323484958277,
+          "x": 8915.5871,
+          "y": 8857.3235,
           "direction": 2
         },
         "meta": {
@@ -1560,7 +1716,7 @@
             "users_id"
           ],
           "x": 9669.06651224878,
-          "y": 9186.226063345455,
+          "y": 9248.226063345455,
           "direction": 1
         },
         "end": {
@@ -1625,7 +1781,7 @@
             "folders_owner_id"
           ],
           "x": 10154.5503,
-          "y": 8631.987,
+          "y": 8636.987,
           "direction": 8
         },
         "meta": {
@@ -1644,7 +1800,7 @@
             "folders_id"
           ],
           "x": 10280.3003,
-          "y": 8407.987,
+          "y": 8412.987,
           "direction": 4
         },
         "end": {
@@ -1653,7 +1809,7 @@
             "folders_parent_id"
           ],
           "x": 10300.3003,
-          "y": 8427.987,
+          "y": 8432.987,
           "direction": 2
         },
         "meta": {
@@ -1672,7 +1828,7 @@
             "folders_id"
           ],
           "x": 9863.0503,
-          "y": 8631.987,
+          "y": 8636.987,
           "direction": 8
         },
         "end": {
@@ -1680,13 +1836,69 @@
           "columnIds": [
             "blogs_folder_id"
           ],
-          "x": 9783.065,
-          "y": 8769.7145,
+          "x": 9781.065,
+          "y": 8749.7145,
           "direction": 2
         },
         "meta": {
           "updateAt": 1774010688368,
           "createAt": 1774010688368
+        }
+      },
+      "rel_users_activity_events": {
+        "id": "rel_users_activity_events",
+        "identification": true,
+        "relationshipType": 4,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "users_table",
+          "columnIds": [
+            "users_id"
+          ],
+          "x": 9669.06651224878,
+          "y": 9124.226063345455,
+          "direction": 1
+        },
+        "end": {
+          "tableId": "activity_events_table",
+          "columnIds": [
+            "activity_events_user_id"
+          ],
+          "x": 9367,
+          "y": 9166,
+          "direction": 2
+        },
+        "meta": {
+          "updateAt": 1776406593048,
+          "createAt": 1776406593048
+        }
+      },
+      "rel_notes_activity_events": {
+        "id": "rel_notes_activity_events",
+        "identification": true,
+        "relationshipType": 4,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "blogs_table",
+          "columnIds": [
+            "blogs_id"
+          ],
+          "x": 9417.065,
+          "y": 8971.7145,
+          "direction": 8
+        },
+        "end": {
+          "tableId": "activity_events_table",
+          "columnIds": [
+            "activity_events_note_id"
+          ],
+          "x": 9367,
+          "y": 9066,
+          "direction": 2
+        },
+        "meta": {
+          "updateAt": 1776406593048,
+          "createAt": 1776406593048
         }
       }
     },
