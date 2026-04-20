@@ -6,10 +6,12 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
+import com.keepgoing.keepgoing.activity.service.ActivityEventRecord;
 import com.keepgoing.keepgoing.folder.domain.Folder;
 import com.keepgoing.keepgoing.folder.repository.FolderRepository;
 import com.keepgoing.keepgoing.folder.service.FolderLockService;
@@ -37,6 +39,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
@@ -63,6 +66,9 @@ class NoteServiceTest {
 	@Mock
 	FolderLockService folderLockService;
 
+	@Mock
+	ActivityEventRecord activityEventRecord;
+
 	@InjectMocks
 	NoteService noteService;
 
@@ -73,6 +79,7 @@ class NoteServiceTest {
 		@Test
 		@DisplayName("folderId가 null이면 루트 노트를 생성한다")
 		void createsRootNoteWhenFolderIdIsNull() {
+			// given
 			Long userId = 1L;
 			NoteCreateCommand command = NoteCreateCommand.builder()
 					.userId(userId)
@@ -88,10 +95,13 @@ class NoteServiceTest {
 			given(noteRepository.save(any(Note.class)))
 					.willAnswer(invocation -> invocation.getArgument(0));
 
+			// when
 			NoteDetailResult result = noteService.createNote(command);
 
+			// then
 			ArgumentCaptor<Note> noteCaptor = ArgumentCaptor.forClass(Note.class);
-			verify(noteRepository).save(noteCaptor.capture());
+			InOrder inOrder = inOrder(noteRepository, activityEventRecord);
+			inOrder.verify(noteRepository).save(noteCaptor.capture());
 
 			Note savedNote = noteCaptor.getValue();
 			assertThat(savedNote.getAuthor().getId()).isEqualTo(userId);
@@ -108,14 +118,16 @@ class NoteServiceTest {
 			assertThat(result.visibility()).isEqualTo(command.visibility());
 			assertThat(result.aiCollectable()).isEqualTo(command.aiCollectable());
 
+			inOrder.verify(activityEventRecord).recordNoteCreated(eq(author), eq(savedNote));
 			verify(userRepository).findById(userId);
 			verifyNoInteractions(folderRepository);
-			verifyNoMoreInteractions(userRepository, noteRepository);
+			verifyNoMoreInteractions(userRepository, noteRepository, activityEventRecord);
 		}
 
 		@Test
 		@DisplayName("없는 사용자가 노트 생성을 요청하면 예외가 발생한다")
 		void throwsWhenUserNotFound() {
+			// given
 			Long userId = 1L;
 			NoteCreateCommand command = new NoteCreateCommand(
 					userId,
@@ -128,16 +140,18 @@ class NoteServiceTest {
 
 			given(userRepository.findById(userId)).willReturn(Optional.empty());
 
+			// when & then
 			assertThatThrownBy(() -> noteService.createNote(command))
 					.isInstanceOf(BusinessException.class)
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.USER_NOT_FOUND);
 			verify(userRepository).findById(userId);
-			verifyNoInteractions(noteRepository, folderRepository);
+			verifyNoInteractions(noteRepository, folderRepository, activityEventRecord);
 		}
 
 		@Test
 		@DisplayName("내 폴더가 주어지면 해당 폴더에 노트를 생성한다")
 		void createsNoteWhenFolderExists() {
+			// given
 			Long userId = 1L;
 			User author = user(userId, "test@example.com", "테스트유저");
 			Folder folder = folder(author, 2L);
@@ -155,10 +169,13 @@ class NoteServiceTest {
 			given(noteRepository.save(any(Note.class)))
 					.willAnswer(invocation -> invocation.getArgument(0));
 
+			// when
 			NoteDetailResult result = noteService.createNote(command);
 
+			// then
 			ArgumentCaptor<Note> noteCaptor = ArgumentCaptor.forClass(Note.class);
-			verify(noteRepository).save(noteCaptor.capture());
+			InOrder inOrder = inOrder(noteRepository, activityEventRecord);
+			inOrder.verify(noteRepository).save(noteCaptor.capture());
 
 			Note savedNote = noteCaptor.getValue();
 			assertThat(savedNote.getAuthor().getId()).isEqualTo(userId);
@@ -175,15 +192,16 @@ class NoteServiceTest {
 			assertThat(result.content()).isEqualTo(command.content());
 			assertThat(result.visibility()).isEqualTo(command.visibility());
 			assertThat(result.aiCollectable()).isEqualTo(command.aiCollectable());
+			inOrder.verify(activityEventRecord).recordNoteCreated(eq(author), eq(savedNote));
 			verify(userRepository).findById(userId);
 			verify(folderLockService).lockActiveFolder(folder.getId());
-			verify(noteRepository).save(any(Note.class));
-			verifyNoMoreInteractions(userRepository, noteRepository, folderRepository, folderLockService);
+			verifyNoMoreInteractions(userRepository, noteRepository, folderRepository, folderLockService, activityEventRecord);
 		}
 
 		@Test
 		@DisplayName("없는 폴더로 노트를 만들려고 하면 예외가 발생한다")
 		void throwsWhenFolderNotFound() {
+			// given
 			Long userId = 1L;
 			User author = user(userId);
 			NoteCreateCommand command = NoteCreateCommand.builder()
@@ -199,18 +217,20 @@ class NoteServiceTest {
 			given(folderLockService.lockActiveFolder(2L))
 					.willThrow(new BusinessException(ErrorCode.FOLDER_NOT_FOUND));
 
+			// when & then
 			assertThatThrownBy(() -> noteService.createNote(command))
 					.isInstanceOf(BusinessException.class)
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_NOT_FOUND);
 			verify(userRepository).findById(command.userId());
 			verify(folderLockService).lockActiveFolder(2L);
 			verifyNoMoreInteractions(userRepository, folderRepository, folderLockService);
-			verifyNoInteractions(noteRepository);
+			verifyNoInteractions(noteRepository, activityEventRecord);
 		}
 
 		@Test
 		@DisplayName("다른 사용자의 폴더로 노트를 만들려고 하면 예외가 발생한다")
 		void throwsWhenFolderOwnedByAnotherUser() {
+			// given
 			Long userId = 1L;
 			Long otherUserId = 2L;
 			Long folderId = 10L;
@@ -229,13 +249,14 @@ class NoteServiceTest {
 			given(userRepository.findById(command.userId())).willReturn(Optional.of(author));
 			given(folderLockService.lockActiveFolder(folderId)).willReturn(folder);
 
+			// when & then
 			assertThatThrownBy(() -> noteService.createNote(command))
 					.isInstanceOf(BusinessException.class)
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_ACCESS_DENIED);
 			verify(userRepository).findById(command.userId());
 			verify(folderLockService).lockActiveFolder(folderId);
 			verifyNoMoreInteractions(userRepository, folderRepository, folderLockService);
-			verifyNoInteractions(noteRepository);
+			verifyNoInteractions(noteRepository, activityEventRecord);
 		}
 	}
 
@@ -390,6 +411,7 @@ class NoteServiceTest {
 		@Test
 		@DisplayName("작성자가 맞으면 게시글이 수정된다")
 		void updatesWhenAuthorMatches() {
+			// given
 			Long userId = 1L;
 			Long noteId = 10L;
 			User user = user(userId);
@@ -409,20 +431,24 @@ class NoteServiceTest {
 
 			given(noteRepository.findById(noteId)).willReturn(Optional.of(note));
 
+			// when
 			NoteDetailResult result = noteService.updateNote(command);
 
+			// then
 			assertThat(result.title()).isEqualTo(newTitle);
 			assertThat(result.content()).isEqualTo(newContent);
 			assertThat(result.visibility()).isEqualTo(newVisibility);
 			assertThat(result.aiCollectable()).isEqualTo(newAiCollectable);
 			verify(noteRepository).findById(noteId);
-			verifyNoMoreInteractions(noteRepository);
+			verify(activityEventRecord).recordNoteUpdated(user, note);
+			verifyNoMoreInteractions(noteRepository, activityEventRecord);
 			verifyNoInteractions(userRepository, folderRepository);
 		}
 
 		@Test
 		@DisplayName("없는 노트를 수정하려고 하면 예외가 발생한다")
 		void throwsWhenNoteNotFound() {
+			// given
 			Long userId = 1L;
 			Long noteId = 10L;
 			NoteUpdateCommand command = new NoteUpdateCommand(
@@ -436,17 +462,19 @@ class NoteServiceTest {
 
 			given(noteRepository.findById(noteId)).willReturn(Optional.empty());
 
+			// when & then
 			assertThatThrownBy(() -> noteService.updateNote(command))
 					.isInstanceOf(BusinessException.class)
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_NOT_FOUND);
 			verify(noteRepository).findById(noteId);
 			verifyNoMoreInteractions(noteRepository);
-			verifyNoInteractions(userRepository, folderRepository);
+			verifyNoInteractions(userRepository, folderRepository, activityEventRecord);
 		}
 
 		@Test
 		@DisplayName("다른 사용자가 노트 수정을 요청하면 예외가 발생한다")
 		void throwsWhenNotAuthor() {
+			// given
 			Long requesterId = 1L;
 			Long authorId = 2L;
 			Long noteId = 10L;
@@ -463,12 +491,13 @@ class NoteServiceTest {
 
 			given(noteRepository.findById(noteId)).willReturn(Optional.of(note));
 
+			// when & then
 			assertThatThrownBy(() -> noteService.updateNote(command))
 					.isInstanceOf(BusinessException.class)
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_ACCESS_DENIED);
 			verify(noteRepository).findById(noteId);
 			verifyNoMoreInteractions(noteRepository);
-			verifyNoInteractions(userRepository, folderRepository);
+			verifyNoInteractions(userRepository, folderRepository, activityEventRecord);
 		}
 	}
 
@@ -479,6 +508,7 @@ class NoteServiceTest {
 		@Test
 		@DisplayName("작성자가 맞으면 soft delete 된다")
 		void softDeletesWhenAuthorMatches() {
+			// given
 			Long userId = 1L;
 			Long noteId = 10L;
 			User user = user(userId);
@@ -486,33 +516,38 @@ class NoteServiceTest {
 
 			given(noteRepository.findById(noteId)).willReturn(Optional.of(note));
 
+			// when
 			noteService.deleteNote(userId, noteId);
 
+			// then
 			assertThat(note.isDeleted()).isTrue();
 			verify(noteRepository).findById(noteId);
 			verifyNoMoreInteractions(noteRepository);
-			verifyNoInteractions(userRepository, folderRepository);
+			verifyNoInteractions(userRepository, folderRepository, activityEventRecord);
 		}
 
 		@Test
 		@DisplayName("없는 노트를 삭제하려고 하면 예외가 발생한다")
 		void throwsWhenNoteNotFound() {
+			// given
 			Long userId = 1L;
 			Long noteId = 10L;
 
 			given(noteRepository.findById(noteId)).willReturn(Optional.empty());
 
+			// when & then
 			assertThatThrownBy(() -> noteService.deleteNote(userId, noteId))
 					.isInstanceOf(BusinessException.class)
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_NOT_FOUND);
 			verify(noteRepository).findById(noteId);
 			verifyNoMoreInteractions(noteRepository);
-			verifyNoInteractions(userRepository, folderRepository);
+			verifyNoInteractions(userRepository, folderRepository, activityEventRecord);
 		}
 
 		@Test
 		@DisplayName("다른 사용자가 노트 삭제를 요청하면 예외가 발생한다")
 		void throwsWhenNotAuthor() {
+			// given
 			Long requesterId = 1L;
 			Long authorId = 2L;
 			Long noteId = 10L;
@@ -521,12 +556,13 @@ class NoteServiceTest {
 
 			given(noteRepository.findById(noteId)).willReturn(Optional.of(note));
 
+			// when & then
 			assertThatThrownBy(() -> noteService.deleteNote(requesterId, noteId))
 					.isInstanceOf(BusinessException.class)
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_ACCESS_DENIED);
 			verify(noteRepository).findById(noteId);
 			verifyNoMoreInteractions(noteRepository);
-			verifyNoInteractions(userRepository, folderRepository);
+			verifyNoInteractions(userRepository, folderRepository, activityEventRecord);
 		}
 	}
 
@@ -537,6 +573,7 @@ class NoteServiceTest {
 		@Test
 		@DisplayName("작성자가 맞으면 제목이 변경된다")
 		void renamesWhenAuthorMatches() {
+			// given
 			Long userId = 1L;
 			Long noteId = 10L;
 			User author = user(userId);
@@ -545,35 +582,40 @@ class NoteServiceTest {
 
 			given(noteRepository.findById(noteId)).willReturn(Optional.of(note));
 
+			// when
 			NoteDetailResult result = noteService.renameNote(command);
 
+			// then
 			assertThat(note.getTitle()).isEqualTo("새 제목");
 			assertThat(result.title()).isEqualTo("새 제목");
 			verify(noteRepository).findById(noteId);
 			verifyNoMoreInteractions(noteRepository);
-			verifyNoInteractions(userRepository, folderRepository);
+			verifyNoInteractions(userRepository, folderRepository, activityEventRecord);
 		}
 
 		@Test
 		@DisplayName("없는 노트의 이동을 요청하면 예외가 발생한다")
 		void throwsWhenNoteNotFound() {
+			// given
 			Long userId = 1L;
 			Long noteId = 10L;
 			NoteRenameCommand command = new NoteRenameCommand(noteId, userId, "새 제목");
 
 			given(noteRepository.findById(noteId)).willReturn(Optional.empty());
 
+			// when & then
 			assertThatThrownBy(() -> noteService.renameNote(command))
 					.isInstanceOf(BusinessException.class)
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_NOT_FOUND);
 			verify(noteRepository).findById(noteId);
 			verifyNoMoreInteractions(noteRepository);
-			verifyNoInteractions(userRepository, folderRepository);
+			verifyNoInteractions(userRepository, folderRepository, activityEventRecord);
 		}
 
 		@Test
 		@DisplayName("다른 사용자가 제목 변경을 요청하면 예외가 발생한다")
 		void throwsWhenRequesterIsNotAuthor() {
+			// given
 			Long requesterId = 1L;
 			Long authorId = 2L;
 			Long noteId = 10L;
@@ -583,12 +625,13 @@ class NoteServiceTest {
 
 			given(noteRepository.findById(noteId)).willReturn(Optional.of(note));
 
+			// when & then
 			assertThatThrownBy(() -> noteService.renameNote(command))
 					.isInstanceOf(BusinessException.class)
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_ACCESS_DENIED);
 			verify(noteRepository).findById(noteId);
 			verifyNoMoreInteractions(noteRepository);
-			verifyNoInteractions(userRepository, folderRepository);
+			verifyNoInteractions(userRepository, folderRepository, activityEventRecord);
 		}
 	}
 
@@ -599,6 +642,7 @@ class NoteServiceTest {
 		@Test
 		@DisplayName("내 폴더로 이동하면 folderId가 변경된다")
 		void movesToOwnedFolder() {
+			// given
 			Long userId = 1L;
 			Long noteId = 10L;
 			Long folderId = 20L;
@@ -611,19 +655,22 @@ class NoteServiceTest {
 			given(folderLockService.lockActiveFolders(Arrays.asList(null, folderId)))
 					.willReturn(Map.of(folderId, folder));
 
+			// when
 			NoteDetailResult result = noteService.moveNote(command);
 
+			// then
 			assertThat(note.getFolder()).isEqualTo(folder);
 			assertThat(result.folderId()).isEqualTo(folderId);
 			verify(noteRepository).findById(noteId);
 			verify(folderLockService).lockActiveFolders(Arrays.asList(null, folderId));
 			verifyNoMoreInteractions(noteRepository, folderRepository, folderLockService);
-			verifyNoInteractions(userRepository);
+			verifyNoInteractions(userRepository, activityEventRecord);
 		}
 
 		@Test
 		@DisplayName("폴더 간 이동 시 source 와 target 폴더를 함께 잠근다")
 		void moveNote_locksSourceAndTargetFoldersTogether() {
+			// given
 			Long userId = 1L;
 			Long noteId = 10L;
 			Long sourceFolderId = 20L;
@@ -638,19 +685,22 @@ class NoteServiceTest {
 			given(folderLockService.lockActiveFolders(Arrays.asList(sourceFolderId, targetFolderId)))
 					.willReturn(Map.of(sourceFolderId, sourceFolder, targetFolderId, targetFolder));
 
+			// when
 			NoteDetailResult result = noteService.moveNote(command);
 
+			// then
 			assertThat(note.getFolder()).isEqualTo(targetFolder);
 			assertThat(result.folderId()).isEqualTo(targetFolderId);
 			verify(noteRepository).findById(noteId);
 			verify(folderLockService).lockActiveFolders(Arrays.asList(sourceFolderId, targetFolderId));
 			verifyNoMoreInteractions(noteRepository, folderRepository, folderLockService);
-			verifyNoInteractions(userRepository);
+			verifyNoInteractions(userRepository, activityEventRecord);
 		}
 
 		@Test
 		@DisplayName("folderId가 null이면 루트로 이동한다")
 		void movesToRootWhenFolderIdIsNull() {
+			// given
 			Long userId = 1L;
 			Long noteId = 10L;
 			Long existingFolderId = 30L;
@@ -663,19 +713,22 @@ class NoteServiceTest {
 			given(folderLockService.lockActiveFolders(Arrays.asList(existingFolderId, null)))
 					.willReturn(Map.of(existingFolderId, existingFolder));
 
+			// when
 			NoteDetailResult result = noteService.moveNote(command);
 
+			// then
 			assertThat(note.getFolder()).isNull();
 			assertThat(result.folderId()).isNull();
 			verify(noteRepository).findById(noteId);
 			verify(folderLockService).lockActiveFolders(Arrays.asList(existingFolderId, null));
 			verifyNoMoreInteractions(noteRepository, folderRepository, folderLockService);
-			verifyNoInteractions(userRepository);
+			verifyNoInteractions(userRepository, activityEventRecord);
 		}
 
 		@Test
 		@DisplayName("없는 노트의 제목 변경을 요청하면 예외가 발생한다")
 		void throwsWhenNoteNotFound() {
+			// given
 			Long noteId = 10L;
 			Long userId = 1L;
 			Long folderId = 20L;
@@ -683,17 +736,19 @@ class NoteServiceTest {
 
 			given(noteRepository.findById(noteId)).willReturn(Optional.empty());
 
+			// when & then
 			assertThatThrownBy(() -> noteService.moveNote(command))
 					.isInstanceOf(BusinessException.class)
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_NOT_FOUND);
 			verify(noteRepository).findById(noteId);
 			verifyNoMoreInteractions(noteRepository);
-			verifyNoInteractions(folderRepository, userRepository);
+			verifyNoInteractions(folderRepository, userRepository, activityEventRecord);
 		}
 
 		@Test
 		@DisplayName("없는 폴더로 노트를 이동하려고 하면 예외가 발생한다")
 		void throwsWhenFolderNotFound() {
+			// given
 			Long userId = 1L;
 			Long noteId = 10L;
 			Long folderId = 20L;
@@ -705,18 +760,20 @@ class NoteServiceTest {
 			given(folderLockService.lockActiveFolders(Arrays.asList(null, folderId)))
 					.willThrow(new BusinessException(ErrorCode.FOLDER_NOT_FOUND));
 
+			// when & then
 			assertThatThrownBy(() -> noteService.moveNote(command))
 					.isInstanceOf(BusinessException.class)
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_NOT_FOUND);
 			verify(noteRepository).findById(noteId);
 			verify(folderLockService).lockActiveFolders(Arrays.asList(null, folderId));
 			verifyNoMoreInteractions(noteRepository, folderRepository, folderLockService);
-			verifyNoInteractions(userRepository);
+			verifyNoInteractions(userRepository, activityEventRecord);
 		}
 
 		@Test
 		@DisplayName("다른 사용자가 노트 이동을 요청하면 예외가 발생한다")
 		void throwsWhenRequesterIsNotAuthor() {
+			// given
 			Long requesterId = 1L;
 			Long authorId = 2L;
 			Long noteId = 10L;
@@ -728,18 +785,20 @@ class NoteServiceTest {
 			given(folderLockService.lockActiveFolders(Arrays.asList(null, null)))
 					.willReturn(Map.of());
 
+			// when & then
 			assertThatThrownBy(() -> noteService.moveNote(command))
 					.isInstanceOf(BusinessException.class)
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_ACCESS_DENIED);
 			verify(noteRepository).findById(noteId);
 			verify(folderLockService).lockActiveFolders(Arrays.asList(null, null));
 			verifyNoMoreInteractions(noteRepository, folderRepository, folderLockService);
-			verifyNoInteractions(userRepository);
+			verifyNoInteractions(userRepository, activityEventRecord);
 		}
 
 		@Test
 		@DisplayName("다른 사용자의 폴더로 노트를 이동하려고 하면 예외가 발생한다")
 		void throwsWhenTargetFolderOwnedByAnotherUser() {
+			// given
 			Long userId = 1L;
 			Long otherUserId = 2L;
 			Long noteId = 10L;
@@ -760,7 +819,7 @@ class NoteServiceTest {
 			verify(noteRepository).findById(noteId);
 			verify(folderLockService).lockActiveFolders(Arrays.asList(null, folderId));
 			verifyNoMoreInteractions(noteRepository, folderRepository, folderLockService);
-			verifyNoInteractions(userRepository);
+			verifyNoInteractions(userRepository, activityEventRecord);
 		}
 	}
 

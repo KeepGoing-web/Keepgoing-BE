@@ -1,5 +1,6 @@
 package com.keepgoing.keepgoing.folder.service;
 
+import com.keepgoing.keepgoing.activity.repository.ActivityEventRepository;
 import com.keepgoing.keepgoing.folder.domain.Folder;
 import com.keepgoing.keepgoing.folder.repository.FolderRepository;
 import com.keepgoing.keepgoing.folder.service.dto.FolderCreateCommand;
@@ -44,6 +45,9 @@ public class FolderMutationConcurrencyTest {
 	NoteRepository noteRepository;
 
 	@Autowired
+	ActivityEventRepository activityEventRepository;
+
+	@Autowired
 	UserRepository userRepository;
 
 	private User user;
@@ -54,6 +58,7 @@ public class FolderMutationConcurrencyTest {
 
 	@BeforeEach
 	void setUp() {
+		activityEventRepository.deleteAll();
 		noteRepository.deleteAll();
 		folderRepository.deleteAll();
 		userRepository.deleteAll();
