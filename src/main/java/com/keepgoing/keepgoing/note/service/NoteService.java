@@ -18,7 +18,6 @@ import com.keepgoing.keepgoing.note.service.dto.NoteUpdateCommand;
 import com.keepgoing.keepgoing.user.domain.User;
 import com.keepgoing.keepgoing.user.repository.UserRepository;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;

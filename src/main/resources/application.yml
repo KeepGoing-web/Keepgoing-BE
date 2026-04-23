@@ -11,6 +11,12 @@ spring:
             client-id: ${OAUTH_GOOGLE_CLIENT_ID}
             client-secret: ${OAUTH_GOOGLE_CLIENT_SECRET}
 
+  ai:
+    logging:
+      prompt-response:
+        enabled: false
+
+
 jwt:
   secret-key: ${JWT_SECRET_KEY}
   access-token-expiry: 3600000      # 1시간

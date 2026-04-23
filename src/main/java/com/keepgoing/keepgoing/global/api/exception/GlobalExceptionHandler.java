@@ -7,6 +7,9 @@ import com.keepgoing.keepgoing.global.api.response.ErrorResponse;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.retry.NonTransientAiException;
+import org.springframework.ai.retry.TransientAiException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -15,6 +18,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     /**
@@ -84,4 +88,30 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(response);
     }
+
+	@ExceptionHandler(NonTransientAiException.class)
+	public ResponseEntity<ErrorResponse> handleNonTransientAi(NonTransientAiException ex) {
+		// API 키 오류, 잘못된 요청 등 - 재시도 무의미
+		ErrorDetail detail = ErrorDetail.of(
+				ErrorCode.SERVICE_UNAVAILABLE,
+				"AI 서비스 요청이 실패했습니다."
+		);
+		log.error("AI non-transient error", ex);
+		ErrorResponse response = ErrorResponse.of(detail);
+		return ResponseEntity.status(ErrorCode.SERVICE_UNAVAILABLE.getHttpStatus())
+				.body(response);
+	}
+
+	@ExceptionHandler(TransientAiException.class)
+	public ResponseEntity<ErrorResponse> handleTransientAi(TransientAiException ex) {
+		// retry 모두 실패 후 도달 - 일시적 장애
+		ErrorDetail detail = ErrorDetail.of(
+				ErrorCode.SERVICE_UNAVAILABLE,
+				"AI 서비스가 일시적으로 불안정합니다. 잠시 후 다시 시도해주세요."
+		);
+		log.warn("AI transient error after retries exhausted", ex);
+		ErrorResponse response = ErrorResponse.of(detail);
+		return ResponseEntity.status(ErrorCode.SERVICE_UNAVAILABLE.getHttpStatus())
+				.body(response);
+	}
 }
