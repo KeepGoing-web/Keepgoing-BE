@@ -1,13 +1,19 @@
 package com.keepgoing.keepgoing.activity;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.keepgoing.keepgoing.activity.domain.ActivityEvent;
 import com.keepgoing.keepgoing.activity.domain.ActivityEventType;
 import com.keepgoing.keepgoing.activity.repository.ActivityEventRepository;
+import com.keepgoing.keepgoing.note.controller.dto.NoteCreateRequest;
+import com.keepgoing.keepgoing.note.controller.dto.NoteUpdateRequest;
 import com.keepgoing.keepgoing.note.domain.Note;
 import com.keepgoing.keepgoing.note.domain.NoteVisibility;
 import com.keepgoing.keepgoing.note.repository.NoteRepository;
@@ -35,6 +41,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
@@ -47,6 +54,9 @@ class ActivityIntegrationTest {
 
 	@Autowired
 	MockMvc mockMvc;
+
+	@Autowired
+	ObjectMapper objectMapper;
 
 	@Autowired
 	UserRepository userRepository;
@@ -101,6 +111,72 @@ class ActivityIntegrationTest {
 					.andExpect(jsonPath("$.data.streak.longest").value(3))
 					.andExpect(jsonPath("$.data.streak.scope").value("ALL_TIME"))
 					.andExpect(jsonPath("$.data.backfillPolicy").value("CREATE_ONLY"));
+		}
+
+		@Test
+		@DisplayName("노트 생성 API로 기록된 활동이 대시보드 count에 반영된다")
+		void reflectsActivityEventCreatedByNoteCreateApi() throws Exception {
+			// given
+			User author = saveUser("note-create-activity@test.com", "노트 생성 활동 사용자");
+			LocalDate today = LocalDate.of(2026, 4, 20);
+			mockLoginUser(author.getId());
+
+			// when
+			createNoteByApi("오늘 작성한 노트", "활동으로 기록될 본문");
+
+			// then
+			List<ActivityEvent> events = activityEventRepository.findByUser_IdAndActivityDateBetween(
+					author.getId(),
+					today,
+					today
+			);
+			assertThat(events)
+					.extracting(ActivityEvent::getType)
+					.containsExactly(ActivityEventType.NOTE_CREATED);
+
+			mockMvc.perform(get("/api/activities/me/dashboard")
+							.param("from", "2026-04-20")
+							.param("to", "2026-04-20"))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.success").value(true))
+					.andExpect(jsonPath("$.data.calendar[0].date").value("2026-04-20"))
+					.andExpect(jsonPath("$.data.calendar[0].count").value(1))
+					.andExpect(jsonPath("$.data.summary.totalCount").value(1))
+					.andExpect(jsonPath("$.data.summary.activeDays").value(1));
+		}
+
+		@Test
+		@DisplayName("노트 수정 API로 추가 기록된 활동이 대시보드 count에 누적 반영된다")
+		void reflectsActivityEventCreatedByNoteUpdateApi() throws Exception {
+			// given
+			User author = saveUser("note-update-activity@test.com", "노트 수정 활동 사용자");
+			LocalDate today = LocalDate.of(2026, 4, 20);
+			mockLoginUser(author.getId());
+			Long noteId = createNoteByApi("수정 전 노트", "수정 전 본문");
+
+			// when
+			updateNoteByApi(noteId, "수정된 노트", "수정된 본문");
+
+			// then
+			List<ActivityEvent> events = activityEventRepository.findByUser_IdAndActivityDateBetween(
+					author.getId(),
+					today,
+					today
+			);
+			assertThat(events)
+					.extracting(ActivityEvent::getType)
+					.containsExactlyInAnyOrder(ActivityEventType.NOTE_CREATED, ActivityEventType.NOTE_UPDATED);
+
+			mockMvc.perform(get("/api/activities/me/dashboard")
+							.param("from", "2026-04-20")
+							.param("to", "2026-04-20"))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.success").value(true))
+					.andExpect(jsonPath("$.data.calendar[0].date").value("2026-04-20"))
+					.andExpect(jsonPath("$.data.calendar[0].count").value(2))
+					.andExpect(jsonPath("$.data.calendar[0].level").value(2))
+					.andExpect(jsonPath("$.data.summary.totalCount").value(2))
+					.andExpect(jsonPath("$.data.summary.activeDays").value(1));
 		}
 
 		@Test
@@ -183,6 +259,35 @@ class ActivityIntegrationTest {
 
 	private Note saveNote(User author, String title) {
 		return noteRepository.saveAndFlush(Note.create(author, null, title, "본문", NoteVisibility.PRIVATE, false));
+	}
+
+	private Long createNoteByApi(String title, String content) throws Exception {
+		MvcResult result = mockMvc.perform(post("/api/notes")
+						.contentType(APPLICATION_JSON)
+						.content(requestJson(new NoteCreateRequest(null, title, content, NoteVisibility.PRIVATE, false))))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.success").value(true))
+				.andExpect(jsonPath("$.data.title").value(title))
+				.andReturn();
+
+		return objectMapper.readTree(result.getResponse().getContentAsString())
+				.path("data")
+				.path("noteId")
+				.asLong();
+	}
+
+	private void updateNoteByApi(Long noteId, String title, String content) throws Exception {
+		mockMvc.perform(put("/api/notes/{noteId}", noteId)
+						.contentType(APPLICATION_JSON)
+						.content(requestJson(new NoteUpdateRequest(title, content, NoteVisibility.PRIVATE, false))))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.success").value(true))
+				.andExpect(jsonPath("$.data.noteId").value(noteId))
+				.andExpect(jsonPath("$.data.title").value(title));
+	}
+
+	private String requestJson(Object request) throws Exception {
+		return objectMapper.writeValueAsString(request);
 	}
 
 	private void saveActivityEvents(User author, Note note, List<LocalDate> dates) {
