@@ -178,6 +178,48 @@ class ActivityDashboardServiceTest {
 		}
 
 		@Test
+		@DisplayName("조회 기간이 정확히 1년이면 정상 조회한다")
+		void returnsDashboardWhenRangeIsExactlyOneYear() {
+			// given
+			Long userId = 1L;
+			LocalDate from = LocalDate.of(2025, 4, 20);
+			LocalDate to = LocalDate.of(2026, 4, 20);
+
+			given(activityEventRepository.findByUser_IdAndActivityDateBetween(userId, from, to))
+					.willReturn(List.of());
+			given(activityEventRepository.findDistinctActivityDatesByUserId(userId))
+					.willReturn(List.of());
+
+			// when
+			ActivityDashboardResult result = activityDashboardService.getDashboard(userId, new ActivityDashboardQuery(from, to));
+
+			// then
+			assertThat(result.from()).isEqualTo(from);
+			assertThat(result.to()).isEqualTo(to);
+			assertThat(result.calendar()).hasSize((int) from.datesUntil(to.plusDays(1)).count());
+			assertThat(result.summary()).isEqualTo(new ActivitySummary(0, 0));
+
+			verify(activityEventRepository).findByUser_IdAndActivityDateBetween(userId, from, to);
+			verify(activityEventRepository).findDistinctActivityDatesByUserId(userId);
+			verifyNoMoreInteractions(activityEventRepository);
+		}
+
+		@Test
+		@DisplayName("조회 기간이 1년을 초과하면 INVALID_INPUT 예외가 발생한다")
+		void throwsWhenRangeExceedsOneYear() {
+			// given
+			LocalDate from = LocalDate.of(2025, 4, 20);
+			LocalDate to = LocalDate.of(2026, 4, 21);
+
+			// when & then
+			assertThatThrownBy(() -> activityDashboardService.getDashboard(1L, new ActivityDashboardQuery(from, to)))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_INPUT);
+
+			verifyNoInteractions(activityEventRepository);
+		}
+
+		@Test
 		@DisplayName("조회 기간에 null이 포함되면 INVALID_INPUT 예외가 발생한다")
 		void throwsWhenRangeContainsNull() {
 			// when & then

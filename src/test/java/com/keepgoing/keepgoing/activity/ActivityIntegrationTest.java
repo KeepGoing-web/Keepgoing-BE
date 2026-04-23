@@ -120,6 +120,22 @@ class ActivityIntegrationTest {
 		}
 
 		@Test
+		@DisplayName("조회 기간이 1년을 초과하면 400과 INVALID_INPUT을 반환한다")
+		void returnsBadRequestWhenRangeExceedsOneYear() throws Exception {
+			// given
+			User author = saveUser("range-limit@test.com", "기간 제한 사용자");
+			mockLoginUser(author.getId());
+
+			// when & then
+			mockMvc.perform(get("/api/activities/me/dashboard")
+							.param("from", "2025-04-20")
+							.param("to", "2026-04-21"))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
+		}
+
+		@Test
 		@DisplayName("다른 사용자의 활동은 내 대시보드에 포함되지 않는다")
 		void excludesOtherUsersActivities() throws Exception {
 			// given

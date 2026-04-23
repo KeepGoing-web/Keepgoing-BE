@@ -65,7 +65,7 @@ public class ActivityDashboardService {
 	}
 
 	private static void validateRange(LocalDate from, LocalDate to) {
-		if (from == null || to == null || from.isAfter(to)) {
+		if (from == null || to == null || from.isAfter(to) || to.isAfter(from.plusYears(1))) {
 			throw new BusinessException(ErrorCode.INVALID_INPUT);
 		}
 	}
