@@ -2,6 +2,7 @@ package com.keepgoing.keepgoing.note.controller;
 
 import com.keepgoing.keepgoing.global.api.response.ApiResponse;
 import com.keepgoing.keepgoing.global.api.response.PagedResponse;
+import com.keepgoing.keepgoing.global.api.response.SliceResponse;
 import com.keepgoing.keepgoing.note.controller.dto.NoteCreateRequest;
 import com.keepgoing.keepgoing.note.controller.dto.NoteDetailResponse;
 import com.keepgoing.keepgoing.note.controller.dto.NoteMoveRequest;
@@ -23,6 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
@@ -148,6 +150,29 @@ public class NoteController {
 				.toList();
 
 		return ResponseEntity.ok(ApiResponse.success(PagedResponse.of(page, contents)));
+	}
+
+	@GetMapping("/me/search-slice")
+	public ResponseEntity<ApiResponse<SliceResponse<NoteSummaryResponse>>> searchMyNotesSlice(
+			@RequestParam String keyword,
+			@PageableDefault(size = 10)
+			Pageable pageable,
+			@AuthenticationPrincipal Long userId
+	) {
+		Pageable safePageable = safePageableUnsorted(pageable);
+
+		Slice<NoteSummaryResult> slice = noteService.searchMyNotesSlice(
+				userId,
+				new NoteSearchQuery(keyword, safePageable)
+		);
+
+		List<NoteSummaryResponse> contents = slice.getContent().stream()
+				.map(NoteSummaryResponse::from)
+				.toList();
+
+		return ResponseEntity.ok(
+				ApiResponse.success(SliceResponse.of(slice, contents))
+		);
 	}
 
 	/**

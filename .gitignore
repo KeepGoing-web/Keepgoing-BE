@@ -42,7 +42,8 @@ application-oauth.yml
 !gradle/wrapper/gradle-wrapper.jar
 !gradle/wrapper/gradle-wrapper.properties
 
-docs/perf/results/
+docs/perf/mysql/results/
+docs/perf/postgres/results/
 
 .omx/
 .omc/
@@ -57,3 +58,5 @@ out/
 AGENTS.md
 GEMINI.md
 conductor/
+
+cookies.txt

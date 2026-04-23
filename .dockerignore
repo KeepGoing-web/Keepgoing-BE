@@ -9,7 +9,7 @@
 build
 var
 backups
-docs/perf/results
+docs/perf/mysql/results
 *.log
 .env
 .env.prod

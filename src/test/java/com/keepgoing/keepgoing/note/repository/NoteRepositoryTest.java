@@ -26,6 +26,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.Sort;
 
 @DataJpaTest
@@ -168,6 +169,96 @@ class NoteRepositoryTest {
 				.containsExactlyInAnyOrder(folder.getId(), null);
 
 		assertThat(queryCountAfterMapping).isEqualTo(queryCountAfterFetch);
+	}
+
+	@Test
+	@DisplayName("searchMyNotesSlice: 특정 작성자의 검색 결과를 최신순 슬라이스로 조회한다")
+	void searchMyNotesSlice_returnsSliceSortedByCreatedAtDesc() {
+		// given
+		noteRepository.save(Note.create(user1, null, "일반 제목", "일반 내용", NoteVisibility.PRIVATE, false));
+
+		try {
+			Thread.sleep(10);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+		}
+		noteRepository.save(Note.create(user2, null, "spring 다른 유저", "내용", NoteVisibility.PRIVATE, false));
+
+		try {
+			Thread.sleep(10);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+		}
+		noteRepository.save(Note.create(user1, null, "spring 제목1", "내용", NoteVisibility.PRIVATE, false));
+
+		try {
+			Thread.sleep(10);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+		}
+		noteRepository.save(Note.create(user1, null, "spring 제목2", "내용", NoteVisibility.PRIVATE, false));
+
+		Pageable pageable = PageRequest.of(0, 1);
+
+		// when
+		Slice<Note> slice = noteRepository.searchMyNotesSlice(user1.getId(), "spring", pageable);
+
+		// then
+		assertThat(slice.getContent()).hasSize(1);
+		assertThat(slice.hasNext()).isTrue();
+		assertThat(slice.getContent().get(0).getTitle()).isEqualTo("spring 제목2");
+	}
+
+	@Test
+	@DisplayName("searchMyNotes: Page 검색은 content query와 count query를 함께 실행한다")
+	void searchMyNotes_executesContentAndCountQueries() {
+		// given
+		noteRepository.save(Note.create(user1, null, "spring 제목1", "내용", NoteVisibility.PRIVATE, false));
+		noteRepository.save(Note.create(user1, null, "spring 제목2", "내용", NoteVisibility.PRIVATE, false));
+		noteRepository.save(Note.create(user1, null, "spring 제목3", "내용", NoteVisibility.PRIVATE, false));
+
+		em.flush();
+		em.clear();
+
+		Statistics statistics = statistics();
+		statistics.clear();
+
+		Pageable pageable = PageRequest.of(0, 2);
+
+		// when
+		Page<Note> page = noteRepository.searchMyNotes(user1.getId(), "spring", pageable);
+		long queryCount = statistics.getPrepareStatementCount();
+
+		// then
+		assertThat(page.getContent()).hasSize(2);
+		assertThat(page.getTotalElements()).isEqualTo(3);
+		assertThat(queryCount).isEqualTo(2L);
+	}
+
+	@Test
+	@DisplayName("searchMyNotesSlice: Slice 검색은 content query만 실행한다")
+	void searchMyNotesSlice_executesOnlyContentQuery() {
+		// given
+		noteRepository.save(Note.create(user1, null, "spring 제목1", "내용", NoteVisibility.PRIVATE, false));
+		noteRepository.save(Note.create(user1, null, "spring 제목2", "내용", NoteVisibility.PRIVATE, false));
+		noteRepository.save(Note.create(user1, null, "spring 제목3", "내용", NoteVisibility.PRIVATE, false));
+
+		em.flush();
+		em.clear();
+
+		Statistics statistics = statistics();
+		statistics.clear();
+
+		Pageable pageable = PageRequest.of(0, 2);
+
+		// when
+		Slice<Note> slice = noteRepository.searchMyNotesSlice(user1.getId(), "spring", pageable);
+		long queryCount = statistics.getPrepareStatementCount();
+
+		// then
+		assertThat(slice.getContent()).hasSize(2);
+		assertThat(slice.hasNext()).isTrue();
+		assertThat(queryCount).isEqualTo(1L);
 	}
 
 	// ========== findById ==========
