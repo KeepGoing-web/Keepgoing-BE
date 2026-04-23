@@ -13,7 +13,8 @@ public record ActivityDashboardResponse(
 		String timezone,
 		List<ActivityCalendarDay> calendar,
 		ActivitySummary summary,
-		ActivityStreak streak
+		ActivityStreak streak,
+		String backfillPolicy
 ) {
 	public static ActivityDashboardResponse from(ActivityDashboardResult result) {
 		return new ActivityDashboardResponse(
@@ -22,7 +23,8 @@ public record ActivityDashboardResponse(
 				result.timezone(),
 				result.calendar(),
 				result.summary(),
-				result.streak()
+				result.streak(),
+				result.backfillPolicy()
 		);
 	}
 }

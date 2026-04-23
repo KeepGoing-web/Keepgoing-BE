@@ -99,7 +99,8 @@ class ActivityIntegrationTest {
 					.andExpect(jsonPath("$.data.summary.activeDays").value(4))
 					.andExpect(jsonPath("$.data.streak.current").value(3))
 					.andExpect(jsonPath("$.data.streak.longest").value(3))
-					.andExpect(jsonPath("$.data.streak.scope").value("ALL_TIME"));
+					.andExpect(jsonPath("$.data.streak.scope").value("ALL_TIME"))
+					.andExpect(jsonPath("$.data.backfillPolicy").value("CREATE_ONLY"));
 		}
 
 		@Test
@@ -155,7 +156,8 @@ class ActivityIntegrationTest {
 					.andExpect(jsonPath("$.data.summary.totalCount").value(3))
 					.andExpect(jsonPath("$.data.summary.activeDays").value(3))
 					.andExpect(jsonPath("$.data.streak.current").value(2))
-					.andExpect(jsonPath("$.data.streak.longest").value(2));
+					.andExpect(jsonPath("$.data.streak.longest").value(2))
+					.andExpect(jsonPath("$.data.backfillPolicy").value("CREATE_ONLY"));
 		}
 	}
 

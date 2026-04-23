@@ -1,6 +1,5 @@
 package com.keepgoing.keepgoing.activity.domain;
 
-import com.keepgoing.keepgoing.activity.repository.ActivityEventRepository;
 import com.keepgoing.keepgoing.note.domain.Note;
 import com.keepgoing.keepgoing.user.domain.User;
 import jakarta.persistence.Column;
@@ -50,7 +49,7 @@ public class ActivityEvent {
 	private LocalDate activityDate;
 
 	@CreatedDate
-	@Column(name = "created_at")
+	@Column(name = "created_at", nullable = false, updatable = false)
 	private LocalDateTime createdAt;
 
 	public ActivityEvent(

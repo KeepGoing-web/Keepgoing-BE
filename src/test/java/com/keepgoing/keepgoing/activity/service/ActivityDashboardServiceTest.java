@@ -55,7 +55,7 @@ class ActivityDashboardServiceTest {
 		void returnsCalendarSummaryAndStreak() {
 			// given
 			Long userId = 1L;
-			LocalDate today = LocalDate.now(ActivityDashboardService.KST);
+			LocalDate today = LocalDate.now(clock);
 			LocalDate from = today.minusDays(4);
 			LocalDate to = today;
 			User author = user(userId);
@@ -108,7 +108,7 @@ class ActivityDashboardServiceTest {
 		void returnsEmptyDashboardWhenNoActivityExists() {
 			// given
 			Long userId = 1L;
-			LocalDate today = LocalDate.now(ActivityDashboardService.KST);
+			LocalDate today = LocalDate.now(clock);
 			LocalDate from = today.minusDays(2);
 			LocalDate to = today;
 

@@ -97,7 +97,8 @@ class ActivityControllerTest {
 					.andExpect(jsonPath("$.data.summary.activeDays").value(1))
 					.andExpect(jsonPath("$.data.streak.current").value(1))
 					.andExpect(jsonPath("$.data.streak.longest").value(3))
-					.andExpect(jsonPath("$.data.streak.scope").value("ALL_TIME"));
+					.andExpect(jsonPath("$.data.streak.scope").value("ALL_TIME"))
+					.andExpect(jsonPath("$.data.backfillPolicy").value("CREATE_ONLY"));
 
 			then(activityDashboardService).should().getDashboard(argThat(id -> id.equals(userId)), argThat(query ->
 					query.from().equals(from) && query.to().equals(to)
