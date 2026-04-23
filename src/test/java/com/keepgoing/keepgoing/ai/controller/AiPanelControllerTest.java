@@ -113,7 +113,7 @@ class AiPanelControllerTest {
 					.andExpect(status().isOk())
 					.andExpect(jsonPath("$.success").value(true))
 					.andExpect(jsonPath("$.data.assistantMessage").value("일반 응답"))
-					.andExpect(jsonPath("$.data.contextNoteId").doesNotExist())
+					.andExpect(jsonPath("$.data.contextNoteId").doesNotHaveJsonPath())
 					.andExpect(jsonPath("$.data.contextAttached").value(false));
 
 			ArgumentCaptor<AiPanelMessageCommand> captor = ArgumentCaptor.forClass(AiPanelMessageCommand.class);

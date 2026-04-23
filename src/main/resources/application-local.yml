@@ -34,7 +34,7 @@ spring:
 
     zhipuai:
       api-key: ${ZHIPUAI_API_KEY}
-      base-url: https://api.z.ai/api/coding/paas
+      base-url: ${ZHIPUAI_BASE_URL:https://api.z.ai/api/coding/paas}
 
       chat:
         options:

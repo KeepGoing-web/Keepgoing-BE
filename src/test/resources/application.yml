@@ -34,10 +34,10 @@ spring:
           model: gpt-4o-mini
 
     zhipuai:
-      api-key: test-zhipua-api-key
+      api-key: test-zhipuai-api-key
       chat:
         options:
-          model: gpt-4o-mini
+          model: glm-5.1
 
 jwt:
   secret-key: "test-secret-key-for-testing-purpose-only-32bytes!!"
