@@ -266,6 +266,36 @@ class SecurityConfigTest {
 	}
 
 	@Nested
+	@DisplayName("AI 정책")
+	class AiPolicy {
+
+		@Test
+		@DisplayName("POST /api/ai/panel/messages 는 익명 사용자에게 401을 반환한다")
+		void aiEndpoints_requireAuthentication() throws Exception {
+			assertUnauthorized(post("/api/ai/panel/messages")
+					.contentType(JSON)
+					.content("""
+							{
+							  "message": "요약해줘"
+							}
+							"""));
+		}
+
+		@Test
+		@DisplayName("POST /api/ai/panel/messages 는 인증 사용자에게 열려 있다")
+		void aiEndpoints_allowAuthenticatedUser() throws Exception {
+			assertNotBlocked(post("/api/ai/panel/messages")
+					.with(authentication(authenticatedUser()))
+					.contentType(JSON)
+					.content("""
+							{
+							  "message": "요약해줘"
+							}
+							"""));
+		}
+	}
+
+	@Nested
 	@DisplayName("Fallback 정책 - 명시되지 않은 /api/**")
 	class FallbackPolicy {
 

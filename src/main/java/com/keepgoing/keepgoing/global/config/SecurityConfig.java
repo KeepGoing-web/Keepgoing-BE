@@ -35,6 +35,7 @@ public class SecurityConfig {
 	private static final String FOLDERS_API_PATTERN = "/api/folders/**";
 	private static final String NOTES_API_PATTERN = "/api/notes/**";
 	private static final String NOTES_ME_API_PATTERN = "/api/notes/me/**";
+	private static final String AI_API_PATTERN = "/api/ai/**";
 
 	private final JwtAuthenticationFilter jwtAuthenticationFilter;
 	private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
@@ -95,6 +96,8 @@ public class SecurityConfig {
 									.requestMatchers(HttpMethod.PUT, NOTES_API_PATTERN).authenticated()
 									.requestMatchers(HttpMethod.PATCH, NOTES_API_PATTERN).authenticated()
 									.requestMatchers(HttpMethod.DELETE, NOTES_API_PATTERN).authenticated()
+									// AI 도메인
+									.requestMatchers(AI_API_PATTERN).authenticated()
 									// oauth
 									.requestMatchers(
 											"/oauth2/**",

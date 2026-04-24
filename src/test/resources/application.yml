@@ -26,6 +26,19 @@ spring:
   flyway:
     enabled: false
 
+  ai:
+    openai:
+      api-key: test-openai-api-key
+      chat:
+        options:
+          model: gpt-4o-mini
+
+    zhipuai:
+      api-key: test-zhipuai-api-key
+      chat:
+        options:
+          model: glm-5.1
+
 jwt:
   secret-key: "test-secret-key-for-testing-purpose-only-32bytes!!"
   access-token-expiry: 3600000
