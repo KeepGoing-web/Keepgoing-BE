@@ -6,10 +6,12 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
+import com.keepgoing.keepgoing.activity.service.ActivityEventRecord;
 import com.keepgoing.keepgoing.folder.domain.Folder;
 import com.keepgoing.keepgoing.folder.repository.FolderRepository;
 import com.keepgoing.keepgoing.folder.service.FolderLockService;
@@ -37,6 +39,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
@@ -64,6 +67,9 @@ class NoteServiceTest {
 
 	@Mock
 	FolderLockService folderLockService;
+
+	@Mock
+	ActivityEventRecord activityEventRecord;
 
 	@InjectMocks
 	NoteService noteService;
@@ -96,7 +102,8 @@ class NoteServiceTest {
 
 			// then
 			ArgumentCaptor<Note> noteCaptor = ArgumentCaptor.forClass(Note.class);
-			verify(noteRepository).save(noteCaptor.capture());
+			InOrder inOrder = inOrder(noteRepository, activityEventRecord);
+			inOrder.verify(noteRepository).save(noteCaptor.capture());
 
 			Note savedNote = noteCaptor.getValue();
 			assertThat(savedNote.getAuthor().getId()).isEqualTo(userId);
@@ -113,9 +120,10 @@ class NoteServiceTest {
 			assertThat(result.visibility()).isEqualTo(command.visibility());
 			assertThat(result.aiCollectable()).isEqualTo(command.aiCollectable());
 
+			inOrder.verify(activityEventRecord).recordNoteCreated(eq(author), eq(savedNote));
 			verify(userRepository).findById(userId);
 			verifyNoInteractions(folderRepository);
-			verifyNoMoreInteractions(userRepository, noteRepository);
+			verifyNoMoreInteractions(userRepository, noteRepository, activityEventRecord);
 		}
 
 		@Test
@@ -139,7 +147,7 @@ class NoteServiceTest {
 					.isInstanceOf(BusinessException.class)
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.USER_NOT_FOUND);
 			verify(userRepository).findById(userId);
-			verifyNoInteractions(noteRepository, folderRepository);
+			verifyNoInteractions(noteRepository, folderRepository, activityEventRecord);
 		}
 
 		@Test
@@ -168,7 +176,8 @@ class NoteServiceTest {
 
 			// then
 			ArgumentCaptor<Note> noteCaptor = ArgumentCaptor.forClass(Note.class);
-			verify(noteRepository).save(noteCaptor.capture());
+			InOrder inOrder = inOrder(noteRepository, activityEventRecord);
+			inOrder.verify(noteRepository).save(noteCaptor.capture());
 
 			Note savedNote = noteCaptor.getValue();
 			assertThat(savedNote.getAuthor().getId()).isEqualTo(userId);
@@ -185,10 +194,10 @@ class NoteServiceTest {
 			assertThat(result.content()).isEqualTo(command.content());
 			assertThat(result.visibility()).isEqualTo(command.visibility());
 			assertThat(result.aiCollectable()).isEqualTo(command.aiCollectable());
+			inOrder.verify(activityEventRecord).recordNoteCreated(eq(author), eq(savedNote));
 			verify(userRepository).findById(userId);
 			verify(folderLockService).lockActiveFolder(folder.getId());
-			verify(noteRepository).save(any(Note.class));
-			verifyNoMoreInteractions(userRepository, noteRepository, folderRepository, folderLockService);
+			verifyNoMoreInteractions(userRepository, noteRepository, folderRepository, folderLockService, activityEventRecord);
 		}
 
 		@Test
@@ -217,7 +226,7 @@ class NoteServiceTest {
 			verify(userRepository).findById(command.userId());
 			verify(folderLockService).lockActiveFolder(2L);
 			verifyNoMoreInteractions(userRepository, folderRepository, folderLockService);
-			verifyNoInteractions(noteRepository);
+			verifyNoInteractions(noteRepository, activityEventRecord);
 		}
 
 		@Test
@@ -249,7 +258,7 @@ class NoteServiceTest {
 			verify(userRepository).findById(command.userId());
 			verify(folderLockService).lockActiveFolder(folderId);
 			verifyNoMoreInteractions(userRepository, folderRepository, folderLockService);
-			verifyNoInteractions(noteRepository);
+			verifyNoInteractions(noteRepository, activityEventRecord);
 		}
 	}
 
@@ -451,7 +460,8 @@ class NoteServiceTest {
 			assertThat(result.visibility()).isEqualTo(newVisibility);
 			assertThat(result.aiCollectable()).isEqualTo(newAiCollectable);
 			verify(noteRepository).findById(noteId);
-			verifyNoMoreInteractions(noteRepository);
+			verify(activityEventRecord).recordNoteUpdated(user, note);
+			verifyNoMoreInteractions(noteRepository, activityEventRecord);
 			verifyNoInteractions(userRepository, folderRepository);
 		}
 
@@ -478,7 +488,7 @@ class NoteServiceTest {
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_NOT_FOUND);
 			verify(noteRepository).findById(noteId);
 			verifyNoMoreInteractions(noteRepository);
-			verifyNoInteractions(userRepository, folderRepository);
+			verifyNoInteractions(userRepository, folderRepository, activityEventRecord);
 		}
 
 		@Test
@@ -507,7 +517,7 @@ class NoteServiceTest {
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_ACCESS_DENIED);
 			verify(noteRepository).findById(noteId);
 			verifyNoMoreInteractions(noteRepository);
-			verifyNoInteractions(userRepository, folderRepository);
+			verifyNoInteractions(userRepository, folderRepository, activityEventRecord);
 		}
 	}
 
@@ -533,7 +543,7 @@ class NoteServiceTest {
 			assertThat(note.isDeleted()).isTrue();
 			verify(noteRepository).findById(noteId);
 			verifyNoMoreInteractions(noteRepository);
-			verifyNoInteractions(userRepository, folderRepository);
+			verifyNoInteractions(userRepository, folderRepository, activityEventRecord);
 		}
 
 		@Test
@@ -551,7 +561,7 @@ class NoteServiceTest {
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_NOT_FOUND);
 			verify(noteRepository).findById(noteId);
 			verifyNoMoreInteractions(noteRepository);
-			verifyNoInteractions(userRepository, folderRepository);
+			verifyNoInteractions(userRepository, folderRepository, activityEventRecord);
 		}
 
 		@Test
@@ -572,7 +582,7 @@ class NoteServiceTest {
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_ACCESS_DENIED);
 			verify(noteRepository).findById(noteId);
 			verifyNoMoreInteractions(noteRepository);
-			verifyNoInteractions(userRepository, folderRepository);
+			verifyNoInteractions(userRepository, folderRepository, activityEventRecord);
 		}
 	}
 
@@ -583,6 +593,7 @@ class NoteServiceTest {
 		@Test
 		@DisplayName("작성자가 맞으면 제목이 변경된다")
 		void renamesWhenAuthorMatches() {
+			// given
 			Long userId = 1L;
 			Long noteId = 10L;
 			User author = user(userId);
@@ -591,35 +602,40 @@ class NoteServiceTest {
 
 			given(noteRepository.findById(noteId)).willReturn(Optional.of(note));
 
+			// when
 			NoteDetailResult result = noteService.renameNote(command);
 
+			// then
 			assertThat(note.getTitle()).isEqualTo("새 제목");
 			assertThat(result.title()).isEqualTo("새 제목");
 			verify(noteRepository).findById(noteId);
 			verifyNoMoreInteractions(noteRepository);
-			verifyNoInteractions(userRepository, folderRepository);
+			verifyNoInteractions(userRepository, folderRepository, activityEventRecord);
 		}
 
 		@Test
 		@DisplayName("없는 노트의 이동을 요청하면 예외가 발생한다")
 		void throwsWhenNoteNotFound() {
+			// given
 			Long userId = 1L;
 			Long noteId = 10L;
 			NoteRenameCommand command = new NoteRenameCommand(noteId, userId, "새 제목");
 
 			given(noteRepository.findById(noteId)).willReturn(Optional.empty());
 
+			// when & then
 			assertThatThrownBy(() -> noteService.renameNote(command))
 					.isInstanceOf(BusinessException.class)
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_NOT_FOUND);
 			verify(noteRepository).findById(noteId);
 			verifyNoMoreInteractions(noteRepository);
-			verifyNoInteractions(userRepository, folderRepository);
+			verifyNoInteractions(userRepository, folderRepository, activityEventRecord);
 		}
 
 		@Test
 		@DisplayName("다른 사용자가 제목 변경을 요청하면 예외가 발생한다")
 		void throwsWhenRequesterIsNotAuthor() {
+			// given
 			Long requesterId = 1L;
 			Long authorId = 2L;
 			Long noteId = 10L;
@@ -629,12 +645,13 @@ class NoteServiceTest {
 
 			given(noteRepository.findById(noteId)).willReturn(Optional.of(note));
 
+			// when & then
 			assertThatThrownBy(() -> noteService.renameNote(command))
 					.isInstanceOf(BusinessException.class)
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_ACCESS_DENIED);
 			verify(noteRepository).findById(noteId);
 			verifyNoMoreInteractions(noteRepository);
-			verifyNoInteractions(userRepository, folderRepository);
+			verifyNoInteractions(userRepository, folderRepository, activityEventRecord);
 		}
 	}
 
@@ -667,7 +684,7 @@ class NoteServiceTest {
 			verify(noteRepository).findById(noteId);
 			verify(folderLockService).lockActiveFolders(Arrays.asList(null, folderId));
 			verifyNoMoreInteractions(noteRepository, folderRepository, folderLockService);
-			verifyNoInteractions(userRepository);
+			verifyNoInteractions(userRepository, activityEventRecord);
 		}
 
 		@Test
@@ -697,7 +714,7 @@ class NoteServiceTest {
 			verify(noteRepository).findById(noteId);
 			verify(folderLockService).lockActiveFolders(Arrays.asList(sourceFolderId, targetFolderId));
 			verifyNoMoreInteractions(noteRepository, folderRepository, folderLockService);
-			verifyNoInteractions(userRepository);
+			verifyNoInteractions(userRepository, activityEventRecord);
 		}
 
 		@Test
@@ -725,7 +742,7 @@ class NoteServiceTest {
 			verify(noteRepository).findById(noteId);
 			verify(folderLockService).lockActiveFolders(Arrays.asList(existingFolderId, null));
 			verifyNoMoreInteractions(noteRepository, folderRepository, folderLockService);
-			verifyNoInteractions(userRepository);
+			verifyNoInteractions(userRepository, activityEventRecord);
 		}
 
 		@Test
@@ -745,7 +762,7 @@ class NoteServiceTest {
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_NOT_FOUND);
 			verify(noteRepository).findById(noteId);
 			verifyNoMoreInteractions(noteRepository);
-			verifyNoInteractions(folderRepository, userRepository);
+			verifyNoInteractions(folderRepository, userRepository, activityEventRecord);
 		}
 
 		@Test
@@ -770,7 +787,7 @@ class NoteServiceTest {
 			verify(noteRepository).findById(noteId);
 			verify(folderLockService).lockActiveFolders(Arrays.asList(null, folderId));
 			verifyNoMoreInteractions(noteRepository, folderRepository, folderLockService);
-			verifyNoInteractions(userRepository);
+			verifyNoInteractions(userRepository, activityEventRecord);
 		}
 
 		@Test
@@ -795,7 +812,7 @@ class NoteServiceTest {
 			verify(noteRepository).findById(noteId);
 			verify(folderLockService).lockActiveFolders(Arrays.asList(null, null));
 			verifyNoMoreInteractions(noteRepository, folderRepository, folderLockService);
-			verifyNoInteractions(userRepository);
+			verifyNoInteractions(userRepository, activityEventRecord);
 		}
 
 		@Test
@@ -823,7 +840,7 @@ class NoteServiceTest {
 			verify(noteRepository).findById(noteId);
 			verify(folderLockService).lockActiveFolders(Arrays.asList(null, folderId));
 			verifyNoMoreInteractions(noteRepository, folderRepository, folderLockService);
-			verifyNoInteractions(userRepository);
+			verifyNoInteractions(userRepository, activityEventRecord);
 		}
 	}
 

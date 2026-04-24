@@ -11,8 +11,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -54,6 +56,21 @@ public class GlobalExceptionHandler {
                 .toList();
 
         ErrorDetail detail = ErrorDetail.ofValidation(fieldErrors);
+        ErrorResponse response = ErrorResponse.of(detail);
+
+        return ResponseEntity.status(BAD_REQUEST)
+                .body(response);
+    }
+
+    @ExceptionHandler({
+            MissingServletRequestParameterException.class,
+            MethodArgumentTypeMismatchException.class
+    })
+    public ResponseEntity<ErrorResponse> handleInvalidInput(Exception ex) {
+        ErrorDetail detail = ErrorDetail.of(
+                ErrorCode.INVALID_INPUT,
+                ErrorCode.INVALID_INPUT.getDefaultMessage()
+        );
         ErrorResponse response = ErrorResponse.of(detail);
 
         return ResponseEntity.status(BAD_REQUEST)
