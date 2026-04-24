@@ -134,6 +134,22 @@ class AiPanelIntegrationTest {
 
 			verifyNoInteractions(aiPanelChatClient);
 		}
+
+		@Test
+		@DisplayName("message 길이가 최대 제한을 초과하면 400 검증 오류를 반환하고 모델은 호출하지 않는다")
+		void returnsBadRequestWhenMessageExceedsLimit() throws Exception {
+			String tooLongMessage = "a".repeat(AiPanelMessageRequest.MAX_MESSAGE_LENGTH + 1);
+
+			mockMvc.perform(post("/api/ai/panel/messages")
+							.contentType(APPLICATION_JSON)
+							.content(requestJson(new AiPanelMessageRequest(null, tooLongMessage))))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value("VALIDATION_FAILED"))
+					.andExpect(jsonPath("$.error.fieldErrors[0].field").value("message"));
+
+			verifyNoInteractions(aiPanelChatClient);
+		}
 	}
 
 	private User saveUser(String email, String name) {

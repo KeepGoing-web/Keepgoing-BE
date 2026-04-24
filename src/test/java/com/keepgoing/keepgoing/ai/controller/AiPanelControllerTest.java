@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -150,6 +151,25 @@ class AiPanelControllerTest {
 					.andExpect(jsonPath("$.success").value(false))
 					.andExpect(jsonPath("$.error.code").value("VALIDATION_FAILED"))
 					.andExpect(jsonPath("$.error.fieldErrors[0].field").value("message"));
+		}
+
+		@Test
+		@DisplayName("message가 최대 길이를 초과하면 validation 에러를 반환하고 서비스를 호출하지 않는다")
+		void returnsBadRequestWhenMessageExceedsLimit() throws Exception {
+			AiPanelMessageRequest request = new AiPanelMessageRequest(
+					null,
+					"a".repeat(AiPanelMessageRequest.MAX_MESSAGE_LENGTH + 1)
+			);
+
+			mockMvc.perform(post("/api/ai/panel/messages")
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(objectMapper.writeValueAsString(request)))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value("VALIDATION_FAILED"))
+					.andExpect(jsonPath("$.error.fieldErrors[0].field").value("message"));
+
+			verifyNoInteractions(aiPanelService);
 		}
 
 		@Test
