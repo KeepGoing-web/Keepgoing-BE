@@ -1,5 +1,6 @@
 package com.keepgoing.keepgoing.note.service;
 
+import com.keepgoing.keepgoing.activity.service.ActivityEventRecord;
 import com.keepgoing.keepgoing.folder.domain.Folder;
 import com.keepgoing.keepgoing.folder.repository.FolderRepository;
 import com.keepgoing.keepgoing.folder.service.FolderLockService;
@@ -34,6 +35,7 @@ public class NoteService {
 	private final UserRepository userRepository;
 	private final FolderRepository folderRepository;
 	private final FolderLockService folderLockService;
+	private final ActivityEventRecord activityEventRecord;
 
 	/**
 	 * 노트 생성
@@ -57,6 +59,7 @@ public class NoteService {
 				command.aiCollectable()
 		);
 		Note saved = noteRepository.save(note);
+		activityEventRecord.recordNoteCreated(author, note);
 		return NoteDetailResult.from(saved);
 	}
 
@@ -99,6 +102,7 @@ public class NoteService {
 				command.aiCollectable()
 		);
 
+		activityEventRecord.recordNoteUpdated(note.getAuthor(), note);
 		return NoteDetailResult.from(note);
 	}
 
