@@ -2,6 +2,7 @@ package com.keepgoing.keepgoing.note;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -9,7 +10,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.keepgoing.keepgoing.note.controller.dto.NoteRenameRequest;
 import com.keepgoing.keepgoing.note.domain.Note;
+import com.keepgoing.keepgoing.note.domain.NoteImage;
 import com.keepgoing.keepgoing.note.domain.NoteVisibility;
+import com.keepgoing.keepgoing.note.repository.NoteImageRepository;
 import com.keepgoing.keepgoing.note.repository.NoteRepository;
 import com.keepgoing.keepgoing.user.domain.User;
 import com.keepgoing.keepgoing.user.domain.UserRole;
@@ -46,6 +49,9 @@ class NoteIntegrationTest {
 
 	@Autowired
 	NoteRepository noteRepository;
+
+	@Autowired
+	NoteImageRepository noteImageRepository;
 
 	@Autowired
 	EntityManager entityManager;
@@ -141,6 +147,33 @@ class NoteIntegrationTest {
 		}
 	}
 
+	@Nested
+	@DisplayName("DELETE /api/notes/{noteId}")
+	class DeleteNote {
+
+		@Test
+		@DisplayName("작성자가 노트 삭제를 요청하면 노트와 연결 이미지가 soft delete된다")
+		void softDeletesNoteAndImages() throws Exception {
+			User author = saveUser("author@test.com", "작성자");
+			Note targetNote = saveNote(author, "삭제할 노트");
+			Note otherNote = saveNote(author, "유지할 노트");
+			saveNoteImage(targetNote, author, "note-images/target-1.png");
+			saveNoteImage(targetNote, author, "note-images/target-2.png");
+			saveNoteImage(otherNote, author, "note-images/other.png");
+			mockLoginUser(author.getId());
+
+			mockMvc.perform(delete("/api/notes/{noteId}", targetNote.getId()))
+					.andExpect(status().isNoContent());
+
+			entityManager.flush();
+			entityManager.clear();
+
+			assertThat(countDeletedNotes(targetNote.getId())).isEqualTo(1);
+			assertThat(countDeletedImages(targetNote.getId())).isEqualTo(2);
+			assertThat(countActiveImages(otherNote.getId())).isEqualTo(1);
+		}
+	}
+
 	private User saveUser(String email, String name) {
 		return userRepository.saveAndFlush(User.create(email, name));
 	}
@@ -148,6 +181,54 @@ class NoteIntegrationTest {
 	private Note saveNote(User author, String title) {
 		Note note = Note.create(author, null, title, "본문", NoteVisibility.PRIVATE, false);
 		return noteRepository.saveAndFlush(note);
+	}
+
+	private NoteImage saveNoteImage(Note note, User uploader, String storageKey) {
+		NoteImage image = NoteImage.create(
+				note,
+				uploader,
+				storageKey,
+				"image.png",
+				"image/png",
+				1024L
+		);
+		return noteImageRepository.saveAndFlush(image);
+	}
+
+	private long countDeletedNotes(Long noteId) {
+		return ((Number) entityManager.createNativeQuery("""
+					select count(*)
+					from notes
+					where id = :noteId
+					  and deleted_at is not null
+					""")
+				.setParameter("noteId", noteId)
+				.getSingleResult())
+				.longValue();
+	}
+
+	private long countDeletedImages(Long noteId) {
+		return ((Number) entityManager.createNativeQuery("""
+					select count(*)
+					from note_images
+					where note_id = :noteId
+					  and deleted_at is not null
+					""")
+				.setParameter("noteId", noteId)
+				.getSingleResult())
+				.longValue();
+	}
+
+	private long countActiveImages(Long noteId) {
+		return ((Number) entityManager.createNativeQuery("""
+					select count(*)
+					from note_images
+					where note_id = :noteId
+					  and deleted_at is null
+					""")
+				.setParameter("noteId", noteId)
+				.getSingleResult())
+				.longValue();
 	}
 
 	private String requestJson(Object request) throws Exception {

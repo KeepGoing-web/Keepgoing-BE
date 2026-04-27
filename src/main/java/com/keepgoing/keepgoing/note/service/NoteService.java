@@ -8,6 +8,7 @@ import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import com.keepgoing.keepgoing.note.domain.Note;
 import com.keepgoing.keepgoing.note.domain.NoteVisibility;
+import com.keepgoing.keepgoing.note.repository.NoteImageRepository;
 import com.keepgoing.keepgoing.note.repository.NoteRepository;
 import com.keepgoing.keepgoing.note.service.dto.NoteCreateCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteDetailResult;
@@ -32,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class NoteService {
 
 	private final NoteRepository noteRepository;
+	private final NoteImageRepository noteImageRepository;
 	private final UserRepository userRepository;
 	private final FolderRepository folderRepository;
 	private final FolderLockService folderLockService;
@@ -116,6 +118,7 @@ public class NoteService {
 
 		note.validateAuthor(userId);
 		note.softDelete();
+		noteImageRepository.softDeleteByNoteId(noteId);
 	}
 
 	/**
