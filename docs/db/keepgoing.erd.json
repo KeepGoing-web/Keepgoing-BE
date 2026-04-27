@@ -1681,7 +1681,7 @@
         "id": "note_images_note_id",
         "tableId": "note_images_table",
         "name": "note_id",
-        "comment": "연결된 노트 ID (FK, nullable)",
+        "comment": "연결된 노트 ID (FK)",
         "dataType": "BIGINT",
         "default": "",
         "options": 2,
