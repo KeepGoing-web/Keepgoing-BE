@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -19,6 +20,7 @@ import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import com.keepgoing.keepgoing.note.domain.Note;
 import com.keepgoing.keepgoing.note.domain.NoteVisibility;
+import com.keepgoing.keepgoing.note.repository.NoteImageRepository;
 import com.keepgoing.keepgoing.note.repository.NoteRepository;
 import com.keepgoing.keepgoing.note.service.dto.NoteCreateCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteDetailResult;
@@ -64,6 +66,9 @@ class NoteServiceTest {
 
 	@Mock
 	FolderRepository folderRepository;
+
+	@Mock
+	NoteImageRepository noteImageRepository;
 
 	@Mock
 	FolderLockService folderLockService;
@@ -197,7 +202,8 @@ class NoteServiceTest {
 			inOrder.verify(activityEventRecord).recordNoteCreated(eq(author), eq(savedNote));
 			verify(userRepository).findById(userId);
 			verify(folderLockService).lockActiveFolder(folder.getId());
-			verifyNoMoreInteractions(userRepository, noteRepository, folderRepository, folderLockService, activityEventRecord);
+			verifyNoMoreInteractions(userRepository, noteRepository, folderRepository, folderLockService,
+					activityEventRecord);
 		}
 
 		@Test
@@ -547,6 +553,24 @@ class NoteServiceTest {
 		}
 
 		@Test
+		@DisplayName("작성자가 맞으면 연결 이미지를 soft delete한다")
+		void softDeletesNoteImagesWhenAuthorMatches() {
+			// given
+			Long userId = 1L;
+			Long noteId = 10L;
+			User user = user(userId);
+			Note note = Note.create(user, null, "title", "content", NoteVisibility.PRIVATE, true);
+
+			given(noteRepository.findById(noteId)).willReturn(Optional.of(note));
+
+			// when
+			noteService.deleteNote(userId, noteId);
+
+			// then
+			verify(noteImageRepository).softDeleteByNoteId(noteId);
+		}
+
+		@Test
 		@DisplayName("없는 노트를 삭제하려고 하면 예외가 발생한다")
 		void throwsWhenNoteNotFound() {
 			// given
@@ -561,6 +585,7 @@ class NoteServiceTest {
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_NOT_FOUND);
 			verify(noteRepository).findById(noteId);
 			verifyNoMoreInteractions(noteRepository);
+			verify(noteImageRepository, never()).softDeleteByNoteId(any());
 			verifyNoInteractions(userRepository, folderRepository, activityEventRecord);
 		}
 
@@ -582,6 +607,7 @@ class NoteServiceTest {
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_ACCESS_DENIED);
 			verify(noteRepository).findById(noteId);
 			verifyNoMoreInteractions(noteRepository);
+			verify(noteImageRepository, never()).softDeleteByNoteId(any());
 			verifyNoInteractions(userRepository, folderRepository, activityEventRecord);
 		}
 	}

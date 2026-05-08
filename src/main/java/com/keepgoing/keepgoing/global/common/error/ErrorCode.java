@@ -177,6 +177,13 @@ public enum ErrorCode {
 			"검색어(keyword)는 필수입니다."
 	),
 
+	// ===== NOTE_IMAGE =====
+	NOTE_IMAGE_ACCESS_DENIED(
+			HttpStatus.FORBIDDEN,
+			"NOTE_IMAGE_001",
+			"해당 이미지에 대한 권한이 없습니다."
+	),
+
 	// ===== Folder =====
 	FOLDER_ACCESS_DENIED(
 			HttpStatus.FORBIDDEN,
