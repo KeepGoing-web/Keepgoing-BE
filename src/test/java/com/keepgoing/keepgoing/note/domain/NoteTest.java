@@ -3,6 +3,7 @@ package com.keepgoing.keepgoing.note.domain;
 import static com.keepgoing.keepgoing.support.UserFixture.user;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.assertj.core.api.SoftAssertions.assertSoftly;
 
 import com.keepgoing.keepgoing.folder.domain.Folder;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
@@ -14,123 +15,88 @@ import org.junit.jupiter.api.Test;
 
 class NoteTest {
 
-	public static final String DIR_NAME = "backend";
-	public static final String TITLE = "제목";
-	public static final String CONTENT = "내용";
+	private static final Long AUTHOR_ID = 1L;
+	private static final Long OTHER_USER_ID = 2L;
+	private static final String TITLE = "제목";
+	private static final String CONTENT = "내용";
+	private static final String NEW_TITLE = "new title";
+	private static final String NEW_CONTENT = "new content";
+	private static final String RENAMED_TITLE = "새 제목";
+	private static final String BLANK = " ";
+	private static final String MAX_LENGTH_TITLE = "a".repeat(200);
+	private static final String TOO_LONG_TITLE = "a".repeat(201);
 
-	// ========== create ==========
 	@Nested
 	@DisplayName("create")
 	class Create {
-		@Test
-		@DisplayName("기본값이 잘 세팅 되는지 테스트")
-		void create_setsDefault() {
-			// given
-			User author = user(1L);
 
-			String title = TITLE;
-			String content = CONTENT;
+		@Test
+		@DisplayName("노트 생성 기본값을 세팅한다")
+		void setsDefaultValues() {
+			// given
+			User author = author();
 
 			// when
-			Note note = Note.create(
-					author,
-					null,
-					title,
-					content,
-					null,
-					true
-			);
+			Note note = Note.create(author, null, TITLE, CONTENT, null, true);
 
 			// then
-			assertThat(note.getAuthor()).isEqualTo(author);
-			assertThat(note.getFolder()).isNull();
-			assertThat(note.getTitle()).isEqualTo(title);
-			assertThat(note.getContent()).isEqualTo(content);
-			assertThat(note.getVisibility()).isEqualTo(NoteVisibility.PRIVATE);
-			assertThat(note.isAiCollectable()).isTrue();
+			assertSoftly(softly -> {
+				softly.assertThat(note.getAuthor()).isEqualTo(author);
+				softly.assertThat(note.getFolder()).isNull();
+				softly.assertThat(note.getTitle()).isEqualTo(TITLE);
+				softly.assertThat(note.getContent()).isEqualTo(CONTENT);
+				softly.assertThat(note.getVisibility()).isEqualTo(NoteVisibility.PRIVATE);
+				softly.assertThat(note.isAiCollectable()).isTrue();
+			});
 		}
 
 		@Test
-		@DisplayName("visibility가 null이면 PRIVATE 기본값")
-		void create_defaultVisibilityWhenNull() {
+		@DisplayName("visibility가 null이면 PRIVATE으로 생성한다")
+		void defaultsVisibilityToPrivateWhenNull() {
 			// given
-			User author = user(1L, "test@example.com", "테스트유저");
-
-			String title = TITLE;
-			String content = CONTENT;
-			boolean aiCollectable = false;
+			User author = author();
 
 			// when
-			Note note = Note.create(
-					author,
-					null,
-					title,
-					content,
-					null,
-					aiCollectable
-			);
+			Note note = Note.create(author, null, TITLE, CONTENT, null, false);
 
 			// then
-			assertThat(note.getAuthorId()).isEqualTo(1L);
-			assertThat(note.getTitle()).isEqualTo(title);
-			assertThat(note.getContent()).isEqualTo(content);
 			assertThat(note.getVisibility()).isEqualTo(NoteVisibility.PRIVATE);
-			assertThat(note.isAiCollectable()).isFalse();
 		}
 
 		@Test
-		@DisplayName("visibility가 주어지면 그 값을 사용")
-		void create_useGivenVisibility() {
+		@DisplayName("visibility가 주어지면 해당 값으로 생성한다")
+		void usesGivenVisibility() {
 			// given
-			User author = user(1L, "test@example.com", "테스트유저");
-
-			NoteVisibility visibility = NoteVisibility.PUBLIC;
-			boolean aiCollectable = false;
+			User author = author();
 
 			// when
-			Note note = Note.create(author, null, TITLE, CONTENT, visibility, aiCollectable);
+			Note note = Note.create(author, null, TITLE, CONTENT, NoteVisibility.PUBLIC, false);
 
 			// then
 			assertThat(note.getVisibility()).isEqualTo(NoteVisibility.PUBLIC);
-			assertThat(note.isAiCollectable()).isFalse();
 		}
 
 		@Test
-		@DisplayName("폴더 owner와 작성자가 같으면 해당 폴더로 노트를 생성한다.")
-		void create_createsNoteWhenFolderOwnerMatchesAuthor() {
+		@DisplayName("작성자 소유 폴더에 노트를 생성한다")
+		void createsNoteInOwnedFolder() {
 			// given
-			User author = user(1L, "test@example.com", "test");
-			Folder folder = Folder.create(author, null, DIR_NAME);
+			User author = author();
+			Folder folder = folderOf(author);
 
 			// when
-			Note note = Note.create(
-					author,
-					folder,
-					TITLE,
-					CONTENT,
-					NoteVisibility.PRIVATE,
-					false
-			);
+			Note note = Note.create(author, folder, TITLE, CONTENT, NoteVisibility.PRIVATE, false);
 
 			// then
 			assertThat(note.getAuthor()).isEqualTo(author);
 			assertThat(note.getFolder()).isEqualTo(folder);
-			assertThat(note.getTitle()).isEqualTo(TITLE);
-			assertThat(note.getContent()).isEqualTo(CONTENT);
-			assertThat(note.getVisibility()).isEqualTo(NoteVisibility.PRIVATE);
-			assertThat(note.isAiCollectable()).isFalse();
 		}
 
 		@Test
-		@DisplayName("폴더 소유자와 작성자가 다르면 해당 폴더로 노트를 만들 수 없다.")
-		void create_throwsWhenFolderOwnerDoesNotMatchAuthor() {
+		@DisplayName("다른 사용자의 폴더에는 노트를 생성할 수 없다")
+		void throwsWhenFolderOwnerDoesNotMatchAuthor() {
 			// given
-			Long authorId = 1L;
-			User author = user(authorId, "test@test.com", "test");
-
-			Long otherAuthorId = 2L;
-			User otherAuthor = user(otherAuthorId, "other@other.com", "other");
-			Folder otherUserFolder = Folder.create(otherAuthor, null, DIR_NAME);
+			User author = author();
+			Folder otherUserFolder = folderOf(otherUser());
 
 			// when & then
 			assertThatThrownBy(() -> Note.create(
@@ -146,10 +112,10 @@ class NoteTest {
 		}
 
 		@Test
-		@DisplayName("작성자 ID가 없으면 INTERNAL_SERVER_ERROR 예외가 발생한다.")
-		void create_throwsWhenAuthorIdIsNull() {
+		@DisplayName("작성자 ID가 없으면 노트를 생성할 수 없다")
+		void throwsWhenAuthorIdIsNull() {
 			// given
-			User author = User.create("test@test.com", "test");
+			User author = transientAuthor();
 
 			// when & then
 			assertThatThrownBy(() -> Note.create(
@@ -165,219 +131,244 @@ class NoteTest {
 		}
 
 		@Test
-		@DisplayName("제목이 비어 있으면 노트를 만들 수 없다.")
-		void create_throwsWhenTitleIsBlank() {
+		@DisplayName("제목과 내용이 null이면 빈 문자열로 생성한다")
+		void createsWithEmptyStringsWhenNull() {
 			// given
-			User author = user(1L, "test@test.com", "test");
+			User author = author();
 
-			// when & then
-			assertThatThrownBy(() -> Note.create(
-					author,
-					null,
-					"   ",
-					CONTENT,
-					NoteVisibility.PRIVATE,
-					false
-			))
-					.isInstanceOf(BusinessException.class)
-					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_INPUT);
+			// when
+			Note note = Note.create(author, null, null, null, null, false);
+
+			// then
+			assertSoftly(softly -> {
+				softly.assertThat(note.getTitle()).isEqualTo("");
+				softly.assertThat(note.getContent()).isEqualTo("");
+			});
 		}
 
 		@Test
-		@DisplayName("본문이 비어 있으면 노트를 만들 수 없다.")
-		void create_throwsWhenContentIsBlank() {
+		@DisplayName("PUBLIC으로 노트를 생성할 때 제목이 비어있으면 예외가 발생한다")
+		void throwsWhenCreatingPublicNoteWithEmptyTitle() {
 			// given
-			User author = user(1L, "test@test.com", "test");
+			User author = author();
 
 			// when & then
-			assertThatThrownBy(() -> Note.create(
-					author,
-					null,
-					TITLE,
-					"   ",
-					NoteVisibility.PRIVATE,
+			assertThatThrownBy(() -> Note.create(author, null, "", "내용", NoteVisibility.PUBLIC, false))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_TITLE_INVALID);
+		}
+	}
+
+	@Nested
+	@DisplayName("update")
+	class Update {
+
+		@Test
+		@DisplayName("작성자가 제목/내용/visibility/aiCollectable을 변경한다")
+		void changesFields() {
+			// given
+			User author = author();
+			Note note = Note.create(author, null, "old title", "old content", NoteVisibility.PRIVATE, true);
+
+			// when
+			note.update(author.getId(), NEW_TITLE, NEW_CONTENT, NoteVisibility.PUBLIC, false);
+
+			// then
+			assertSoftly(softly -> {
+				softly.assertThat(note.getTitle()).isEqualTo(NEW_TITLE);
+				softly.assertThat(note.getContent()).isEqualTo(NEW_CONTENT);
+				softly.assertThat(note.getVisibility()).isEqualTo(NoteVisibility.PUBLIC);
+				softly.assertThat(note.isAiCollectable()).isFalse();
+			});
+		}
+
+		@Test
+		@DisplayName("visibility가 null이면 PRIVATE으로 변경한다")
+		void defaultsVisibilityToPrivateWhenNull() {
+			// given
+			User author = author();
+			Note note = Note.create(author, null, TITLE, CONTENT, NoteVisibility.PUBLIC, false);
+
+			// when
+			note.update(author.getId(), NEW_TITLE, NEW_CONTENT, null, false);
+
+			// then
+			assertThat(note.getVisibility()).isEqualTo(NoteVisibility.PRIVATE);
+		}
+
+		@Test
+		@DisplayName("수정 시 제목과 내용이 null이면 빈 문자열로 저장한다")
+		void updatesWithEmptyStringsWhenNull() {
+			// given
+			User author = author();
+			Note note = Note.create(author, null, TITLE, CONTENT, NoteVisibility.PRIVATE, false);
+
+			// when
+			note.update(author.getId(), null, null, null, false);
+
+			// then
+			assertSoftly(softly -> {
+				softly.assertThat(note.getTitle()).isEqualTo("");
+				softly.assertThat(note.getContent()).isEqualTo("");
+			});
+		}
+
+		@Test
+		@DisplayName("제목이 비어있는 상태로 PUBLIC으로 변경하려고 하면 예외가 발생한다")
+		void throwsWhenUpdatingToPublicWithEmptyTitle() {
+			// given
+			User author = author();
+			Note note = Note.create(author, null, "", "내용", NoteVisibility.PRIVATE, false);
+
+			// when & then
+			assertThatThrownBy(() -> note.update(author.getId(), "", "내용", NoteVisibility.PUBLIC, false))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_TITLE_INVALID);
+		}
+
+		@Test
+		@DisplayName("본문이 비어있는 상태로 PUBLIC으로 변경하려고 하면 예외가 발생한다")
+		void throwsWhenUpdatingToPublicWithEmptyContent() {
+			// given
+			User author = author();
+			Note note = Note.create(author, null, "제목", "", NoteVisibility.PRIVATE, false);
+
+			// when & then
+			assertThatThrownBy(() -> note.update(author.getId(), "제목", "", NoteVisibility.PUBLIC, false))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_CONTENT_REQUIRED);
+		}
+
+		@Test
+		@DisplayName("작성자가 아니면 수정할 수 없다")
+		void throwsWhenRequesterIsNotAuthor() {
+			// given
+			User author = author();
+			Note note = note(author);
+
+			// when & then
+			assertThatThrownBy(() -> note.update(
+					OTHER_USER_ID,
+					NEW_TITLE,
+					NEW_CONTENT,
+					NoteVisibility.PUBLIC,
 					false
 			))
 					.isInstanceOf(BusinessException.class)
-					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_INPUT);
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_ACCESS_DENIED);
+		}
+	}
+
+	@Nested
+	@DisplayName("softDeleteBy")
+	class SoftDeleteBy {
+
+		@Test
+		@DisplayName("작성자가 삭제하면 deletedAt을 채운다")
+		void setsDeletedAt() {
+			// given
+			User author = author();
+			Note note = note(author);
+
+			// when
+			note.softDeleteBy(author.getId());
+
+			// then
+			assertThat(note.isDeleted()).isTrue();
+			assertThat(note.getDeletedAt()).isNotNull();
 		}
 
+		@Test
+		@DisplayName("여러 번 삭제해도 최초 삭제 시각을 유지한다")
+		void preservesDeletedAtWhenAlreadyDeleted() {
+			// given
+			User author = author();
+			Note note = note(author);
+
+			// when
+			note.softDeleteBy(author.getId());
+			var firstDeletedAt = note.getDeletedAt();
+			assertThat(firstDeletedAt).isNotNull();
+			note.softDeleteBy(author.getId());
+
+			// then
+			assertThat(note.getDeletedAt()).isEqualTo(firstDeletedAt);
+		}
+
+		@Test
+		@DisplayName("작성자가 아니면 삭제할 수 없다")
+		void throwsWhenRequesterIsNotAuthor() {
+			// given
+			Note note = note(author());
+
+			// when & then
+			assertThatThrownBy(() -> note.softDeleteBy(OTHER_USER_ID))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_ACCESS_DENIED);
+		}
 	}
 
-	// ========== update ==========
-	@Test
-	@DisplayName("update: 제목/내용/visibility/aiCollectable 변경")
-	void update_changeFields() {
-		// given
-		User author = user(1L);
+	@Nested
+	@DisplayName("changeFolder")
+	class ChangeFolder {
 
-		Note note = Note.create(
-				author,
-				null,
-				"old title",
-				"old content",
-				NoteVisibility.PRIVATE,
-				true
-		);
+		@Test
+		@DisplayName("작성자가 요청하고 같은 소유자의 폴더면 이동한다")
+		void movesWhenRequesterIsAuthorAndFolderOwnerMatches() {
+			// given
+			User author = author();
+			Folder targetFolder = folderOf(author);
+			Note note = note(author);
 
-		// when
-		note.update(
-				"new title",
-				"new content",
-				NoteVisibility.PUBLIC,
-				false);
+			// when
+			note.changeFolder(author.getId(), targetFolder);
 
-		// then
-		assertThat(note.getTitle()).isEqualTo("new title");
-		assertThat(note.getContent()).isEqualTo("new content");
-		assertThat(note.getVisibility()).isEqualTo(NoteVisibility.PUBLIC);
-		assertThat(note.isAiCollectable()).isFalse();
-	}
+			// then
+			assertThat(note.getFolder()).isEqualTo(targetFolder);
+		}
 
-	// ========== softDelete ==========
-	@Test
-	@DisplayName("softDelete: deletedAt 채워지고 isDeleted true 반환")
-	void softDelete_setsDeletedAt() {
-		// given
-		User author = user(1L, "test@example.com", "테스트유저");
+		@Test
+		@DisplayName("작성자가 요청하면 루트로 이동할 수 있다")
+		void movesToRootWhenTargetFolderIsNull() {
+			// given
+			User author = author();
+			Folder currentFolder = folderOf(author);
+			Note note = note(author, currentFolder);
 
-		Note note = Note.create(
-				author,
-				null,
-				"title",
-				"content",
-				NoteVisibility.PRIVATE,
-				true
-		);
+			// when
+			note.changeFolder(author.getId(), null);
 
-		// when
-		note.softDelete();
+			// then
+			assertThat(note.getFolder()).isNull();
+		}
 
-		// then
-		assertThat(note.isDeleted()).isTrue();
-		assertThat(note.getDeletedAt()).isNotNull();
-	}
+		@Test
+		@DisplayName("작성자가 아니면 폴더를 이동할 수 없다")
+		void throwsWhenRequesterIsNotAuthor() {
+			// given
+			User author = author();
+			Folder targetFolder = folderOf(author);
+			Note note = note(author);
 
-	// ========== validateAuthor ==========
-	@Test
-	@DisplayName("validateAuthor: 작성자가 아니면 예외 발생")
-	void validateAuthor_throws_whenNotAuthor() {
-		// given
-		User author = user(1L, "a@a.com", "작성자");
+			// when & then
+			assertThatThrownBy(() -> note.changeFolder(OTHER_USER_ID, targetFolder))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_ACCESS_DENIED);
+		}
 
-		Note note = Note.create(
-				author,
-				null,
-				"title",
-				"content",
-				NoteVisibility.PRIVATE,
-				true
-		);
+		@Test
+		@DisplayName("다른 사용자의 폴더로는 이동할 수 없다")
+		void throwsWhenTargetFolderOwnedByAnotherUser() {
+			// given
+			User author = author();
+			Folder otherFolder = folderOf(otherUser());
+			Note note = note(author);
 
-		// when & then
-		assertThatThrownBy(() -> note.validateAuthor(2L))
-				.isInstanceOf(BusinessException.class)
-				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_ACCESS_DENIED);
-	}
-
-	// ========== isAuthor ==========
-	@Test
-	@DisplayName("isAuthor: 작성자인지 여부를 반환")
-	void isAuthor_returnsTrueOnlyForAuthor() {
-		// given
-		User author = user(1L, "a@a.com", "작성자");
-
-		Note note = Note.create(
-				author,
-				null,
-				"title",
-				"content",
-				NoteVisibility.PRIVATE,
-				true
-		);
-
-		// expect
-		assertThat(note.isAuthor(1L)).isTrue();
-		assertThat(note.isAuthor(2L)).isFalse();
-	}
-
-	// ========== getAuthorId ==========
-	@Test
-	@DisplayName("getAuthorId: 작성자 ID를 정상적으로 반환")
-	void getAuthorId_returnsAuthorId() {
-		// given
-		User author = user(1L);
-
-		Note note = Note.create(
-				author,
-				null,
-				"title",
-				"content",
-				NoteVisibility.PRIVATE,
-				true);
-
-		// when & then
-		assertThat(note.getAuthorId()).isEqualTo(1L);
-	}
-
-	// ========== changeFolder ==========
-	@Test
-	@DisplayName("changeFolder: 작성자가 요청하고 같은 소유자의 폴더면 이동한다")
-	void changeFolder_movesWhenRequesterIsAuthorAndFolderOwnerMatches() {
-		// given
-		User author = user(1L, "author@test.com", "author");
-		Folder targetFolder = Folder.create(author, null, DIR_NAME);
-		Note note = Note.create(author, null, TITLE, CONTENT, NoteVisibility.PRIVATE, false);
-
-		// when
-		note.changeFolder(author.getId(), targetFolder);
-
-		// then
-		assertThat(note.getFolder()).isEqualTo(targetFolder);
-	}
-
-	@Test
-	@DisplayName("changeFolder: 작성자가 요청하면 루트로 이동할 수 있다")
-	void changeFolder_movesToRootWhenTargetFolderIsNull() {
-		// given
-		User author = user(1L, "author@test.com", "author");
-		Folder currentFolder = Folder.create(author, null, DIR_NAME);
-		Note note = Note.create(author, currentFolder, TITLE, CONTENT, NoteVisibility.PRIVATE, false);
-
-		// when
-		note.changeFolder(author.getId(), null);
-
-		// then
-		assertThat(note.getFolder()).isNull();
-	}
-
-	@Test
-	@DisplayName("changeFolder: 다른 사용자가 이동을 시도하면 예외가 발생한다")
-	void changeFolder_throwsWhenRequesterIsNotAuthor() {
-		// given
-		User author = user(1L, "author@test.com", "author");
-		Folder targetFolder = Folder.create(author, null, DIR_NAME);
-		Note note = Note.create(author, null, TITLE, CONTENT, NoteVisibility.PRIVATE, false);
-
-		// when & then
-		assertThatThrownBy(() -> note.changeFolder(2L, targetFolder))
-				.isInstanceOf(BusinessException.class)
-				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_ACCESS_DENIED);
-	}
-
-	@Test
-	@DisplayName("changeFolder: 다른 사용자의 폴더로는 이동할 수 없다")
-	void changeFolder_throwsWhenTargetFolderOwnedByAnotherUser() {
-		// given
-		User author = user(1L, "author@test.com", "author");
-		User otherAuthor = user(2L, "other@test.com", "other");
-		Folder otherFolder = Folder.create(otherAuthor, null, DIR_NAME);
-		Note note = Note.create(author, null, TITLE, CONTENT, NoteVisibility.PRIVATE, false);
-
-		// when & then
-		assertThatThrownBy(() -> note.changeFolder(author.getId(), otherFolder))
-				.isInstanceOf(BusinessException.class)
-				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_ACCESS_DENIED);
+			// when & then
+			assertThatThrownBy(() -> note.changeFolder(author.getId(), otherFolder))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FOLDER_ACCESS_DENIED);
+		}
 	}
 
 	@Nested
@@ -385,70 +376,132 @@ class NoteTest {
 	class RenameTitle {
 
 		@Test
-		@DisplayName("작성자가 요청하면 제목이 변경된다")
+		@DisplayName("작성자가 요청하면 제목을 변경한다")
 		void changesTitleWhenRequesterIsAuthor() {
-			User author = user(1L, "author@test.com", "author");
-			Note note = Note.create(author, null, TITLE, CONTENT, NoteVisibility.PRIVATE, false);
+			// given
+			User author = author();
+			Note note = note(author);
 
-			note.renameTitle(author.getId(), "새 제목");
+			// when
+			note.renameTitle(author.getId(), RENAMED_TITLE);
 
-			assertThat(note.getTitle()).isEqualTo("새 제목");
+			// then
+			assertThat(note.getTitle()).isEqualTo(RENAMED_TITLE);
 		}
 
 		@Test
-		@DisplayName("다른 사용자가 제목 변경을 시도하면 예외가 발생한다")
+		@DisplayName("작성자가 아니면 제목을 변경할 수 없다")
 		void throwsWhenRequesterIsNotAuthor() {
-			User author = user(1L, "author@test.com", "author");
-			Note note = Note.create(author, null, TITLE, CONTENT, NoteVisibility.PRIVATE, false);
+			// given
+			Note note = note(author());
 
-			assertThatThrownBy(() -> note.renameTitle(2L, "새 제목"))
+			// when & then
+			assertThatThrownBy(() -> note.renameTitle(OTHER_USER_ID, RENAMED_TITLE))
 					.isInstanceOf(BusinessException.class)
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_ACCESS_DENIED);
 		}
 
 		@Test
-		@DisplayName("제목을 공백으로 바꾸려고 하면 예외가 발생한다")
+		@DisplayName("제목을 공백으로 바꿀 수 없다")
 		void throwsWhenTitleIsBlank() {
-			User author = user(1L, "author@test.com", "author");
-			Note note = Note.create(author, null, TITLE, CONTENT, NoteVisibility.PRIVATE, false);
+			// given
+			User author = author();
+			Note note = note(author);
 
-			assertThatThrownBy(() -> note.renameTitle(author.getId(), " "))
+			// when & then
+			assertThatThrownBy(() -> note.renameTitle(author.getId(), BLANK))
 					.isInstanceOf(BusinessException.class)
-					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_INPUT);
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_TITLE_INVALID);
 		}
 
 		@Test
-		@DisplayName("제목이 길이 제한을 넘으면 예외가 발생한다")
+		@DisplayName("제목이 길이 제한을 넘으면 변경할 수 없다")
 		void throwsWhenTitleIsTooLong() {
-			User author = user(1L, "author@test.com", "author");
-			Note note = Note.create(author, null, TITLE, CONTENT, NoteVisibility.PRIVATE, false);
+			// given
+			User author = author();
+			Note note = note(author);
 
-			assertThatThrownBy(() -> note.renameTitle(author.getId(), "a".repeat(201)))
+			// when & then
+			assertThatThrownBy(() -> note.renameTitle(author.getId(), TOO_LONG_TITLE))
 					.isInstanceOf(BusinessException.class)
-					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_INPUT);
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_TITLE_INVALID);
 		}
 
 		@Test
-		@DisplayName("제목을 null로 바꾸려고 하면 예외가 발생한다")
+		@DisplayName("제목을 null로 변경할 수 없다")
 		void throwsWhenTitleIsNull() {
-			User author = user(1L, "author@test.com", "author");
-			Note note = Note.create(author, null, TITLE, CONTENT, NoteVisibility.PRIVATE, false);
+			// given
+			User author = author();
+			Note note = note(author);
 
+			// when & then
 			assertThatThrownBy(() -> note.renameTitle(author.getId(), null))
 					.isInstanceOf(BusinessException.class)
-					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_INPUT);
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_TITLE_INVALID);
 		}
 
 		@Test
 		@DisplayName("제목 길이가 200자면 변경할 수 있다")
 		void changesTitleWhenLengthIsExactly200() {
-			User author = user(1L, "author@test.com", "author");
-			Note note = Note.create(author, null, TITLE, CONTENT, NoteVisibility.PRIVATE, false);
-			String newTitle = "a".repeat(200);
+			// given
+			User author = author();
+			Note note = note(author);
 
-			note.renameTitle(author.getId(), newTitle);
+			// when
+			note.renameTitle(author.getId(), MAX_LENGTH_TITLE);
 
-			assertThat(note.getTitle()).isEqualTo(newTitle);
+			// then
+			assertThat(note.getTitle()).isEqualTo(MAX_LENGTH_TITLE);
 		}
+	}
+
+	@Nested
+	@DisplayName("queries")
+	class Queries {
+
+		@Test
+		@DisplayName("isAuthor는 작성자 여부를 반환한다")
+		void isAuthorReturnsTrueOnlyForAuthor() {
+			// given
+			Note note = note(author());
+
+			// expect
+			assertThat(note.isAuthor(AUTHOR_ID)).isTrue();
+			assertThat(note.isAuthor(OTHER_USER_ID)).isFalse();
+		}
+
+		@Test
+		@DisplayName("getAuthorId는 작성자 ID를 반환한다")
+		void getAuthorIdReturnsAuthorId() {
+			// given
+			Note note = note(author());
+
+			// when & then
+			assertThat(note.getAuthorId()).isEqualTo(AUTHOR_ID);
+		}
+	}
+
+	private static User author() {
+		return user(AUTHOR_ID, "author@test.com", "author");
+	}
+
+	private static User otherUser() {
+		return user(OTHER_USER_ID, "other@test.com", "other");
+	}
+
+	private static User transientAuthor() {
+		return User.create("author@test.com", "author");
+	}
+
+	private static Folder folderOf(User owner) {
+		return Folder.create(owner, null, "backend");
+	}
+
+	private static Note note(User author) {
+		return note(author, null);
+	}
+
+	private static Note note(User author, Folder folder) {
+		return Note.create(author, folder, TITLE, CONTENT, NoteVisibility.PRIVATE, false);
 	}
 }

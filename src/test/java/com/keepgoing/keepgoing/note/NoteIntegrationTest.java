@@ -8,7 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.keepgoing.keepgoing.note.controller.dto.NoteRenameRequest;
+import com.keepgoing.keepgoing.note.controller.dto.request.NoteRenameRequest;
 import com.keepgoing.keepgoing.note.domain.Note;
 import com.keepgoing.keepgoing.note.domain.NoteImage;
 import com.keepgoing.keepgoing.note.domain.NoteVisibility;
@@ -153,7 +153,7 @@ class NoteIntegrationTest {
 
 		@Test
 		@DisplayName("작성자가 노트 삭제를 요청하면 노트와 연결 이미지가 soft delete된다")
-		void softDeletesNoteAndImages() throws Exception {
+		void softDeletesNoteAndImagesBy() throws Exception {
 			User author = saveUser("author@test.com", "작성자");
 			Note targetNote = saveNote(author, "삭제할 노트");
 			Note otherNote = saveNote(author, "유지할 노트");

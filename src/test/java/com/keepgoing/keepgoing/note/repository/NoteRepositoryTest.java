@@ -115,13 +115,13 @@ class NoteRepositoryTest {
 
 	@Test
 	@DisplayName("findByAuthor_Id: soft delete 된 게시글은 조회되지 않는다")
-	void findByAuthorId_excludesSoftDeletedNotes() {
+	void findByAuthorId_excludesSoftDeletedNotesBy() {
 		// given
 		Note note1 = noteRepository.save(Note.create(user1, null, "살아있는 글", "내용", NoteVisibility.PUBLIC, true));
 		Note note2 = noteRepository.save(Note.create(user1, null, "삭제된 글", "내용", NoteVisibility.PUBLIC, true));
 
 		// soft delete
-		note2.softDelete();
+		note2.softDeleteBy(user1.getId());
 		noteRepository.save(note2); // 변경사항 반영
 
 		Pageable pageable = sortedByCreatedAtDesc(10);
@@ -380,7 +380,7 @@ class NoteRepositoryTest {
 			Note note = noteRepository.save(
 					Note.create(user1, folder, "title", "content", NoteVisibility.PRIVATE, false)
 			);
-			note.softDelete();
+			note.softDeleteBy(user1.getId());
 
 			// when
 			boolean result = noteRepository.existsByFolder_IdAndDeletedAtIsNull(folder.getId());

@@ -24,9 +24,9 @@ import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import com.keepgoing.keepgoing.global.config.JacksonConfig;
 import com.keepgoing.keepgoing.global.security.cookie.CookieConfig;
 import com.keepgoing.keepgoing.global.security.jwt.JwtProvider;
-import com.keepgoing.keepgoing.note.controller.dto.NoteCreateRequest;
-import com.keepgoing.keepgoing.note.controller.dto.NoteRenameRequest;
-import com.keepgoing.keepgoing.note.controller.dto.NoteUpdateRequest;
+import com.keepgoing.keepgoing.note.controller.dto.request.NoteCreateRequest;
+import com.keepgoing.keepgoing.note.controller.dto.request.NoteRenameRequest;
+import com.keepgoing.keepgoing.note.controller.dto.request.NoteUpdateRequest;
 import com.keepgoing.keepgoing.note.domain.NoteVisibility;
 import com.keepgoing.keepgoing.note.service.NoteService;
 import com.keepgoing.keepgoing.note.service.dto.NoteCreateCommand;
@@ -199,27 +199,6 @@ public class NoteControllerTest {
 					.userId()).isEqualTo(userId);
 			assertThat(captor.getValue()
 					.folderId()).isEqualTo(folderId);
-		}
-
-		@Test
-		@DisplayName("title이 비어있으면 400 에러")
-		void createNote_failsWithEmptyTitle() throws Exception {
-			//given
-			NoteCreateRequest request = new NoteCreateRequest(
-					null,
-					"",
-					"테스트 내용",
-					NoteVisibility.PRIVATE,
-					true
-			);
-
-			String json = objectMapper.writeValueAsString(request);
-
-			//when & then
-			mockMvc.perform(post("/api/notes")
-							.contentType(MediaType.APPLICATION_JSON)
-							.content(json))
-					.andExpect(status().isBadRequest()); // HTTP 400 Bad Request를 기대
 		}
 
 		@Test
@@ -548,6 +527,44 @@ public class NoteControllerTest {
 					.andExpect(status().isOk())
 					.andExpect(jsonPath("$.success").value(true))
 					.andExpect(jsonPath("$.data.title").value("수정된 제목"));
+		}
+
+		@Test
+		@DisplayName("수정 시 제목과 본문을 비워두어도 성공한다")
+		void updateNote_successWithEmptyFields() throws Exception {
+			// given
+			Long noteId = 1L;
+			Long userId = 1L;
+			NoteUpdateRequest request = new NoteUpdateRequest("", "", NoteVisibility.PRIVATE, false);
+			NoteDetailResult result = new NoteDetailResult(userId, noteId, null, "", "", NoteVisibility.PRIVATE, false, null, null);
+
+			given(noteService.updateNote(any(NoteUpdateCommand.class))).willReturn(result);
+			SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(userId, null, List.of()));
+
+			// when & then
+			mockMvc.perform(put("/api/notes/{noteId}", noteId)
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(objectMapper.writeValueAsString(request)))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.data.title").value(""))
+					.andExpect(jsonPath("$.data.content").value(""));
+		}
+
+		@Test
+		@DisplayName("빈 제목으로 PUBLIC 업데이트 시도 시 에러를 반환한다")
+		void updateNote_failWhenPublicWithEmptyTitle() throws Exception {
+			// given
+			Long noteId = 1L;
+			NoteUpdateRequest request = new NoteUpdateRequest("", "내용", NoteVisibility.PUBLIC, false);
+
+			given(noteService.updateNote(any())).willThrow(new BusinessException(ErrorCode.NOTE_TITLE_INVALID));
+
+			// when & then
+			mockMvc.perform(put("/api/notes/{noteId}", noteId)
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(objectMapper.writeValueAsString(request)))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.error.code").value("NOTE_TITLE_INVALID"));
 		}
 
 		@Test

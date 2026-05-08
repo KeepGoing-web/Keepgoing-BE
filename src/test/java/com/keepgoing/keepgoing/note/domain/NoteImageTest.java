@@ -84,7 +84,7 @@ class NoteImageTest {
 			// given
 			User uploader = user(1L);
 			Note note = note(uploader);
-			note.softDelete();
+			note.softDeleteBy(uploader.getId());
 
 			// when & then
 			assertThatThrownBy(() -> NoteImage.create(
