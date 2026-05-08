@@ -67,7 +67,7 @@ public class NoteImage extends BaseEntity {
 			String contentType,
 			Long fileSize
 	) {
-		if (note == null || note.isDeleted()) {
+		if (note == null || note.getId() == null || note.isDeleted()) {
 			throw new BusinessException(ErrorCode.INVALID_INPUT);
 		}
 

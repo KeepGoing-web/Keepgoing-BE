@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.springframework.test.util.ReflectionTestUtils;
 
 class NoteImageTest {
 
@@ -77,6 +78,25 @@ class NoteImageTest {
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_INPUT);
 		}
 
+		@Test
+		@DisplayName("저장되지 않은 노트에는 이미지를 생성할 수 없다")
+		void create_throwsWhenNoteIsNotPersisted() {
+			// given
+			User uploader = user(1L);
+			Note unsavedNote = unsavedNote(uploader);
+
+			// when & then
+			assertThatThrownBy(() -> NoteImage.create(
+					unsavedNote,
+					uploader,
+					STORAGE_KEY,
+					ORIGINAL_NAME,
+					CONTENT_TYPE,
+					FILE_SIZE
+			))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_INPUT);
+		}
 
 		@Test
 		@DisplayName("삭제된 노트에는 이미지를 생성할 수 없다")
@@ -292,6 +312,12 @@ class NoteImageTest {
 	}
 
 	private Note note(User author) {
+		Note note = unsavedNote(author);
+		ReflectionTestUtils.setField(note, "id", 1L);
+		return note;
+	}
+
+	private Note unsavedNote(User author) {
 		return Note.create(
 				author,
 				null,
