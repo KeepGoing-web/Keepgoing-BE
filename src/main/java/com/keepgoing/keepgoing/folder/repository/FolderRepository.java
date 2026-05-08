@@ -76,7 +76,7 @@ public interface FolderRepository extends JpaRepository<Folder, Long> {
 			select f
 			from Folder f
 			where f.id = :targetFolderId
-			  and f.deletedAt is null 
+			  and f.deletedAt is null
 			""")
 	Optional<Folder> findForUpdate(@Param("targetFolderId") Long targetFolderId);
 

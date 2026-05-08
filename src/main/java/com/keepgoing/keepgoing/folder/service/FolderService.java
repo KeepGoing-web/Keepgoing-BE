@@ -36,7 +36,7 @@ public class FolderService {
 	private final UserRepository userRepository;
 	private final FolderRepository folderRepository;
 	private final NoteRepository noteRepository;
-	private final FolderLockService folderLockService;
+	private final FolderLocker folderLockService;
 	private static final int MAX_TREE_DEPTH = 200;
 
 	@Transactional
