@@ -1,4 +1,4 @@
-package com.keepgoing.keepgoing.note.controller.dto;
+package com.keepgoing.keepgoing.note.controller.dto.request;
 
 import com.keepgoing.keepgoing.global.validation.PositiveIfPresent;
 import com.keepgoing.keepgoing.global.validation.PresentJsonNullable;

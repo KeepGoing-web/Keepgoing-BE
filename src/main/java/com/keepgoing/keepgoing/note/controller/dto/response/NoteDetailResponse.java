@@ -1,9 +1,8 @@
-package com.keepgoing.keepgoing.note.controller.dto;
+package com.keepgoing.keepgoing.note.controller.dto.response;
 
 import com.keepgoing.keepgoing.note.domain.NoteVisibility;
 import com.keepgoing.keepgoing.note.service.dto.NoteDetailResult;
 import io.swagger.v3.oas.annotations.media.Schema;
-
 import java.time.LocalDateTime;
 
 @Schema(description = "노트 상세 응답")

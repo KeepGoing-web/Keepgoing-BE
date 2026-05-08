@@ -1,4 +1,4 @@
-package com.keepgoing.keepgoing.note.controller.dto;
+package com.keepgoing.keepgoing.note.controller.dto.response;
 
 import com.keepgoing.keepgoing.note.domain.NoteVisibility;
 import com.keepgoing.keepgoing.note.service.dto.NoteSummaryResult;

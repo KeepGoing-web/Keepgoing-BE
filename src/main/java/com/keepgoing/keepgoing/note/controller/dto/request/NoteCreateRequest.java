@@ -1,9 +1,8 @@
-package com.keepgoing.keepgoing.note.controller.dto;
+package com.keepgoing.keepgoing.note.controller.dto.request;
 
 import com.keepgoing.keepgoing.note.domain.NoteVisibility;
 import com.keepgoing.keepgoing.note.service.dto.NoteCreateCommand;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 @Schema(description = "노트 생성 요청")
@@ -16,11 +15,9 @@ public record NoteCreateRequest(
         )
         Long folderId,
 
-        @NotBlank
         @Size(max = 200)
         String title,
 
-        @NotBlank
         String content,
 
         NoteVisibility visibility,

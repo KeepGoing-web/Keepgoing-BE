@@ -54,8 +54,7 @@ public class Note extends BaseEntity {
 
 	@Enumerated(EnumType.STRING)
 	@Column(name = "visibility", nullable = false, length = 20)
-	@Builder.Default
-	private NoteVisibility visibility = NoteVisibility.PRIVATE;
+	private NoteVisibility visibility;
 
 	@Column(name = "ai_collectable", nullable = false)
 	@Builder.Default
@@ -64,7 +63,7 @@ public class Note extends BaseEntity {
 	@Column(name = "deleted_at")
 	private LocalDateTime deletedAt;
 
-	// === 비즈니스 로직 ===
+	// ===== Factory =====
 
 	/**
 	 * 글 생성 팩토리 메서드 - visibility가 null이면 기본값 PRIVATE 사용
@@ -77,56 +76,105 @@ public class Note extends BaseEntity {
 			NoteVisibility visibility,
 			Boolean aiCollectable
 	) {
-		if (author == null || author.getId() == null) {
-			throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
-		}
+		requirePersistedAuthor(author);
 		if (folder != null) {
 			folder.validateOwner(author.getId());
 		}
-		if (title == null || title.isBlank()) {
-			throw new BusinessException(ErrorCode.INVALID_INPUT);
-		}
-		if (content == null || content.isBlank()) {
-			throw new BusinessException(ErrorCode.INVALID_INPUT);
-		}
 
-		NoteVisibility finalVisibility =
-				(visibility != null) ? visibility : NoteVisibility.PRIVATE;
+		if (visibility == NoteVisibility.PUBLIC) {
+			validatePublishedContent(title, content);
+		}
+		validateTitle(title);
 
-		boolean finalAiCollectable =
-				(aiCollectable != null) && aiCollectable;
+		final String finalTitle = (title != null) ? title : "";
+		final String finalContent = (content != null) ? content : "";
+		final NoteVisibility finalVisibility = (visibility != null) ? visibility : NoteVisibility.PRIVATE;
+		final boolean finalAiCollectable = (aiCollectable != null) && aiCollectable;
 
 		return Note.builder()
 				.author(author)
 				.folder(folder)
-				.title(title)
-				.content(content)
+				.title(finalTitle)
+				.content(finalContent)
 				.visibility(finalVisibility)
 				.aiCollectable(finalAiCollectable)
 				.build();
 	}
 
+	private static void validatePublishedContent(String title, String content) {
+		if (title == null || title.isBlank() || title.length() > 200) {
+			throw new BusinessException(ErrorCode.NOTE_TITLE_INVALID);
+		}
+
+		if (content == null || content.isBlank()) {
+			throw new BusinessException(ErrorCode.NOTE_CONTENT_REQUIRED);
+		}
+	}
+
 	/**
 	 * 글 내용 수정
 	 */
-	public void update(String title,
-	                   String content,
-	                   NoteVisibility visibility,
-	                   boolean aiCollectable) {
-		this.title = title;
-		this.content = content;
-		this.visibility = visibility;
-		this.aiCollectable = aiCollectable;
+	public void update(
+			Long requesterId,
+			String title,
+			String content,
+			NoteVisibility visibility,
+			Boolean aiCollectable
+	) {
+		requireAuthorAccess(requesterId);
+		if (visibility == NoteVisibility.PUBLIC) {
+			validatePublishedContent(title, content);
+		}
+		validateTitle(title);
+
+		final String finalTitle = (title != null) ? title : "";
+		final String finalContent = (content != null) ? content : "";
+		final NoteVisibility finalVisibility = (visibility != null) ? visibility : NoteVisibility.PRIVATE;
+		final boolean finalAiCollectable = (aiCollectable != null) && aiCollectable;
+
+		this.title = finalTitle;
+		this.content = finalContent;
+		this.visibility = finalVisibility;
+		this.aiCollectable = finalAiCollectable;
 	}
+
+	/**
+	 * 제목 변경
+	 */
+	public void renameTitle(Long requesterId, String newTitle) {
+		requireAuthorAccess(requesterId);
+
+		if (newTitle == null || newTitle.isBlank() || newTitle.length() > 200) {
+			throw new BusinessException(ErrorCode.NOTE_TITLE_INVALID);
+		}
+		this.title = newTitle;
+	}
+
+	/**
+	 * 폴더 변경
+	 */
+	public void changeFolder(Long requesterId, Folder targetFolder) {
+		requireAuthorAccess(requesterId);
+		if (targetFolder != null) {
+			targetFolder.validateOwner(this.author.getId());
+		}
+
+		this.folder = targetFolder;
+	}
+
+	// ===== Termination =====
 
 	/**
 	 * 소프트 삭제
 	 */
-	public void softDelete() {
+	public void softDeleteBy(Long requesterId) {
+		requireAuthorAccess(requesterId);
 		if (this.deletedAt == null) {
 			this.deletedAt = LocalDateTime.now();
 		}
 	}
+
+	// ===== Queries =====
 
 	/**
 	 * 삭제 처리된 게시글인지 여부
@@ -136,17 +184,7 @@ public class Note extends BaseEntity {
 	}
 
 	/**
-	 * 작성자 권한 검증
-	 */
-	public void validateAuthor(Long authorId) {
-		if (!isAuthor(authorId)) {
-			throw new BusinessException(ErrorCode.NOTE_ACCESS_DENIED);
-		}
-	}
-
-	/**
 	 * 이 글의 작성자 여부
-	 *
 	 */
 	public boolean isAuthor(Long authorId) {
 		return this.author != null
@@ -158,32 +196,27 @@ public class Note extends BaseEntity {
 	 * 작성자 ID 가져오기
 	 */
 	public Long getAuthorId() {
-		if (this.author == null || this.author.getId() == null) {
-			throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
-		}
+		requirePersistedAuthor(this.author);
 		return this.author.getId();
 	}
 
-	/**
-	 * 폴더 변경
-	 */
-	public void changeFolder(Long requesterId, Folder targetFolder) {
-		validateAuthor(requesterId);
+	// ===== Internal Guards =====
 
-		if (targetFolder != null) {
-			targetFolder.validateOwner(this.author.getId());
+	private void requireAuthorAccess(Long requesterId) {
+		if (!isAuthor(requesterId)) {
+			throw new BusinessException(ErrorCode.NOTE_ACCESS_DENIED);
 		}
-		this.folder = targetFolder;
 	}
 
-	/**
-	 * 제목 변경
-	 */
-	public void renameTitle(Long requesterId, String newTitle) {
-		validateAuthor(requesterId);
+	private static void requirePersistedAuthor(User author) {
+		if (author == null || author.getId() == null) {
+			throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
+		}
+	}
 
-		if (newTitle == null || newTitle.isBlank() || newTitle.length() > 200)
-			throw new BusinessException(ErrorCode.INVALID_INPUT);
-		this.title = newTitle;
+	private static void validateTitle(String title) {
+		if (title != null && title.length() > 200) {
+			throw new BusinessException(ErrorCode.NOTE_TITLE_INVALID);
+		}
 	}
 }
