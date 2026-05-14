@@ -83,6 +83,7 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<ErrorResponse> handleUnexpected(Exception ex) {
+		log.error("unhandled exception", ex);
 		ErrorDetail detail = ErrorDetail.of(
 				ErrorCode.INTERNAL_SERVER_ERROR,
 				"알 수 없는 서버 에러가 발생했습니다."

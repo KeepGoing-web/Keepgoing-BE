@@ -219,4 +219,10 @@ public class Note extends BaseEntity {
 			throw new BusinessException(ErrorCode.NOTE_TITLE_INVALID);
 		}
 	}
+
+	public void validateOwner(Long userId) {
+		if (!isAuthor(userId)) {
+			throw new BusinessException(ErrorCode.NOTE_ACCESS_DENIED);
+		}
+	}
 }

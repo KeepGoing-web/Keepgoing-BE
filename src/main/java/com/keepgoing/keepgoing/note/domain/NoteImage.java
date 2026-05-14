@@ -6,6 +6,8 @@ import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import com.keepgoing.keepgoing.user.domain.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -17,6 +19,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.SQLRestriction;
@@ -27,6 +30,7 @@ import org.hibernate.annotations.SQLRestriction;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Getter
 @SQLRestriction("deleted_at IS NULL")
+@Builder(access = AccessLevel.PROTECTED)
 public class NoteImage extends BaseEntity {
 
 	@Id
@@ -55,6 +59,11 @@ public class NoteImage extends BaseEntity {
 
 	@Column(name = "file_size", nullable = false)
 	private Long fileSize;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "status", nullable = false, length = 20)
+	@Builder.Default
+	private NoteImageStatus status = NoteImageStatus.PENDING;
 
 	@Column(name = "deleted_at")
 	private LocalDateTime deletedAt;
@@ -95,17 +104,16 @@ public class NoteImage extends BaseEntity {
 			throw new BusinessException(ErrorCode.INVALID_INPUT);
 		}
 
-		return new NoteImage(
-				null,
-				UUID.randomUUID(),
-				note,
-				uploader,
-				storageKey,
-				originalName,
-				contentType,
-				fileSize,
-				null
-		);
+		return NoteImage.builder()
+				.publicId(UUID.randomUUID())
+				.note(note)
+				.uploader(uploader)
+				.storageKey(storageKey)
+				.originalName(originalName)
+				.contentType(contentType)
+				.fileSize(fileSize)
+				.status(NoteImageStatus.PENDING)
+				.build();
 	}
 
 	public void validateUploader(Long userId) {
