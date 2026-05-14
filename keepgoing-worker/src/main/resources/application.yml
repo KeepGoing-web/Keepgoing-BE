@@ -1,0 +1,5 @@
+spring:
+  application:
+    name: keepgoing-worker
+  main:
+    web-application-type: none
