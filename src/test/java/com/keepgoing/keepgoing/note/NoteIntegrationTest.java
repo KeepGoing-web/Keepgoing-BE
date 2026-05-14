@@ -3,7 +3,9 @@ package com.keepgoing.keepgoing.note;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -59,6 +61,79 @@ class NoteIntegrationTest {
 	@AfterEach
 	void tearDown() {
 		SecurityContextHolder.clearContext();
+	}
+
+	@Nested
+	@DisplayName("POST /api/notes")
+	class CreateNote {
+
+		@Test
+		@DisplayName("작성자가 빈 노트 생성을 요청하면 PRIVATE 노트 ID를 반환하고 DB에 저장한다")
+		void createsEmptyPrivateNoteAndReturnsId() throws Exception {
+			User author = saveUser("author@test.com", "작성자");
+			mockLoginUser(author.getId());
+
+			mockMvc.perform(post("/api/notes")
+							.contentType(APPLICATION_JSON)
+							.content("""
+									{
+									  "title": null,
+									  "content": null,
+									  "visibility": null,
+									  "aiCollectable": null
+									}
+									"""))
+					.andExpect(status().isCreated())
+					.andExpect(jsonPath("$.success").value(true))
+					.andExpect(jsonPath("$.data.noteId").isNumber())
+					.andExpect(jsonPath("$.data.userId").value(author.getId()))
+					.andExpect(jsonPath("$.data.title").value(""))
+					.andExpect(jsonPath("$.data.content").value(""))
+					.andExpect(jsonPath("$.data.visibility").value("PRIVATE"))
+					.andExpect(jsonPath("$.data.aiCollectable").value(false));
+
+			entityManager.flush();
+			entityManager.clear();
+
+			List<Note> notes = noteRepository.findAll();
+			assertThat(notes).hasSize(1);
+			Note saved = notes.getFirst();
+			assertThat(saved.getAuthor().getId()).isEqualTo(author.getId());
+			assertThat(saved.getTitle()).isEqualTo("");
+			assertThat(saved.getContent()).isEqualTo("");
+			assertThat(saved.getVisibility()).isEqualTo(NoteVisibility.PRIVATE);
+			assertThat(saved.isAiCollectable()).isFalse();
+		}
+
+		@Test
+		@DisplayName("PRIVATE으로 즉시 생성된 노트는 공개 검색에 노출되지 않는다")
+		void excludesPrivateCreatedNoteFromPublicSearch() throws Exception {
+			User author = saveUser("author@test.com", "작성자");
+			mockLoginUser(author.getId());
+
+			mockMvc.perform(post("/api/notes")
+							.contentType(APPLICATION_JSON)
+							.content("""
+									{
+									  "title": "검색노출금지",
+									  "content": "",
+									  "visibility": "PRIVATE",
+									  "aiCollectable": false
+									}
+									"""))
+					.andExpect(status().isCreated())
+					.andExpect(jsonPath("$.data.visibility").value("PRIVATE"));
+
+			entityManager.flush();
+			entityManager.clear();
+			SecurityContextHolder.clearContext();
+
+			mockMvc.perform(get("/api/notes/search")
+							.param("keyword", "검색노출금지"))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.success").value(true))
+					.andExpect(jsonPath("$.data.contents.length()").value(0));
+		}
 	}
 
 	@Nested

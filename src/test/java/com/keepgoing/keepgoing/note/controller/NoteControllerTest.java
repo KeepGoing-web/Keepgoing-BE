@@ -504,9 +504,9 @@ public class NoteControllerTest {
 			);
 
 			NoteDetailResult result = new NoteDetailResult(
-					userId,
 					noteId,
 					null,
+					userId,
 					"수정된 제목",
 					"수정된 내용",
 					NoteVisibility.PUBLIC,
@@ -536,7 +536,7 @@ public class NoteControllerTest {
 			Long noteId = 1L;
 			Long userId = 1L;
 			NoteUpdateRequest request = new NoteUpdateRequest("", "", NoteVisibility.PRIVATE, false);
-			NoteDetailResult result = new NoteDetailResult(userId, noteId, null, "", "", NoteVisibility.PRIVATE, false, null, null);
+			NoteDetailResult result = new NoteDetailResult(noteId, null, userId, "", "", NoteVisibility.PRIVATE, false, null, null);
 
 			given(noteService.updateNote(any(NoteUpdateCommand.class))).willReturn(result);
 			SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(userId, null, List.of()));
