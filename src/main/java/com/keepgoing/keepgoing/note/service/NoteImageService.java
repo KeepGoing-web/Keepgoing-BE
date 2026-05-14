@@ -68,7 +68,6 @@ public class NoteImageService {
 			return objectStorageClient.upload(
 					command.inputStreamSupplier(),
 					"notes/" + noteId,
-					command.originalFileName(),
 					command.fileSize()
 			);
 		} catch (ObjectStorageException e) {

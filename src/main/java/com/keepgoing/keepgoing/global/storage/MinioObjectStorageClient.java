@@ -23,11 +23,9 @@ public class MinioObjectStorageClient implements ObjectStorageClient {
 	public String upload(
 			InputStreamSupplier inputStreamSupplier,
 			String directory,
-			String originalFilename,
 			long fileSize
 	) {
-		String extension = extractExtension(originalFilename);
-		String savedKey = directory + "/" + UUID.randomUUID() + extension;
+		String savedKey = directory + "/" + UUID.randomUUID();
 
 		try (InputStream inputStream = inputStreamSupplier.get()) {
 			PutObjectRequest putObjectRequest = PutObjectRequest.builder()
@@ -55,12 +53,5 @@ public class MinioObjectStorageClient implements ObjectStorageClient {
 		} catch (S3Exception | SdkClientException e) {
 			throw new ObjectStorageException("MinIO 파일 삭제 실패: " + storageKey, e);
 		}
-	}
-
-	private String extractExtension(String filename) {
-		if (filename == null || !filename.contains(".")) {
-			return "";
-		}
-		return filename.substring(filename.lastIndexOf("."));
 	}
 }

@@ -27,7 +27,6 @@ class MinioObjectStorageClientTest {
 
 	private static final String QUARANTINE_BUCKET = "quarantine-bucket";
 	private static final String DIRECTORY = "notes/1";
-	private static final String FILE_NAME = "image.png";
 	private static final long FILE_SIZE = 100L;
 
 	@Mock
@@ -56,11 +55,10 @@ class MinioObjectStorageClientTest {
 		InputStreamSupplier supplier = () -> new ByteArrayInputStream(content);
 
 		// when
-		String savedKey = minioClient.upload(supplier, DIRECTORY, FILE_NAME, content.length);
+		String savedKey = minioClient.upload(supplier, DIRECTORY, content.length);
 
 		// then
 		assertThat(savedKey).startsWith(DIRECTORY + "/");
-		assertThat(savedKey).endsWith(".png");
 
 		ArgumentCaptor<PutObjectRequest> requestCaptor = ArgumentCaptor.forClass(PutObjectRequest.class);
 		verify(s3Client).putObject(requestCaptor.capture(), any(RequestBody.class));
@@ -79,7 +77,7 @@ class MinioObjectStorageClientTest {
 				.willThrow(S3Exception.builder().message("s3 error").build());
 
 		// when & then
-		assertThatThrownBy(() -> minioClient.upload(supplier, DIRECTORY, FILE_NAME, FILE_SIZE))
+		assertThatThrownBy(() -> minioClient.upload(supplier, DIRECTORY, FILE_SIZE))
 				.isInstanceOf(ObjectStorageException.class)
 				.hasMessageContaining("MinIO 업로드 중 오류 발생")
 				.hasCauseInstanceOf(S3Exception.class);
@@ -94,7 +92,7 @@ class MinioObjectStorageClientTest {
 				.willThrow(SdkClientException.create("sdk error"));
 
 		// when & then
-		assertThatThrownBy(() -> minioClient.upload(supplier, DIRECTORY, FILE_NAME, FILE_SIZE))
+		assertThatThrownBy(() -> minioClient.upload(supplier, DIRECTORY, FILE_SIZE))
 				.isInstanceOf(ObjectStorageException.class)
 				.hasMessageContaining("MinIO 업로드 중 오류 발생")
 				.hasCauseInstanceOf(SdkClientException.class);
@@ -109,7 +107,7 @@ class MinioObjectStorageClientTest {
 		};
 
 		// when & then
-		assertThatThrownBy(() -> minioClient.upload(supplier, DIRECTORY, FILE_NAME, FILE_SIZE))
+		assertThatThrownBy(() -> minioClient.upload(supplier, DIRECTORY, FILE_SIZE))
 				.isInstanceOf(ObjectStorageException.class)
 				.hasMessageContaining("MinIO 업로드 중 오류 발생")
 				.hasCauseInstanceOf(IOException.class);
@@ -123,7 +121,7 @@ class MinioObjectStorageClientTest {
 		InputStreamSupplier supplier = () -> new ByteArrayInputStream(content);
 
 		// when
-		String savedKey = minioClient.upload(supplier, DIRECTORY, "image", content.length);
+		String savedKey = minioClient.upload(supplier, DIRECTORY, content.length);
 
 		// then
 		assertThat(savedKey).startsWith(DIRECTORY + "/");
@@ -138,7 +136,7 @@ class MinioObjectStorageClientTest {
 		InputStreamSupplier supplier = () -> new ByteArrayInputStream(content);
 
 		// when
-		String savedKey = minioClient.upload(supplier, DIRECTORY, null, content.length);
+		String savedKey = minioClient.upload(supplier, DIRECTORY, content.length);
 
 		// then
 		assertThat(savedKey).startsWith(DIRECTORY + "/");
@@ -149,7 +147,7 @@ class MinioObjectStorageClientTest {
 	@DisplayName("파일 삭제 시 S3Client의 deleteObject를 호출한다")
 	void deleteSuccessfully() {
 		// given
-		String storageKey = "notes/1/uuid.png";
+		String storageKey = "notes/1/uuid";
 
 		// when
 		minioClient.delete(storageKey);
@@ -167,7 +165,7 @@ class MinioObjectStorageClientTest {
 	@DisplayName("삭제 중 SdkClientException 발생 시 ObjectStorageException으로 래핑하여 던진다")
 	void deleteThrowsExceptionOnFailure() {
 		// given
-		String storageKey = "notes/1/uuid.png";
+		String storageKey = "notes/1/uuid";
 		given(s3Client.deleteObject(any(DeleteObjectRequest.class)))
 				.willThrow(SdkClientException.create("network error"));
 
@@ -182,7 +180,7 @@ class MinioObjectStorageClientTest {
 	@DisplayName("삭제 중 S3Exception 발생 시 ObjectStorageException으로 래핑하여 던진다")
 	void deleteThrowsExceptionOnS3Failure() {
 		// given
-		String storageKey = "notes/1/uuid.png";
+		String storageKey = "notes/1/uuid";
 		given(s3Client.deleteObject(any(DeleteObjectRequest.class)))
 				.willThrow(S3Exception.builder().message("delete s3 error").build());
 

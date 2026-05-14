@@ -54,7 +54,7 @@ class NoteImageServiceTest {
 	private static final String ORIGINAL_FILE_NAME = "image.png";
 	private static final String CONTENT_TYPE = "image/png";
 	private static final long FILE_SIZE = 1024L;
-	private static final String STORAGE_KEY = "notes/10/generated-image-key.png";
+	private static final String STORAGE_KEY = "notes/10/generated-image-key";
 
 	@Mock
 	NoteRepository noteRepository;
@@ -90,7 +90,6 @@ class NoteImageServiceTest {
 			given(objectStorageClient.upload(
 					eq(command.inputStreamSupplier()),
 					eq("notes/" + NOTE_ID),
-					eq(command.originalFileName()),
 					eq(command.fileSize())
 			)).willReturn(STORAGE_KEY);
 			given(transactionTemplate.execute(any())).willAnswer(invocation -> {
@@ -109,7 +108,6 @@ class NoteImageServiceTest {
 			inOrder.verify(objectStorageClient).upload(
 					eq(command.inputStreamSupplier()),
 					eq("notes/" + NOTE_ID),
-					eq(command.originalFileName()),
 					eq(command.fileSize())
 			);
 			inOrder.verify(noteImageRepository).save(noteImageCaptor.capture());
@@ -169,10 +167,11 @@ class NoteImageServiceTest {
 			// given
 			Note note = persistedNote(user(UPLOADER_ID));
 			NoteImageUploadCommand command = uploadCommand(NOTE_ID);
-			ObjectStorageException storageException = new ObjectStorageException("upload failed", new RuntimeException("io"));
+			ObjectStorageException storageException = new ObjectStorageException("upload failed",
+					new RuntimeException("io"));
 
 			given(noteRepository.findById(NOTE_ID)).willReturn(Optional.of(note));
-			given(objectStorageClient.upload(any(), eq("notes/" + NOTE_ID), eq(ORIGINAL_FILE_NAME), eq(FILE_SIZE)))
+			given(objectStorageClient.upload(any(), eq("notes/" + NOTE_ID), eq(FILE_SIZE)))
 					.willThrow(storageException);
 
 			// when & then
@@ -182,7 +181,7 @@ class NoteImageServiceTest {
 					.hasCause(storageException);
 
 			verify(noteRepository).findById(NOTE_ID);
-			verify(objectStorageClient).upload(any(), eq("notes/" + NOTE_ID), eq(ORIGINAL_FILE_NAME), eq(FILE_SIZE));
+			verify(objectStorageClient).upload(any(), eq("notes/" + NOTE_ID), eq(FILE_SIZE));
 			verifyNoInteractions(transactionTemplate, userRepository, noteImageRepository);
 			verify(objectStorageClient, never()).delete(any());
 		}
@@ -197,7 +196,7 @@ class NoteImageServiceTest {
 			RuntimeException dbException = new RuntimeException("db save failed");
 
 			given(noteRepository.findById(NOTE_ID)).willReturn(Optional.of(note));
-			given(objectStorageClient.upload(any(), eq("notes/" + NOTE_ID), eq(ORIGINAL_FILE_NAME), eq(FILE_SIZE)))
+			given(objectStorageClient.upload(any(), eq("notes/" + NOTE_ID), eq(FILE_SIZE)))
 					.willReturn(STORAGE_KEY);
 			given(transactionTemplate.execute(any())).willAnswer(invocation -> {
 				TransactionCallback<NoteImageUploadResult> callback = invocation.getArgument(0);
@@ -211,7 +210,8 @@ class NoteImageServiceTest {
 					.isSameAs(dbException);
 
 			InOrder inOrder = inOrder(objectStorageClient, noteImageRepository);
-			inOrder.verify(objectStorageClient).upload(any(), eq("notes/" + NOTE_ID), eq(ORIGINAL_FILE_NAME), eq(FILE_SIZE));
+			inOrder.verify(objectStorageClient)
+					.upload(any(), eq("notes/" + NOTE_ID), eq(FILE_SIZE));
 			inOrder.verify(noteImageRepository).save(any(NoteImage.class));
 			verify(objectStorageClient).delete(STORAGE_KEY);
 		}
@@ -224,10 +224,11 @@ class NoteImageServiceTest {
 			User uploader = user(UPLOADER_ID);
 			NoteImageUploadCommand command = uploadCommand(NOTE_ID);
 			RuntimeException dbException = new RuntimeException("db save failed");
-			ObjectStorageException deleteException = new ObjectStorageException("delete failed", new RuntimeException("network"));
+			ObjectStorageException deleteException = new ObjectStorageException("delete failed",
+					new RuntimeException("network"));
 
 			given(noteRepository.findById(NOTE_ID)).willReturn(Optional.of(note));
-			given(objectStorageClient.upload(any(), eq("notes/" + NOTE_ID), eq(ORIGINAL_FILE_NAME), eq(FILE_SIZE)))
+			given(objectStorageClient.upload(any(), eq("notes/" + NOTE_ID), eq(FILE_SIZE)))
 					.willReturn(STORAGE_KEY);
 			given(transactionTemplate.execute(any())).willAnswer(invocation -> {
 				TransactionCallback<NoteImageUploadResult> callback = invocation.getArgument(0);

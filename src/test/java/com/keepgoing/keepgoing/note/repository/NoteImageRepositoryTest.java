@@ -44,9 +44,9 @@ class NoteImageRepositoryTest {
 			Note targetNote = noteRepository.save(note(author, "대상 노트"));
 			Note otherNote = noteRepository.save(note(author, "다른 노트"));
 
-			noteImageRepository.save(noteImage(targetNote, author, "note-images/target-1.png"));
-			noteImageRepository.save(noteImage(targetNote, author, "note-images/target-2.png"));
-			noteImageRepository.save(noteImage(otherNote, author, "note-images/other.png"));
+			noteImageRepository.save(noteImage(targetNote, author, "note-images/target-1"));
+			noteImageRepository.save(noteImage(targetNote, author, "note-images/target-2"));
+			noteImageRepository.save(noteImage(otherNote, author, "note-images/other"));
 			em.flush();
 			em.clear();
 
@@ -69,9 +69,9 @@ class NoteImageRepositoryTest {
 			Note targetNote = noteRepository.save(note(author, "대상 노트"));
 
 			NoteImage alreadyDeleted = noteImageRepository.save(
-					noteImage(targetNote, author, "note-images/already-deleted.png")
+					noteImage(targetNote, author, "note-images/already-deleted")
 			);
-			noteImageRepository.save(noteImage(targetNote, author, "note-images/active.png"));
+			noteImageRepository.save(noteImage(targetNote, author, "note-images/active"));
 			alreadyDeleted.softDelete();
 			em.flush();
 			em.clear();
@@ -92,7 +92,7 @@ class NoteImageRepositoryTest {
 			// given
 			User author = userRepository.save(User.create("author@test.com", "작성자"));
 			Note targetNote = noteRepository.save(note(author, "대상 노트"));
-			noteImageRepository.save(noteImage(targetNote, author, "note-images/managed.png"));
+			noteImageRepository.save(noteImage(targetNote, author, "note-images/managed"));
 			em.flush();
 
 			// when

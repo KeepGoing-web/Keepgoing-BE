@@ -89,11 +89,10 @@ class NoteImageUploadIntegrationTest {
 			// given
 			User author = saveUser("author@test.com", "작성자");
 			Note note = saveNote(author, "이미지를 포함할 노트");
-			String storageKey = "notes/" + note.getId() + "/generated-image-key.png";
+			String storageKey = "notes/" + note.getId() + "/generated-image-key";
 			mockLoginUser(author.getId());
 
-			given(objectStorageClient.upload(any(), eq("notes/" + note.getId()), eq(IMAGE_NAME),
-					eq((long) IMAGE_CONTENT.length)))
+			given(objectStorageClient.upload(any(), eq("notes/" + note.getId()), eq((long) IMAGE_CONTENT.length)))
 					.willReturn(storageKey);
 
 			// when & then
@@ -122,7 +121,6 @@ class NoteImageUploadIntegrationTest {
 			then(objectStorageClient).should().upload(
 					supplierCaptor.capture(),
 					eq("notes/" + note.getId()),
-					eq(IMAGE_NAME),
 					eq((long) IMAGE_CONTENT.length)
 			);
 			assertThat(supplierCaptor.getValue().get().readAllBytes()).isEqualTo(IMAGE_CONTENT);
@@ -203,7 +201,7 @@ class NoteImageUploadIntegrationTest {
 			Note note = saveNote(author, "이미지 업로드 실패 노트");
 			mockLoginUser(author.getId());
 
-			given(objectStorageClient.upload(any(), eq("notes/" + note.getId()), eq(IMAGE_NAME),
+			given(objectStorageClient.upload(any(), eq("notes/" + note.getId()),
 					eq((long) IMAGE_CONTENT.length)))
 					.willThrow(new ObjectStorageException("upload failed", new RuntimeException("network")));
 
@@ -217,7 +215,7 @@ class NoteImageUploadIntegrationTest {
 
 			assertThat(countAllImageRows()).isZero();
 			then(objectStorageClient).should()
-					.upload(any(), eq("notes/" + note.getId()), eq(IMAGE_NAME), eq((long) IMAGE_CONTENT.length));
+					.upload(any(), eq("notes/" + note.getId()), eq((long) IMAGE_CONTENT.length));
 			then(objectStorageClient).should(never()).delete(any());
 		}
 
@@ -228,11 +226,11 @@ class NoteImageUploadIntegrationTest {
 			// given
 			User author = saveUser("author@test.com", "작성자");
 			Note note = saveNote(author, "이미지 메타데이터 저장 실패 노트");
-			String duplicatedStorageKey = "notes/" + note.getId() + "/duplicated-image-key.png";
+			String duplicatedStorageKey = "notes/" + note.getId() + "/duplicated-image-key";
 			saveNoteImage(note, author, duplicatedStorageKey);
 			mockLoginUser(author.getId());
 
-			given(objectStorageClient.upload(any(), eq("notes/" + note.getId()), eq(IMAGE_NAME),
+			given(objectStorageClient.upload(any(), eq("notes/" + note.getId()),
 					eq((long) IMAGE_CONTENT.length)))
 					.willReturn(duplicatedStorageKey);
 
@@ -248,7 +246,6 @@ class NoteImageUploadIntegrationTest {
 			then(objectStorageClient).should().upload(
 					any(),
 					eq("notes/" + note.getId()),
-					eq(IMAGE_NAME),
 					eq((long) IMAGE_CONTENT.length)
 			);
 			then(objectStorageClient).should().delete(duplicatedStorageKey);

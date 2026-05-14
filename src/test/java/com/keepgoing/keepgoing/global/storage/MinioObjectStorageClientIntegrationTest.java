@@ -1,11 +1,13 @@
 package com.keepgoing.keepgoing.global.storage;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.ByteArrayInputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -86,11 +88,13 @@ class MinioObjectStorageClientIntegrationTest {
 		InputStreamSupplier supplier = () -> new ByteArrayInputStream(content);
 
 		// when
-		String savedKey = minioClient.upload(supplier, DIRECTORY, "image.png", content.length);
+		String savedKey = minioClient.upload(supplier, DIRECTORY, content.length);
 
 		// then
 		assertThat(savedKey).startsWith(DIRECTORY + "/");
-		assertThat(savedKey).endsWith(".png");
+		String objectName = savedKey.substring((DIRECTORY + "/").length());
+		assertThatCode(() -> UUID.fromString(objectName))
+				.doesNotThrowAnyException();
 
 		ResponseBytes<GetObjectResponse> uploaded = s3Client.getObjectAsBytes(GetObjectRequest.builder()
 				.bucket(QUARANTINE_BUCKET)
@@ -109,7 +113,6 @@ class MinioObjectStorageClientIntegrationTest {
 		String savedKey = minioClient.upload(
 				() -> new ByteArrayInputStream(content),
 				DIRECTORY,
-				"delete-target.png",
 				content.length
 		);
 
