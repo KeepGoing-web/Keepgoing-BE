@@ -23,3 +23,12 @@ cors:
   allowed-origins:
     - http://localhost:5173
   max-age: 3600
+
+storage:
+  endpoint: http://localhost:9000
+  access-key: test-access-key
+  secret-key: test-secret-key
+  region: us-east-1
+  bucket-names:
+    quarantine: test-quarantine-bucket
+    secure: test-secure-bucket

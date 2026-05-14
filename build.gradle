@@ -44,6 +44,9 @@ dependencies {
     implementation 'org.flywaydb:flyway-core'
     implementation 'org.flywaydb:flyway-database-postgresql'
 
+    // AWS S3 SDK v2
+    implementation 'software.amazon.awssdk:s3:2.25.10'
+
     implementation 'org.openapitools:jackson-databind-nullable:0.2.10'
 
     runtimeOnly 'org.postgresql:postgresql'
@@ -64,6 +67,8 @@ dependencies {
     // Tests
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
+    testImplementation 'org.testcontainers:testcontainers:1.21.4'
+    testImplementation 'org.testcontainers:junit-jupiter:1.21.4'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
