@@ -91,7 +91,7 @@ class NoteImageServiceTest {
 					eq(command.inputStreamSupplier()),
 					eq("notes/" + NOTE_ID),
 					eq(command.originalFileName()),
-					eq(command.filesize())
+					eq(command.fileSize())
 			)).willReturn(STORAGE_KEY);
 			given(transactionTemplate.execute(any())).willAnswer(invocation -> {
 				TransactionCallback<NoteImageUploadResult> callback = invocation.getArgument(0);
@@ -110,7 +110,7 @@ class NoteImageServiceTest {
 					eq(command.inputStreamSupplier()),
 					eq("notes/" + NOTE_ID),
 					eq(command.originalFileName()),
-					eq(command.filesize())
+					eq(command.fileSize())
 			);
 			inOrder.verify(noteImageRepository).save(noteImageCaptor.capture());
 

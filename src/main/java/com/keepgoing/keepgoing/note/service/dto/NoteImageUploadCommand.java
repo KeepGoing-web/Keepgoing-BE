@@ -7,6 +7,6 @@ public record NoteImageUploadCommand(
 		InputStreamSupplier inputStreamSupplier,
 		String originalFileName,
 		String contentType,
-		long filesize
+		long fileSize
 ) {
 }

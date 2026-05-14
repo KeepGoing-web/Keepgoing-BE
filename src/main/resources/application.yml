@@ -1,6 +1,10 @@
 spring:
   application:
     name: keepgoing
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
   flyway:
     enabled: false
   security:

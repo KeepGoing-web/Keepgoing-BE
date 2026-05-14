@@ -55,7 +55,7 @@ public class NoteImageService {
 							storageKey,
 							command.originalFileName(),
 							command.contentType(),
-							command.filesize()
+							command.fileSize()
 					);
 					NoteImage savedNoteImage = noteImageRepository.save(noteImage);
 
@@ -69,7 +69,7 @@ public class NoteImageService {
 					command.inputStreamSupplier(),
 					"notes/" + noteId,
 					command.originalFileName(),
-					command.filesize()
+					command.fileSize()
 			);
 		} catch (ObjectStorageException e) {
 			throw new BusinessException(ErrorCode.SERVICE_UNAVAILABLE, "이미지 저장소 업로드에 실패했습니다.", e);

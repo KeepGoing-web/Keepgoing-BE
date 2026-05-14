@@ -102,7 +102,7 @@ class NoteImageControllerTest {
 			assertThat(command.noteId()).isEqualTo(noteId);
 			assertThat(command.originalFileName()).isEqualTo("image.png");
 			assertThat(command.contentType()).isEqualTo(MediaType.IMAGE_PNG_VALUE);
-			assertThat(command.filesize()).isEqualTo(fileContent.length);
+			assertThat(command.fileSize()).isEqualTo(fileContent.length);
 			assertThat(new String(command.inputStreamSupplier().get().readAllBytes(), UTF_8))
 					.isEqualTo("image-content");
 		}
