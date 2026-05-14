@@ -4,8 +4,8 @@
   "settings": {
     "width": 20000,
     "height": 20000,
-    "scrollTop": -8146.2415,
-    "scrollLeft": -9165.585,
+    "scrollTop": -8391.2415,
+    "scrollLeft": -8706.585,
     "zoomLevel": 0.8,
     "show": 495,
     "database": 4,
@@ -391,7 +391,8 @@
           "note_images_file_size",
           "note_images_created_at",
           "note_images_updated_at",
-          "note_images_deleted_at"
+          "note_images_deleted_at",
+          "qiKqlXiWT7GRaCI1ilmR3"
         ],
         "seqColumnIds": [
           "note_images_id",
@@ -404,7 +405,8 @@
           "note_images_file_size",
           "note_images_created_at",
           "note_images_updated_at",
-          "note_images_deleted_at"
+          "note_images_deleted_at",
+          "qiKqlXiWT7GRaCI1ilmR3"
         ],
         "ui": {
           "x": 8533.75,
@@ -415,7 +417,7 @@
           "color": "#16A085"
         },
         "meta": {
-          "updateAt": 1777043464267,
+          "updateAt": 1778371980538,
           "createAt": 1777043117819
         }
       }
@@ -1900,6 +1902,26 @@
           "updateAt": 1777279615443,
           "createAt": 1777279615443
         }
+      },
+      "qiKqlXiWT7GRaCI1ilmR3": {
+        "id": "qiKqlXiWT7GRaCI1ilmR3",
+        "tableId": "note_images_table",
+        "name": "status",
+        "comment": "이미지 상태",
+        "dataType": "ENUM('PENDING','SCANNING','SAFE','REJECTED')",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 286,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778732484696,
+          "createAt": 1778371980537
+        }
       }
     },
     "relationshipEntities": {
@@ -2230,9 +2252,9 @@
           "columnIds": [
             "note_images_note_id"
           ],
-          "x": 9103.75,
-          "y": 8762,
-          "direction": 2
+          "x": 8916.75,
+          "y": 8682,
+          "direction": 4
         },
         "meta": {
           "updateAt": 1777043117819,
@@ -2258,8 +2280,8 @@
           "columnIds": [
             "note_images_uploader_id"
           ],
-          "x": 9103.75,
-          "y": 8922,
+          "x": 9299.75,
+          "y": 8854,
           "direction": 2
         },
         "meta": {
