@@ -102,16 +102,14 @@
       "blogs_table": {
         "id": "blogs_table",
         "name": "notes",
-        "comment": "노트 - 공개 범위와 작성 생명주기 분리",
+        "comment": "노트 - visibility 기반 공개 범위 관리",
         "columnIds": [
           "blogs_id",
-          "blogs_public_id",
           "blogs_author_id",
           "blogs_folder_id",
           "blogs_title",
           "blogs_content",
           "blogs_visibility",
-          "blogs_lifecycle_status",
           "blogs_ai_collectable",
           "blogs_created_at",
           "blogs_updated_at",
@@ -119,13 +117,11 @@
         ],
         "seqColumnIds": [
           "blogs_id",
-          "blogs_public_id",
           "blogs_author_id",
           "blogs_folder_id",
           "blogs_title",
           "blogs_content",
           "blogs_visibility",
-          "blogs_lifecycle_status",
           "blogs_ai_collectable",
           "blogs_created_at",
           "blogs_updated_at",
@@ -1859,46 +1855,6 @@
         "meta": {
           "updateAt": 1777043117819,
           "createAt": 1777043117819
-        }
-      },
-      "blogs_public_id": {
-        "id": "blogs_public_id",
-        "tableId": "blogs_table",
-        "name": "public_id",
-        "comment": "외부 노출용 UUID",
-        "dataType": "UUID",
-        "default": "gen_random_uuid()",
-        "options": 14,
-        "ui": {
-          "keys": 0,
-          "widthName": 60,
-          "widthComment": 90,
-          "widthDataType": 60,
-          "widthDefault": 114
-        },
-        "meta": {
-          "updateAt": 1777279615443,
-          "createAt": 1777279615443
-        }
-      },
-      "blogs_lifecycle_status": {
-        "id": "blogs_lifecycle_status",
-        "tableId": "blogs_table",
-        "name": "lifecycle_status",
-        "comment": "작성 생명주기 (DRAFT/PUBLISHED)",
-        "dataType": "ENUM('DRAFT','PUBLISHED')",
-        "default": "'PUBLISHED'",
-        "options": 8,
-        "ui": {
-          "keys": 0,
-          "widthName": 90,
-          "widthComment": 189,
-          "widthDataType": 168,
-          "widthDefault": 76
-        },
-        "meta": {
-          "updateAt": 1777279615443,
-          "createAt": 1777279615443
         }
       }
     },
