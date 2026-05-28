@@ -295,7 +295,7 @@ class AiPanelIntegrationTest {
 				0,
 				title,
 				contentChunk,
-				requestedAt,
+				note.getUpdatedAt(),
 				indexedAt
 		));
 
