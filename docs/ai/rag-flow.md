@@ -13,109 +13,110 @@ AI 패널은 사용자의 메시지에 답변할 때 단순히 선택된 note �
 - AI 응답에 참고한 note 정보를 citation으로 함께 반환한다.
 - 근거가 부족할 때 모델이 과장된 답변을 하지 않도록 prompt 규칙을 둔다.
 
-  ---
+---
 
 ## 전체 흐름
 
-  ```text
-  Note 생성/수정/삭제/이름 변경
-          ↓
-  AiNoteIndexingRequestService
-          ↓
-  AiNoteIndexRequestedEvent 발행
-          ↓
-  @TransactionalEventListener(AFTER_COMMIT)
-  @Async("aiIndexingExecutor")
-          ↓
-  AiNoteIndexingService
-          ↓
-  AiNoteIndexingProcessor
-          ↓
-  ai_note_indexes / ai_note_chunks 저장
-          ↓
-  사용자 AI 패널 메시지 요청
-          ↓
-  AiPanelService
-          ↓
-  AiNoteRetrievalService
-          ↓
-  AiNoteChunkRepository.searchRelevantChunks(...)
-          ↓
-  Prompt assembly
-          ↓
-  ChatClient 호출
-          ↓
-  assistantMessage + citations[] 응답
-  ```
+```text
+Note 생성/수정/삭제/이름 변경
+        ↓
+AiNoteIndexingRequestService
+        ↓
+AiNoteIndexRequestedEvent 발행
+        ↓
+@TransactionalEventListener(AFTER_COMMIT)
+@Async("aiIndexingExecutor")
+        ↓
+AiNoteIndexingService
+        ↓
+AiNoteIndexingProcessor
+        ↓
+ai_note_indexes / ai_note_chunks 저장
+        ↓
+사용자 AI 패널 메시지 요청
+        ↓
+AiPanelService
+        ↓
+AiNoteRetrievalService
+        ↓
+AiNoteChunkRepository.searchRelevantChunks(...)
+        ↓
+Prompt assembly
+        ↓
+ChatClient 호출
+        ↓
+assistantMessage + citations[] 응답
+```
 ---
 
 
-  ## 1. 인덱싱 요청
+## 1. 인덱싱 요청
 
-  note가 생성, 수정, 삭제, 이름 변경되면 AiNoteIndexingRequestService가 재색인을 요청한다.
+note가 생성, 수정, 삭제, 이름 변경되면 AiNoteIndexingRequestService가 재색인을 요청한다.
 
-  AiNoteIndexingRequestService.requestReindex(noteId, authorId)
+AiNoteIndexingRequestService.requestReindex(noteId, authorId)
 
-  역할:
+역할:
 
-  - ai_note_indexes에 note 단위 indexing 상태를 생성하거나 갱신한다.
-  - 상태를 PENDING으로 변경한다.
-  - AiNoteIndexRequestedEvent를 발행한다.
-
----
-
-  ## 2. 비동기 인덱싱 처리
-
-  인덱싱 이벤트는 트랜잭션 commit 이후 비동기로 처리된다.
-
-  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-  @Async("aiIndexingExecutor")
-
-  ```
-  처리 흐름:
-
-  AiNoteIndexingService
-          ↓
-  AiNoteIndexingProcessor
-  ```
-  AiNoteIndexingService는 wrapper 역할을 한다.
-
-  - processor 호출
-  - 예외 발생 시 실패 상태 기록
-  - 실패 로그 기록
-  - 예외 재전파
-
-  AiNoteIndexingProcessor는 실제 인덱싱 트랜잭션을 담당한다.
-
-  - ai_note_indexes row를 pessimistic lock으로 조회한다.
-  - source note를 조회한다.
-  - 삭제된 note 또는 aiCollectable=false note면 chunk를 제거하고 REMOVED로 마킹한다.
-  - 수집 가능한 note면 chunk를 재생성하고 COMPLETED로 마킹한다.
+- ai_note_indexes에 note 단위 indexing 상태를 생성하거나 갱신한다.
+- 상태를 PENDING으로 변경한다.
+- AiNoteIndexRequestedEvent를 발행한다.
 
 ---
 
-  ## 3. 실패 상태 기록
+## 2. 비동기 인덱싱 처리
 
-  인덱싱 중 예외가 발생하면 실패 상태는 별도 트랜잭션으로 기록한다.
+인덱싱 이벤트는 트랜잭션 commit 이후 비동기로 처리된다.
 
-  AiNoteIndexFailureRecorder.markFailed(...)
+@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+@Async("aiIndexingExecutor")
 
-  이 recorder는 REQUIRES_NEW 트랜잭션으로 동작한다.
 
-  목적:
+처리 흐름:
 
-  - 인덱싱 트랜잭션이 rollback되어도 FAILED 상태가 남도록 한다.
-  - last_error, last_processed_at, attempt_count를 기록한다.
+```text
+AiNoteIndexingService
+        ↓
+AiNoteIndexingProcessor
+```
+AiNoteIndexingService는 wrapper 역할을 한다.
+
+- processor 호출
+- 예외 발생 시 실패 상태 기록
+- 실패 로그 기록
+- 예외 재전파
+
+AiNoteIndexingProcessor는 실제 인덱싱 트랜잭션을 담당한다.
+
+- ai_note_indexes row를 pessimistic lock으로 조회한다.
+- source note를 조회한다.
+- 삭제된 note 또는 aiCollectable=false note면 chunk를 제거하고 REMOVED로 마킹한다.
+- 수집 가능한 note면 chunk를 재생성하고 COMPLETED로 마킹한다.
 
 ---
 
-  ## 4. 저장 구조
+## 3. 실패 상태 기록
 
-  ### ai_note_indexes
+인덱싱 중 예외가 발생하면 실패 상태는 별도 트랜잭션으로 기록한다.
 
-  note 단위의 인덱싱 상태를 관리한다.
+AiNoteIndexFailureRecorder.markFailed(...)
 
-  주요 컬럼:
+이 recorder는 REQUIRES_NEW 트랜잭션으로 동작한다.
+
+목적:
+
+- 인덱싱 트랜잭션이 rollback되어도 FAILED 상태가 남도록 한다.
+- last_error, last_processed_at, attempt_count를 기록한다.
+
+---
+
+## 4. 저장 구조
+
+### ai_note_indexes
+
+note 단위의 인덱싱 상태를 관리한다.
+
+주요 컬럼:
 
   | 컬럼 | 설명 |
   | --- | --- |
@@ -128,11 +129,11 @@ AI 패널은 사용자의 메시지에 답변할 때 단순히 선택된 note �
   | indexed_at | 인덱싱 완료 시각 |
   | last_error | 실패 메시지 |
 
-  ### ai_note_chunks
+### ai_note_chunks
 
-  retrieval에 사용할 note chunk를 저장한다.
+retrieval에 사용할 note chunk를 저장한다.
 
-  주요 컬럼:
+주요 컬럼:
 
   | 컬럼 | 설명 |
   | --- | --- |
@@ -147,115 +148,116 @@ AI 패널은 사용자의 메시지에 답변할 때 단순히 선택된 note �
 
 ---
 
-  ## 5. Retrieval 조건
+## 5. Retrieval 조건
 
-  AI 패널 메시지가 들어오면 AiNoteRetrievalService가 사용자 메시지를 기준으로 관련 note chunk를 조회한다.
+AI 패널 메시지가 들어오면 AiNoteRetrievalService가 사용자 메시지를 기준으로 관련 note chunk를 조회한다.
 
-  AiNoteRetrievalService.retrieve(userId, message, contextNoteId)
+AiNoteRetrievalService.retrieve(userId, message, contextNoteId)
 
-  실제 DB 조회는 AiNoteChunkRepository.searchRelevantChunks(...)가 담당한다.
+실제 DB 조회는 AiNoteChunkRepository.searchRelevantChunks(...)가 담당한다.
 
-  ``` 
-  retrieval 대상 조건:
 
-  c.author_id = userId
-  i.author_id = userId
-  n.author_id = userId
-  i.status = COMPLETED
-  n.deleted_at IS NULL
-  n.ai_collectable = true
-  contextNoteId는 제외
-  title 또는 content_chunk가 keyword와 match
-  ```
-  이 조건을 통해 다음을 보장한다.
-  
-  - 다른 사용자의 note는 retrieval되지 않는다.
-  - 삭제된 note는 retrieval되지 않는다.
-  - AI 수집이 허용되지 않은 note는 retrieval되지 않는다.
-  - 인덱싱이 완료되지 않은 note는 retrieval되지 않는다.
-  - 사용자가 직접 선택한 context note는 retrieved note와 중복되지 않는다.
+retrieval 대상 조건:
 
----
+```text
+c.author_id = userId
+i.author_id = userId
+n.author_id = userId
+i.status = COMPLETED
+n.deleted_at IS NULL
+n.ai_collectable = true
+contextNoteId는 제외
+title 또는 content_chunk가 keyword와 match
+```
+이 조건을 통해 다음을 보장한다.
 
-  ## 6. 중복 제거
-
-  DB query는 chunk 단위로 후보를 반환한다.
-  같은 note의 여러 chunk가 검색될 수 있으므로 service 레벨에서 noteId 기준으로 중복 제거한다.
-
-  ```
-  AiNoteRetrievalService
-    - candidate chunk 최대 20개 조회
-    - noteId 기준 중복 제거
-    - 최종 retrieved note 최대 5개 반환
-  ```
-
-  중복 제거는 조회 순서를 유지한다.
-  즉, query 정렬상 더 관련 있다고 판단된 chunk가 해당 note의 대표 excerpt가 된다.
+- 다른 사용자의 note는 retrieval되지 않는다.
+- 삭제된 note는 retrieval되지 않는다.
+- AI 수집이 허용되지 않은 note는 retrieval되지 않는다.
+- 인덱싱이 완료되지 않은 note는 retrieval되지 않는다.
+- 사용자가 직접 선택한 context note는 retrieved note와 중복되지 않는다.
 
 ---
 
-  ## 7. Prompt assembly
+## 6. 중복 제거
 
-  AiPanelService는 다음 정보를 조합해 user prompt를 만든다.
+DB query는 chunk 단위로 후보를 반환한다.
+같은 note의 여러 chunk가 검색될 수 있으므로 service 레벨에서 noteId 기준으로 중복 제거한다.
 
-  1. 현재 선택된 note context
-  2. retrieval된 관련 note
-  3. 답변 규칙
-  4. 사용자 메시지
+```text
+AiNoteRetrievalService
+  - candidate chunk 최대 20개 조회
+  - noteId 기준 중복 제거
+  - 최종 retrieved note 최대 5개 반환
+```
 
+중복 제거는 조회 순서를 유지한다.
+즉, query 정렬상 더 관련 있다고 판단된 chunk가 해당 note의 대표 excerpt가 된다.
 
-  prompt 구조:
-  ```
-  [현재 노트 문맥]
-  - noteId: ...
-  - title: ...
-  - content:
-  ...
-
-  [검색된 관련 노트]
-  1. noteId: ...
-     title: ...
-     excerpt:
-     ...
-
-  [답변 규칙]
-  - 제공된 현재 노트 문맥과 검색된 관련 노트 문맥만 근거로 답변한다.
-  - 근거가 부족하면 추측하지 말고 "노트에서 확인되지 않습니다"라고 말한다.
-  - 실제 저장/수정/삭제가 완료된 것처럼 말하지 않는다.
-  - 참고한 노트가 있다면 답변 내용이 해당 노트 문맥과 연결되도록 답한다.
-
-  [사용자 메시지]
-  ...
-  ```
 ---
 
-  ## 8. Citation 응답
+## 7. Prompt assembly
 
-  AI 패널 응답은 assistant message와 함께 citation 정보를 반환한다.
+AiPanelService는 다음 정보를 조합해 user prompt를 만든다.
 
-  응답 예시:
-  ```
-  {
-    "assistantMessage": "배포 일정은 금요일로 보입니다.",
-    "contextNoteId": 10,
-    "contextAttached": true,
-    "citations": [
-      {
-        "noteId": 10,
-        "title": "현재 회의록",
-        "excerpt": "오늘 논의한 내용...",
-        "sourceType": "CONTEXT_NOTE"
-      },
-      {
-        "noteId": 20,
-        "title": "배포 회의",
-        "excerpt": "금요일 배포 결정",
-        "sourceType": "RETRIEVED_NOTE"
-      }
-    ]
-  }
-  ```
-  citation 필드:
+1. 현재 선택된 note context
+2. retrieval된 관련 note
+3. 답변 규칙
+4. 사용자 메시지
+
+
+prompt 구조:
+```text
+[현재 노트 문맥]
+- noteId: ...
+- title: ...
+- content:
+...
+
+[검색된 관련 노트]
+1. noteId: ...
+   title: ...
+   excerpt:
+   ...
+
+[답변 규칙]
+- 제공된 현재 노트 문맥과 검색된 관련 노트 문맥만 근거로 답변한다.
+- 근거가 부족하면 추측하지 말고 "노트에서 확인되지 않습니다"라고 말한다.
+- 실제 저장/수정/삭제가 완료된 것처럼 말하지 않는다.
+- 참고한 노트가 있다면 답변 내용이 해당 노트 문맥과 연결되도록 답한다.
+
+[사용자 메시지]
+...
+```
+---
+
+## 8. Citation 응답
+
+AI 패널 응답은 assistant message와 함께 citation 정보를 반환한다.
+
+응답 예시:
+```json
+{
+  "assistantMessage": "배포 일정은 금요일로 보입니다.",
+  "contextNoteId": 10,
+  "contextAttached": true,
+  "citations": [
+    {
+      "noteId": 10,
+      "title": "현재 회의록",
+      "excerpt": "오늘 논의한 내용...",
+      "sourceType": "CONTEXT_NOTE"
+    },
+    {
+      "noteId": 20,
+      "title": "배포 회의",
+      "excerpt": "금요일 배포 결정",
+      "sourceType": "RETRIEVED_NOTE"
+    }
+  ]
+}
+```
+citation 필드:
 
   | 필드 | 설명 |
   | --- | --- |
