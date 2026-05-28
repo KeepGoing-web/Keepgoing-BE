@@ -78,3 +78,11 @@ storage:
   bucket-names:
     quarantine: test-quarantine-bucket
     secure: test-secure-bucket
+
+image-processing:
+  streams:
+    enabled: false
+    request: note-image-processing-requests
+    result: note-image-processing-results
+    result-group: keepgoing-api
+    result-consumer: api-1

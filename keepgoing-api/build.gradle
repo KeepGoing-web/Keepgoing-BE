@@ -4,15 +4,7 @@ plugins {
     id 'io.spring.dependency-management'
 }
 
-group = 'com.keepgoing'
-version = '0.0.1-SNAPSHOT'
-description = 'Demo project for Spring Boot'
-
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-    }
-}
+description = 'Keepgoing API application'
 
 configurations {
     compileOnly {
@@ -21,6 +13,7 @@ configurations {
 }
 
 dependencies {
+    implementation project(':keepgoing-common')
     // Spring Boot Starters
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
@@ -45,6 +38,9 @@ dependencies {
 
     implementation 'org.openapitools:jackson-databind-nullable:0.2.10'
 
+    // redis
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
     runtimeOnly 'org.postgresql:postgresql'
     runtimeOnly 'com.h2database:h2'
 
@@ -66,17 +62,6 @@ dependencies {
     testImplementation 'org.testcontainers:testcontainers:1.21.4'
     testImplementation 'org.testcontainers:junit-jupiter:1.21.4'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-}
-
-tasks.named('test') {
-    testLogging {
-        events "FAILED"
-        exceptionFormat "FULL"       // 전체 스택트레이스
-        showExceptions true
-        showCauses true
-        showStackTraces true
-    }
-    useJUnitPlatform()
 }
 
 tasks.named('jar') {

@@ -43,6 +43,18 @@ spring:
     logging:
       prompt-response:
         enabled: false
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+image-processing:
+  streams:
+    request: ${IMAGE_PROCESSING_REQUEST_STREAM:note-image-processing-requests}
+    result: ${IMAGE_PROCESSING_RESULT_STREAM:note-image-processing-results}
+    result-group: ${IMAGE_PROCESSING_RESULT_GROUP:keepgoing-api}
+    result-consumer: ${IMAGE_PROCESSING_RESULT_CONSUMER:api-1}
+    enabled: ${IMAGE_PROCESSING_STREAMS_ENABLED:true}
 
 jwt:
   secret-key: ${JWT_SECRET_KEY}
