@@ -307,7 +307,7 @@ class AiNoteChunkRepositoryTest {
 				0,
 				title,
 				contentChunk,
-				REQUESTED_AT,
+				note.getUpdatedAt(),
 				indexedAt
 		));
 

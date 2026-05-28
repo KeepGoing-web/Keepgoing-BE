@@ -14,6 +14,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.keepgoing.keepgoing.ai.controller.dto.AiPanelMessageRequest;
+import com.keepgoing.keepgoing.ai.domain.AiNoteChunk;
+import com.keepgoing.keepgoing.ai.domain.AiNoteIndex;
+import com.keepgoing.keepgoing.ai.repository.AiNoteChunkRepository;
+import com.keepgoing.keepgoing.ai.repository.AiNoteIndexRepository;
 import com.keepgoing.keepgoing.note.domain.Note;
 import com.keepgoing.keepgoing.note.domain.NoteVisibility;
 import com.keepgoing.keepgoing.note.repository.NoteRepository;
@@ -21,6 +25,7 @@ import com.keepgoing.keepgoing.user.domain.User;
 import com.keepgoing.keepgoing.user.domain.UserRole;
 import com.keepgoing.keepgoing.user.repository.UserRepository;
 import jakarta.persistence.EntityManager;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -56,6 +61,12 @@ class AiPanelIntegrationTest {
 
 	@Autowired
 	NoteRepository noteRepository;
+
+	@Autowired
+	AiNoteIndexRepository aiNoteIndexRepository;
+
+	@Autowired
+	AiNoteChunkRepository aiNoteChunkRepository;
 
 	@Autowired
 	EntityManager entityManager;
@@ -100,7 +111,11 @@ class AiPanelIntegrationTest {
 					.andExpect(jsonPath("$.success").value(true))
 					.andExpect(jsonPath("$.data.assistantMessage").value("AI 응답"))
 					.andExpect(jsonPath("$.data.contextNoteId").value(note.getId()))
-					.andExpect(jsonPath("$.data.contextAttached").value(true));
+					.andExpect(jsonPath("$.data.contextAttached").value(true))
+					.andExpect(jsonPath("$.data.citations[0].noteId").value(note.getId()))
+					.andExpect(jsonPath("$.data.citations[0].title").value("회의록"))
+					.andExpect(jsonPath("$.data.citations[0].excerpt").value("오늘 논의한 내용"))
+					.andExpect(jsonPath("$.data.citations[0].sourceType").value("CONTEXT_NOTE"));
 
 			ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
 			verify(chatClientRequestSpec).user(promptCaptor.capture());
@@ -150,6 +165,85 @@ class AiPanelIntegrationTest {
 
 			verifyNoInteractions(aiPanelChatClient);
 		}
+
+		@Test
+		@DisplayName("retrieval 대상 note가 있으면 prompt와 citation 응답에 RETRIEVED_NOTE로 포함한다")
+		void returnsRetrievedNoteCitation() throws Exception {
+			// given
+			User author = saveUser("author-retrieval@test.com", "작성자");
+			Note note = saveCollectableNote(author, "배포 회의", "금요일 배포 결정");
+
+			saveCompletedAiIndexAndChunk(
+					note,
+					"배포 회의",
+					"금요일 배포 결정"
+			);
+
+			mockLoginUser(author.getId());
+			given(callResponseSpec.content()).willReturn("배포 일정 응답");
+
+			// when & then
+			mockMvc.perform(post("/api/ai/panel/messages")
+							.contentType(APPLICATION_JSON)
+							.content(requestJson(new AiPanelMessageRequest(null, "배포"))))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.success").value(true))
+					.andExpect(jsonPath("$.data.assistantMessage").value("배포 일정 응답"))
+					.andExpect(jsonPath("$.data.contextNoteId").doesNotHaveJsonPath())
+					.andExpect(jsonPath("$.data.contextAttached").value(false))
+					.andExpect(jsonPath("$.data.citations[0].noteId").value(note.getId()))
+					.andExpect(jsonPath("$.data.citations[0].title").value("배포 회의"))
+					.andExpect(jsonPath("$.data.citations[0].excerpt").value("금요일 배포 결정"))
+					.andExpect(jsonPath("$.data.citations[0].sourceType").value("RETRIEVED_NOTE"));
+
+			ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
+			verify(chatClientRequestSpec).user(promptCaptor.capture());
+
+			assertThat(promptCaptor.getValue())
+					.contains("[검색된 관련 노트]")
+					.contains("배포 회의")
+					.contains("금요일 배포 결정")
+					.contains("[답변 규칙]")
+					.contains("노트에서 확인되지 않습니다")
+					.contains("배포");
+		}
+
+		@Test
+		@DisplayName("다른 사용자의 indexed note는 retrieval prompt와 citation에 포함하지 않는다")
+		void doesNotRetrieveOtherUsersNote() throws Exception {
+			// given
+			User author = saveUser("author-private@test.com", "작성자");
+			User requester = saveUser("requester@test.com", "요청자");
+
+			Note otherUserNote = saveCollectableNote(author, "배포 회의", "다른 사용자의 배포 내용");
+
+			saveCompletedAiIndexAndChunk(
+					otherUserNote,
+					"배포 회의",
+					"다른 사용자의 배포 내용"
+			);
+
+			mockLoginUser(requester.getId());
+			given(callResponseSpec.content()).willReturn("근거 없음 응답");
+
+			// when & then
+			mockMvc.perform(post("/api/ai/panel/messages")
+							.contentType(APPLICATION_JSON)
+							.content(requestJson(new AiPanelMessageRequest(null, "배포"))))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.success").value(true))
+					.andExpect(jsonPath("$.data.assistantMessage").value("근거 없음 응답"))
+					.andExpect(jsonPath("$.data.contextAttached").value(false))
+					.andExpect(jsonPath("$.data.citations").isEmpty());
+
+			ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
+			verify(chatClientRequestSpec).user(promptCaptor.capture());
+
+			assertThat(promptCaptor.getValue())
+					.doesNotContain("다른 사용자의 배포 내용")
+					.doesNotContain("[검색된 관련 노트]")
+					.contains("[답변 규칙]");
+		}
 	}
 
 	private User saveUser(String email, String name) {
@@ -172,5 +266,40 @@ class AiPanelIntegrationTest {
 				List.of(new SimpleGrantedAuthority(UserRole.USER.toAuthority()))
 		);
 		SecurityContextHolder.getContext().setAuthentication(authenticated);
+	}
+
+	private Note saveCollectableNote(User author, String title, String content) {
+		Note note = Note.create(author, null, title, content, NoteVisibility.PRIVATE, true);
+		return noteRepository.saveAndFlush(note);
+	}
+
+	private void saveCompletedAiIndexAndChunk(
+			Note note,
+			String title,
+			String contentChunk
+	) {
+		LocalDateTime requestedAt = LocalDateTime.of(2026, 5, 28, 10, 0);
+		LocalDateTime indexedAt = requestedAt.plusMinutes(1);
+
+		AiNoteIndex index = AiNoteIndex.pending(
+				note.getId(),
+				note.getAuthor().getId(),
+				requestedAt
+		);
+		index.markCompleted(indexedAt);
+		aiNoteIndexRepository.save(index);
+
+		aiNoteChunkRepository.save(AiNoteChunk.create(
+				note.getId(),
+				note.getAuthor().getId(),
+				0,
+				title,
+				contentChunk,
+				note.getUpdatedAt(),
+				indexedAt
+		));
+
+		entityManager.flush();
+		entityManager.clear();
 	}
 }
