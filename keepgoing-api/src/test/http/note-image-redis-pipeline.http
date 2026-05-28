@@ -1,0 +1,113 @@
+@host = http://localhost:8080
+@email = image-pipeline@example.com
+@password = Password1234!
+
+# Redis Streams 이미지 처리 파이프라인 수동 확인용
+#
+# 실행 전 준비:
+# 1) Redis/Postgres/MinIO 실행
+#    docker compose up -d redis postgres minio minio-init
+#
+# 2) API 실행 - streams enabled 기본값 true
+#    ./gradlew :keepgoing-api:bootRun --args='--spring.profiles.active=local'
+#
+# 3) Worker 실행 - streams enabled 기본값 true
+#    ./gradlew :keepgoing-worker:bootRun
+#
+# 4) Redis 연결 확인
+#    docker exec -it keepgoing-redis redis-cli PING
+#
+# 기대 흐름:
+# API 이미지 업로드 -> request stream XADD -> worker consume -> SCANNING/SAFE result stream XADD
+# -> worker request ack -> API result consume -> note_images.status SAFE -> API result ack
+
+### 0-1. 회원가입 - 이미 가입되어 있으면 다음 로그인부터 진행
+POST {{host}}/api/auth/signup
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}",
+  "name": "image-pipeline-tester"
+}
+
+### 0-2. 로그인 -> Cookie 저장
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+> {%
+    client.global.set("cookies", response.headers.valueOf("Set-Cookie"));
+%}
+
+### 1. 이미지 업로드용 노트 생성 -> noteId 저장
+POST {{host}}/api/notes
+Content-Type: application/json
+Cookie: {{cookies}}
+
+{
+  "title": "Redis Streams 이미지 파이프라인 수동 테스트",
+  "content": "이 노트에 이미지를 업로드해서 request/result stream과 note_images.status 변경을 확인합니다.",
+  "visibility": "PRIVATE",
+  "aiCollectable": false
+}
+
+> {%
+    const body = response.body;
+    const noteId = body?.data?.noteId ?? body?.data?.id;
+    if (!noteId) {
+        throw new Error("note 생성 응답에서 noteId를 찾지 못했습니다. body=" + JSON.stringify(body));
+    }
+    client.global.set("noteId", noteId);
+%}
+
+### 2. 노트 이미지 업로드 -> imagePublicId 저장, 응답 status는 PENDING 예상
+POST {{host}}/api/notes/{{noteId}}/images
+Cookie: {{cookies}}
+Content-Type: multipart/form-data; boundary=KeepgoingBoundary
+
+--KeepgoingBoundary
+Content-Disposition: form-data; name="file"; filename="sample-image.png"
+Content-Type: image/png
+
+< ./assets/sample-image.png
+--KeepgoingBoundary--
+
+> {%
+    const body = response.body;
+    const publicId = body?.data?.publicId;
+    if (!publicId) {
+        throw new Error("이미지 업로드 응답에서 publicId를 찾지 못했습니다. body=" + JSON.stringify(body));
+    }
+    client.global.set("imagePublicId", publicId);
+%}
+
+### 3. 노트 조회 - 현재 API 응답에는 이미지 status가 포함되지 않음. 노트 생성/인증 확인용
+GET {{host}}/api/notes/{{noteId}}
+Cookie: {{cookies}}
+
+### 4. Redis stream/group 확인 - 아래 명령은 터미널에서 실행
+# docker exec -it keepgoing-redis redis-cli XINFO GROUPS note-image-processing-requests
+# docker exec -it keepgoing-redis redis-cli XINFO GROUPS note-image-processing-results
+# docker exec -it keepgoing-redis redis-cli XLEN note-image-processing-requests
+# docker exec -it keepgoing-redis redis-cli XLEN note-image-processing-results
+# docker exec -it keepgoing-redis redis-cli XPENDING note-image-processing-requests keepgoing-worker
+# docker exec -it keepgoing-redis redis-cli XPENDING note-image-processing-results keepgoing-api
+#
+# 정상 기대:
+# - request stream group: keepgoing-worker 존재
+# - result stream group: keepgoing-api 존재
+# - XPENDING 결과 count가 0이면 ack 완료
+
+### 5. DB 최종 상태 확인 - 아래 명령은 터미널에서 실행
+# publicId는 2번 요청 후 HTTP Client global variable imagePublicId 값 사용
+# docker exec -it keepgoing-postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+#   -c "select public_id, status, storage_key, updated_at from note_images where public_id = '<imagePublicId>';"
+#
+# 정상 기대:
+# - status = SAFE
+# - worker dummy 처리라 SCANNING은 매우 짧게 지나가고 최종 SAFE만 보일 가능성이 큼
