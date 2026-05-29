@@ -1,6 +1,6 @@
-package com.keepgoing.keepgoing.note.domain;
+package com.keepgoing.keepgoing.common.image.domain;
 
-public enum NoteImageStatus {
+public enum ImageProcessingStatus {
 	/*
 	 * 격리(Quarantine) 상태. 파일이 업로드되어 버킷에 저장되었으나,
 	 * 아직 보안 검증을 거치지 않음. 외부 노출이 절대 불가능한 상태.

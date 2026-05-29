@@ -1,5 +1,6 @@
 package com.keepgoing.keepgoing.note.domain;
 
+import com.keepgoing.keepgoing.common.image.domain.ImageProcessingStatus;
 import com.keepgoing.keepgoing.global.common.entity.BaseEntity;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
@@ -63,7 +64,7 @@ public class NoteImage extends BaseEntity {
 	@Enumerated(EnumType.STRING)
 	@Column(name = "status", nullable = false, length = 20)
 	@Builder.Default
-	private NoteImageStatus status = NoteImageStatus.PENDING;
+	private ImageProcessingStatus status = ImageProcessingStatus.PENDING;
 
 	@Column(name = "deleted_at")
 	private LocalDateTime deletedAt;
@@ -112,7 +113,7 @@ public class NoteImage extends BaseEntity {
 				.originalName(originalName)
 				.contentType(contentType)
 				.fileSize(fileSize)
-				.status(NoteImageStatus.PENDING)
+				.status(ImageProcessingStatus.PENDING)
 				.build();
 	}
 
@@ -132,5 +133,17 @@ public class NoteImage extends BaseEntity {
 		if (this.deletedAt == null) {
 			this.deletedAt = LocalDateTime.now();
 		}
+	}
+
+	public void markScanning() {
+		this.status = ImageProcessingStatus.SCANNING;
+	}
+
+	public void markSafe() {
+		this.status = ImageProcessingStatus.SAFE;
+	}
+
+	public void markRejected() {
+		this.status = ImageProcessingStatus.REJECTED;
 	}
 }

@@ -10,4 +10,22 @@ subprojects {
     repositories {
         mavenCentral()
     }
+
+    pluginManager.withPlugin('java') {
+        java {
+            toolchain {
+                languageVersion = JavaLanguageVersion.of(21)
+            }
+        }
+        tasks.withType(Test).configureEach {
+            useJUnitPlatform()
+            testLogging {
+                events "FAILED"
+                exceptionFormat "FULL"
+                showExceptions true
+                showCauses true
+                showStackTraces true
+            }
+        }
+    }
 }

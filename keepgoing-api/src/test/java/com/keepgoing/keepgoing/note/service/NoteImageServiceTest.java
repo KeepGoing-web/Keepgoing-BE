@@ -14,6 +14,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
+import com.keepgoing.keepgoing.common.image.domain.ImageProcessingStatus;
+import com.keepgoing.keepgoing.common.image.event.ImageProcessingRequestedEvent;
+import com.keepgoing.keepgoing.common.image.event.ImageProcessingResultEvent;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import com.keepgoing.keepgoing.global.storage.InputStreamSupplier;
@@ -21,8 +24,8 @@ import com.keepgoing.keepgoing.global.storage.ObjectStorageClient;
 import com.keepgoing.keepgoing.global.storage.ObjectStorageException;
 import com.keepgoing.keepgoing.note.domain.Note;
 import com.keepgoing.keepgoing.note.domain.NoteImage;
-import com.keepgoing.keepgoing.note.domain.NoteImageStatus;
 import com.keepgoing.keepgoing.note.domain.NoteVisibility;
+import com.keepgoing.keepgoing.note.event.NoteImageProcessingRequestPublisher;
 import com.keepgoing.keepgoing.note.repository.NoteImageRepository;
 import com.keepgoing.keepgoing.note.repository.NoteRepository;
 import com.keepgoing.keepgoing.note.service.dto.NoteImageUploadCommand;
@@ -31,7 +34,10 @@ import com.keepgoing.keepgoing.user.domain.User;
 import com.keepgoing.keepgoing.user.repository.UserRepository;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
+import java.time.Instant;
 import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -55,6 +61,7 @@ class NoteImageServiceTest {
 	private static final String CONTENT_TYPE = "image/png";
 	private static final long FILE_SIZE = 1024L;
 	private static final String STORAGE_KEY = "notes/10/generated-image-key";
+	private static final Instant REQUESTED_AT = Instant.parse("2026-05-15T00:00:00Z");
 
 	@Mock
 	NoteRepository noteRepository;
@@ -71,6 +78,12 @@ class NoteImageServiceTest {
 	@Mock
 	TransactionTemplate transactionTemplate;
 
+	@Mock
+	NoteImageProcessingRequestPublisher requestPublisher;
+
+	@Mock
+	Clock clock;
+
 	@InjectMocks
 	NoteImageService noteImageService;
 
@@ -86,46 +99,54 @@ class NoteImageServiceTest {
 			User uploader = user(UPLOADER_ID);
 			NoteImageUploadCommand command = uploadCommand(NOTE_ID);
 
-			given(noteRepository.findById(NOTE_ID)).willReturn(Optional.of(note));
-			given(objectStorageClient.upload(
-					eq(command.inputStreamSupplier()),
-					eq("notes/" + NOTE_ID),
-					eq(command.fileSize())
-			)).willReturn(STORAGE_KEY);
-			given(transactionTemplate.execute(any())).willAnswer(invocation -> {
-				TransactionCallback<NoteImageUploadResult> callback = invocation.getArgument(0);
-				return callback.doInTransaction(mock(TransactionStatus.class));
-			});
-			given(userRepository.getReferenceById(UPLOADER_ID)).willReturn(uploader);
-			given(noteImageRepository.save(any(NoteImage.class))).willAnswer(invocation -> invocation.getArgument(0));
+			givenUploadAndSaveSucceed(command, note, uploader);
 
 			// when
 			NoteImageUploadResult result = noteImageService.uploadImage(UPLOADER_ID, command);
 
 			// then
 			ArgumentCaptor<NoteImage> noteImageCaptor = ArgumentCaptor.forClass(NoteImage.class);
-			InOrder inOrder = inOrder(objectStorageClient, noteImageRepository);
+			InOrder inOrder = inOrder(objectStorageClient, noteImageRepository, requestPublisher);
 			inOrder.verify(objectStorageClient).upload(
 					eq(command.inputStreamSupplier()),
 					eq("notes/" + NOTE_ID),
 					eq(command.fileSize())
 			);
 			inOrder.verify(noteImageRepository).save(noteImageCaptor.capture());
+			inOrder.verify(requestPublisher).publish(any(ImageProcessingRequestedEvent.class));
 
 			NoteImage savedImage = noteImageCaptor.getValue();
 			assertThat(savedImage.getStorageKey()).isEqualTo(STORAGE_KEY);
-			assertThat(savedImage.getOriginalName()).isEqualTo(ORIGINAL_FILE_NAME);
-			assertThat(savedImage.getContentType()).isEqualTo(CONTENT_TYPE);
-			assertThat(savedImage.getFileSize()).isEqualTo(FILE_SIZE);
-			assertThat(savedImage.getStatus()).isEqualTo(NoteImageStatus.PENDING);
+			assertThat(savedImage.getStatus()).isEqualTo(ImageProcessingStatus.PENDING);
 
 			assertThat(result.publicId()).isEqualTo(savedImage.getPublicId());
 			assertThat(result.status()).isEqualTo(savedImage.getStatus());
-
-			verify(noteRepository).findById(NOTE_ID);
-			verify(transactionTemplate).execute(any());
-			verify(userRepository).getReferenceById(UPLOADER_ID);
 			verify(objectStorageClient, never()).delete(any());
+		}
+
+		@Test
+		@DisplayName("업로드 성공 후 처리 요청 이벤트에 이미지 식별자와 스토리지 정보를 담아 발행한다")
+		void publishesProcessingRequestWithImageMetadata() {
+			// given
+			Note note = persistedNote(user(UPLOADER_ID));
+			User uploader = user(UPLOADER_ID);
+			NoteImageUploadCommand command = uploadCommand(NOTE_ID);
+			givenUploadAndSaveSucceed(command, note, uploader);
+
+			// when
+			NoteImageUploadResult result = noteImageService.uploadImage(UPLOADER_ID, command);
+
+			// then
+			ArgumentCaptor<ImageProcessingRequestedEvent> eventCaptor =
+					ArgumentCaptor.forClass(ImageProcessingRequestedEvent.class);
+			verify(requestPublisher).publish(eventCaptor.capture());
+
+			ImageProcessingRequestedEvent publishedEvent = eventCaptor.getValue();
+			assertThat(publishedEvent.publicId()).isEqualTo(result.publicId());
+			assertThat(publishedEvent.storageKey()).isEqualTo(STORAGE_KEY);
+			assertThat(publishedEvent.contentType()).isEqualTo(CONTENT_TYPE);
+			assertThat(publishedEvent.fileSize()).isEqualTo(FILE_SIZE);
+			assertThat(publishedEvent.requestedAt()).isEqualTo(REQUESTED_AT);
 		}
 
 		@Test
@@ -141,7 +162,8 @@ class NoteImageServiceTest {
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_NOT_FOUND);
 
 			verify(noteRepository).findById(NOTE_ID);
-			verifyNoInteractions(objectStorageClient, transactionTemplate, userRepository, noteImageRepository);
+			verifyNoInteractions(objectStorageClient, transactionTemplate, userRepository, noteImageRepository,
+					requestPublisher);
 		}
 
 		@Test
@@ -158,7 +180,8 @@ class NoteImageServiceTest {
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_ACCESS_DENIED);
 
 			verify(noteRepository).findById(NOTE_ID);
-			verifyNoInteractions(objectStorageClient, transactionTemplate, userRepository, noteImageRepository);
+			verifyNoInteractions(objectStorageClient, transactionTemplate, userRepository, noteImageRepository,
+					requestPublisher);
 		}
 
 		@Test
@@ -182,7 +205,7 @@ class NoteImageServiceTest {
 
 			verify(noteRepository).findById(NOTE_ID);
 			verify(objectStorageClient).upload(any(), eq("notes/" + NOTE_ID), eq(FILE_SIZE));
-			verifyNoInteractions(transactionTemplate, userRepository, noteImageRepository);
+			verifyNoInteractions(transactionTemplate, userRepository, noteImageRepository, requestPublisher);
 			verify(objectStorageClient, never()).delete(any());
 		}
 
@@ -214,6 +237,29 @@ class NoteImageServiceTest {
 					.upload(any(), eq("notes/" + NOTE_ID), eq(FILE_SIZE));
 			inOrder.verify(noteImageRepository).save(any(NoteImage.class));
 			verify(objectStorageClient).delete(STORAGE_KEY);
+			verify(requestPublisher, never()).publish(any(ImageProcessingRequestedEvent.class));
+		}
+
+		@Test
+		@DisplayName("처리 요청 이벤트 발행이 실패하면 업로드 파일은 삭제하지 않고 발행 예외를 던진다")
+		void doesNotCleanupUploadedFileWhenPublishingRequestFails() {
+			// given
+			Note note = persistedNote(user(UPLOADER_ID));
+			User uploader = user(UPLOADER_ID);
+			NoteImageUploadCommand command = uploadCommand(NOTE_ID);
+			RuntimeException publishException = new RuntimeException("publish failed");
+
+			givenUploadAndSaveSucceed(command, note, uploader);
+			given(requestPublisher.publish(any(ImageProcessingRequestedEvent.class))).willThrow(publishException);
+
+			// when & then
+			assertThatThrownBy(() -> noteImageService.uploadImage(UPLOADER_ID, command))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.SERVICE_UNAVAILABLE);
+
+			verify(noteImageRepository).save(any(NoteImage.class));
+			verify(requestPublisher).publish(any(ImageProcessingRequestedEvent.class));
+			verify(objectStorageClient, never()).delete(any());
 		}
 
 		@Test
@@ -246,6 +292,109 @@ class NoteImageServiceTest {
 			assertThat(thrown.getSuppressed()).hasSize(1);
 			assertThat(thrown.getSuppressed()[0]).isSameAs(deleteException);
 			verify(objectStorageClient).delete(STORAGE_KEY);
+			verify(requestPublisher, never()).publish(any(ImageProcessingRequestedEvent.class));
+		}
+	}
+
+	@Nested
+	@DisplayName("applyProcessingResult")
+	class ApplyProcessingResult {
+
+		@Test
+		@DisplayName("SCANNING 결과를 반영하면 이미지 상태를 SCANNING으로 변경한다")
+		void marksImageAsScanning() {
+			// given
+			NoteImage noteImage = noteImage();
+			ImageProcessingResultEvent event = processingResultEvent(
+					noteImage.getPublicId(),
+					ImageProcessingStatus.SCANNING
+			);
+			given(noteImageRepository.findByPublicId(noteImage.getPublicId()))
+					.willReturn(Optional.of(noteImage));
+
+			// when
+			noteImageService.applyProcessingResult(event);
+
+			// then
+			assertThat(noteImage.getStatus()).isEqualTo(ImageProcessingStatus.SCANNING);
+			verify(noteImageRepository).findByPublicId(noteImage.getPublicId());
+		}
+
+		@Test
+		@DisplayName("SAFE 결과를 반영하면 이미지 상태를 SAFE로 변경한다")
+		void marksImageAsSafe() {
+			// given
+			NoteImage noteImage = noteImage();
+			ImageProcessingResultEvent event = processingResultEvent(
+					noteImage.getPublicId(),
+					ImageProcessingStatus.SAFE
+			);
+			given(noteImageRepository.findByPublicId(noteImage.getPublicId()))
+					.willReturn(Optional.of(noteImage));
+
+			// when
+			noteImageService.applyProcessingResult(event);
+
+			// then
+			assertThat(noteImage.getStatus()).isEqualTo(ImageProcessingStatus.SAFE);
+			verify(noteImageRepository).findByPublicId(noteImage.getPublicId());
+		}
+
+		@Test
+		@DisplayName("REJECTED 결과를 반영하면 이미지 상태를 REJECTED로 변경한다")
+		void marksImageAsRejected() {
+			// given
+			NoteImage noteImage = noteImage();
+			ImageProcessingResultEvent event = processingResultEvent(
+					noteImage.getPublicId(),
+					ImageProcessingStatus.REJECTED
+			);
+			given(noteImageRepository.findByPublicId(noteImage.getPublicId()))
+					.willReturn(Optional.of(noteImage));
+
+			// when
+			noteImageService.applyProcessingResult(event);
+
+			// then
+			assertThat(noteImage.getStatus()).isEqualTo(ImageProcessingStatus.REJECTED);
+			verify(noteImageRepository).findByPublicId(noteImage.getPublicId());
+		}
+
+		@Test
+		@DisplayName("존재하지 않는 이미지 처리 결과면 NOTE_IMAGE_NOT_FOUND 예외를 던진다")
+		void throwsWhenImageNotFound() {
+			// given
+			UUID publicId = UUID.randomUUID();
+			ImageProcessingResultEvent event = processingResultEvent(publicId, ImageProcessingStatus.SAFE);
+			given(noteImageRepository.findByPublicId(publicId)).willReturn(Optional.empty());
+
+			// when & then
+			assertThatThrownBy(() -> noteImageService.applyProcessingResult(event))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_IMAGE_NOT_FOUND);
+
+			verify(noteImageRepository).findByPublicId(publicId);
+		}
+
+		@Test
+		@DisplayName("PENDING 결과는 처리 완료 결과가 아니므로 INVALID_INPUT 예외를 던진다")
+		void throwsWhenResultStatusIsPending() {
+			// given
+			NoteImage noteImage = noteImage();
+			ImageProcessingResultEvent event = processingResultEvent(
+					noteImage.getPublicId(),
+					ImageProcessingStatus.PENDING
+			);
+			given(noteImageRepository.findByPublicId(noteImage.getPublicId()))
+					.willReturn(Optional.of(noteImage));
+
+			// when & then
+			assertThatThrownBy(() -> noteImageService.applyProcessingResult(event))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_INPUT);
+
+			assertThat(noteImage.getStatus()).isEqualTo(ImageProcessingStatus.PENDING);
+			verify(noteImageRepository).findByPublicId(noteImage.getPublicId());
 		}
 	}
 
@@ -264,5 +413,37 @@ class NoteImageServiceTest {
 		Note note = Note.create(author, null, "제목", "본문", NoteVisibility.PRIVATE, false);
 		ReflectionTestUtils.setField(note, "id", NOTE_ID);
 		return note;
+	}
+
+	private static NoteImage noteImage() {
+		User uploader = user(UPLOADER_ID);
+		return NoteImage.create(
+				persistedNote(uploader),
+				uploader,
+				STORAGE_KEY,
+				ORIGINAL_FILE_NAME,
+				CONTENT_TYPE,
+				FILE_SIZE
+		);
+	}
+
+	private static ImageProcessingResultEvent processingResultEvent(
+			UUID publicId,
+			ImageProcessingStatus status
+	) {
+		return new ImageProcessingResultEvent(publicId, status, "", REQUESTED_AT);
+	}
+
+	private void givenUploadAndSaveSucceed(NoteImageUploadCommand command, Note note, User uploader) {
+		given(noteRepository.findById(command.noteId())).willReturn(Optional.of(note));
+		given(objectStorageClient.upload(any(), eq("notes/" + command.noteId()), eq(command.fileSize())))
+				.willReturn(STORAGE_KEY);
+		given(transactionTemplate.execute(any())).willAnswer(invocation -> {
+			TransactionCallback<NoteImageUploadResult> callback = invocation.getArgument(0);
+			return callback.doInTransaction(mock(TransactionStatus.class));
+		});
+		given(userRepository.getReferenceById(UPLOADER_ID)).willReturn(uploader);
+		given(noteImageRepository.save(any(NoteImage.class))).willAnswer(invocation -> invocation.getArgument(0));
+		given(clock.instant()).willReturn(REQUESTED_AT);
 	}
 }
