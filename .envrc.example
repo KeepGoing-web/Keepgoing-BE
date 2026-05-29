@@ -6,6 +6,18 @@ export POSTGRES_DB=keepgoing
 export POSTGRES_USER=keepgoing
 export POSTGRES_PASSWORD=keepgoing
 
+# minio (docker-compose 기준)
+export MINIO_ROOT_USER=keepgoing_admin
+export MINIO_ROOT_PASSWORD=keepgoing_password
+
+# storage (MinIO 연동용)
+export STORAGE_ENDPOINT=http://localhost:9000
+export STORAGE_ACCESS_KEY=keepgoing_admin
+export STORAGE_SECRET_KEY=keepgoing_password
+export STORAGE_REGION=us-east-1
+export STORAGE_BUCKET_QUARANTINE=quarantine-bucket
+export STORAGE_BUCKET_SECURE=secure-bucket
+
 # jwt (최소 32바이트 이상)
 export JWT_SECRET_KEY="CHANGE_ME_TO_AT_LEAST_32_BYTES_SECRET_KEY"
 export OAUTH_GOOGLE_CLIENT_ID="CHANGE_ME"

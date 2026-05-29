@@ -224,8 +224,7 @@ public enum ErrorCode {
 			HttpStatus.CONFLICT,
 			"FOLDER_006",
 			"하위 폴더 또는 노트가 남아 있어 삭제할 수 없습니다."
-	)
-	;
+	);
 
 	private final HttpStatus httpStatus;
 	private final String code;        // 시스템 내부/프론트에서 쓰는 에러 코드

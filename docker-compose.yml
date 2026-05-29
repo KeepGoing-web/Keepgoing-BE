@@ -13,5 +13,38 @@ services:
     volumes:
       - keepgoing-postgres-data:/var/lib/postgresql/data
 
+  minio:
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    container_name: keepgoing-minio
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-keepgoing_admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-keepgoing_password}
+    command: server /data --console-address ":9001"
+    volumes:
+      - keepgoing-minio-data:/data
+
+  minio-init:
+    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
+    container_name: keepgoing-minio-init
+    depends_on:
+      - minio
+    restart: "no"
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set keepgoing http://minio:9000 ${MINIO_ROOT_USER:-keepgoing_admin} ${MINIO_ROOT_PASSWORD:-keepgoing_password}; do
+        echo 'waiting for minio...';
+        sleep 2;
+      done;
+      mc mb --ignore-existing keepgoing/${STORAGE_BUCKET_QUARANTINE:-quarantine-bucket};
+      mc mb --ignore-existing keepgoing/${STORAGE_BUCKET_SECURE:-secure-bucket};
+      mc anonymous set none keepgoing/${STORAGE_BUCKET_QUARANTINE:-quarantine-bucket};
+      mc anonymous set none keepgoing/${STORAGE_BUCKET_SECURE:-secure-bucket};
+      "
+
 volumes:
   keepgoing-postgres-data:
+  keepgoing-minio-data:

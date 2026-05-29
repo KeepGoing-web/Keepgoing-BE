@@ -19,7 +19,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 class NoteImageTest {
 
-	private static final String STORAGE_KEY = "note-images/2026/04/image.png";
+	private static final String STORAGE_KEY = "note-images/2026/04/image";
 	private static final String ORIGINAL_NAME = "image.png";
 	private static final String CONTENT_TYPE = "image/png";
 	private static final Long FILE_SIZE = 1024L;

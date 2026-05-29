@@ -232,9 +232,9 @@ class NoteIntegrationTest {
 			User author = saveUser("author@test.com", "작성자");
 			Note targetNote = saveNote(author, "삭제할 노트");
 			Note otherNote = saveNote(author, "유지할 노트");
-			saveNoteImage(targetNote, author, "note-images/target-1.png");
-			saveNoteImage(targetNote, author, "note-images/target-2.png");
-			saveNoteImage(otherNote, author, "note-images/other.png");
+			saveNoteImage(targetNote, author, "note-images/target-1");
+			saveNoteImage(targetNote, author, "note-images/target-2");
+			saveNoteImage(otherNote, author, "note-images/other");
 			mockLoginUser(author.getId());
 
 			mockMvc.perform(delete("/api/notes/{noteId}", targetNote.getId()))
