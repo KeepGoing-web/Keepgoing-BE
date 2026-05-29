@@ -22,7 +22,7 @@ public record NoteUpdateRequest(
                 title,
                 content,
                 visibility,
-                aiCollectable
+		        aiCollectable != null && aiCollectable
         );
     }
 }

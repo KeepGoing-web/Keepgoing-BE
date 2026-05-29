@@ -3,6 +3,7 @@ package com.keepgoing.keepgoing.note.controller.dto.request;
 import com.keepgoing.keepgoing.note.controller.validation.ValidImageFile;
 import com.keepgoing.keepgoing.note.service.dto.NoteImageUploadCommand;
 import jakarta.validation.constraints.NotNull;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 public record NoteImageUploadRequest(
@@ -14,7 +15,7 @@ public record NoteImageUploadRequest(
 		return new NoteImageUploadCommand(
 				noteId,
 				file::getInputStream,
-				file.getOriginalFilename(),
+				StringUtils.getFilename(file.getOriginalFilename()),
 				file.getContentType(),
 				file.getSize()
 		);
