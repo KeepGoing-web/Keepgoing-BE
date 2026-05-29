@@ -10,7 +10,6 @@ COPY keepgoing-worker ./keepgoing-worker
 COPY keepgoing-common ./keepgoing-common
 
 RUN chmod +x gradlew
-RUN ./gradlew dependencies --no-daemon || true
 
 RUN ./gradlew :keepgoing-api:bootJar --no-daemon \
     && cp /workspace/keepgoing-api/build/libs/*.jar /workspace/app.jar

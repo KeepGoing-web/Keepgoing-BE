@@ -63,7 +63,7 @@ class NoteImageRepositoryTest {
 
 		@Test
 		@DisplayName("이미 삭제된 이미지는 updated count에 포함하지 않는다")
-		void softDeleteByByNoteId_excludesAlreadyDeletedImagesFromUpdatedCount() {
+		void softDeleteByNoteId_excludesAlreadyDeletedImagesFromUpdatedCount() {
 			// given
 			User author = userRepository.save(User.create("author@test.com", "작성자"));
 			Note targetNote = noteRepository.save(note(author, "대상 노트"));
@@ -88,7 +88,7 @@ class NoteImageRepositoryTest {
 
 		@Test
 		@DisplayName("영속성 컨텍스트에 이미지가 있어도 DB에 soft delete를 반영한다")
-		void softDeleteByByNoteId_reflectsBulkUpdateWhenImageIsManaged() {
+		void softDeleteByNoteId_reflectsBulkUpdateWhenImageIsManaged() {
 			// given
 			User author = userRepository.save(User.create("author@test.com", "작성자"));
 			Note targetNote = noteRepository.save(note(author, "대상 노트"));

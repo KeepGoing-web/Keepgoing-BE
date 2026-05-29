@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 public class ValidImageFileValidator implements ConstraintValidator<ValidImageFile, MultipartFile> {
@@ -30,8 +31,13 @@ public class ValidImageFileValidator implements ConstraintValidator<ValidImageFi
 			addViolation(context, "이미지 파일은 비어 있을 수 없습니다.");
 			return false;
 		}
-		if (file.getOriginalFilename() == null || file.getOriginalFilename().isBlank()) {
+		String originalFilename = StringUtils.getFilename(file.getOriginalFilename());
+		if (originalFilename == null || originalFilename.isBlank()) {
 			addViolation(context, "이미지 파일명은 비어 있을 수 없습니다.");
+			return false;
+		}
+		if (originalFilename.length() > 255) {
+			addViolation(context, "이미지 파일명은 255자를 초과할 수 없습니다.");
 			return false;
 		}
 		String contentType = file.getContentType();
