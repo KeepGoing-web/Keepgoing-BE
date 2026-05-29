@@ -2,7 +2,6 @@ package com.keepgoing.keepgoing.note.service.dto;
 
 import com.keepgoing.keepgoing.note.domain.Note;
 import com.keepgoing.keepgoing.note.domain.NoteVisibility;
-
 import java.time.LocalDateTime;
 
 public record NoteDetailResult(

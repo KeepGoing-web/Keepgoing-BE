@@ -38,7 +38,7 @@ class NoteImageRepositoryTest {
 
 		@Test
 		@DisplayName("특정 노트의 활성 이미지만 soft delete한다")
-		void softDeleteByNoteId_softDeletesOnlyActiveImagesOfNote() {
+		void softDeleteByNoteId_softDeletesOnlyActiveImagesOfNoteBy() {
 			// given
 			User author = userRepository.save(User.create("author@test.com", "작성자"));
 			Note targetNote = noteRepository.save(note(author, "대상 노트"));

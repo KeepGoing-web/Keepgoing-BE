@@ -4,19 +4,20 @@ import com.keepgoing.keepgoing.folder.domain.Folder;
 import com.keepgoing.keepgoing.folder.repository.FolderRepository;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
-@Service
+@Component
 @RequiredArgsConstructor
-public class FolderLockService {
+public class FolderLocker {
 
 	private final FolderRepository folderRepository;
 
@@ -29,7 +30,7 @@ public class FolderLockService {
 	@Transactional(propagation = Propagation.MANDATORY)
 	public Map<Long, Folder> lockActiveFolders(Collection<Long> folderIds) {
 		List<Long> ids = folderIds.stream()
-				.filter(id -> id != null)
+				.filter(Objects::nonNull)
 				.distinct()
 				.sorted(Comparator.naturalOrder())
 				.toList();

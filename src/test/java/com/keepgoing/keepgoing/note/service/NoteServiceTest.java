@@ -15,7 +15,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import com.keepgoing.keepgoing.activity.service.ActivityEventRecord;
 import com.keepgoing.keepgoing.folder.domain.Folder;
 import com.keepgoing.keepgoing.folder.repository.FolderRepository;
-import com.keepgoing.keepgoing.folder.service.FolderLockService;
+import com.keepgoing.keepgoing.folder.service.FolderLocker;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import com.keepgoing.keepgoing.note.domain.Note;
@@ -71,7 +71,7 @@ class NoteServiceTest {
 	NoteImageRepository noteImageRepository;
 
 	@Mock
-	FolderLockService folderLockService;
+	FolderLocker folderLockService;
 
 	@Mock
 	ActivityEventRecord activityEventRecord;
@@ -472,6 +472,35 @@ class NoteServiceTest {
 		}
 
 		@Test
+		@DisplayName("수정 요청 시 제목/내용이 null이면 빈 문자열로 업데이트된다")
+		void updatesWithEmptyStringsWhenCommandFieldsAreNull() {
+			// given
+			Long userId = 1L;
+			Long noteId = 10L;
+			User user = user(userId);
+			Note note = Note.create(user, null, "old title", "old content", NoteVisibility.PRIVATE, true);
+			NoteUpdateCommand command = new NoteUpdateCommand(
+					noteId,
+					userId,
+					null,
+					null,
+					NoteVisibility.PRIVATE,
+					false
+			);
+
+			given(noteRepository.findById(noteId)).willReturn(Optional.of(note));
+
+			// when
+			NoteDetailResult result = noteService.updateNote(command);
+
+			// then
+			assertThat(result.title()).isEqualTo("");
+			assertThat(result.content()).isEqualTo("");
+			verify(noteRepository).findById(noteId);
+			verify(activityEventRecord).recordNoteUpdated(user, note);
+		}
+
+		@Test
 		@DisplayName("없는 노트를 수정하려고 하면 예외가 발생한다")
 		void throwsWhenNoteNotFound() {
 			// given
@@ -533,7 +562,7 @@ class NoteServiceTest {
 
 		@Test
 		@DisplayName("작성자가 맞으면 soft delete 된다")
-		void softDeletesWhenAuthorMatches() {
+		void softDeletesWhenAuthorMatchesBy() {
 			// given
 			Long userId = 1L;
 			Long noteId = 10L;
@@ -554,7 +583,7 @@ class NoteServiceTest {
 
 		@Test
 		@DisplayName("작성자가 맞으면 연결 이미지를 soft delete한다")
-		void softDeletesNoteImagesWhenAuthorMatches() {
+		void softDeletesNoteImagesWhenAuthorMatchesBy() {
 			// given
 			Long userId = 1L;
 			Long noteId = 10L;
@@ -971,7 +1000,7 @@ class NoteServiceTest {
 			// then
 			assertThat(result.hasNext()).isTrue();
 			assertThat(result.getContent()).hasSize(1);
-			assertThat(result.getContent().get(0).folderId()).isEqualTo(10L);
+			assertThat(result.getContent().getFirst().folderId()).isEqualTo(10L);
 			verify(noteRepository).searchMyNotesSlice(eq(userId), eq("spring"), any(Pageable.class));
 			verifyNoMoreInteractions(noteRepository);
 			verifyNoInteractions(userRepository, folderRepository);

@@ -4,8 +4,8 @@
   "settings": {
     "width": 20000,
     "height": 20000,
-    "scrollTop": -8657.7434,
-    "scrollLeft": -8756.8846,
+    "scrollTop": -8146.2415,
+    "scrollLeft": -9165.585,
     "zoomLevel": 0.8,
     "show": 495,
     "database": 4,
@@ -102,7 +102,7 @@
       "blogs_table": {
         "id": "blogs_table",
         "name": "notes",
-        "comment": "노트 - FULLTEXT 검색 지원",
+        "comment": "노트 - visibility 기반 공개 범위 관리",
         "columnIds": [
           "blogs_id",
           "blogs_author_id",
@@ -132,11 +132,11 @@
           "y": 8159.7145,
           "zIndex": 3,
           "widthName": 60,
-          "widthComment": 142,
+          "widthComment": 184,
           "color": "#27AE60"
         },
         "meta": {
-          "updateAt": 1777043456040,
+          "updateAt": 1777279615443,
           "createAt": 1699999999999
         }
       },
@@ -581,19 +581,19 @@
         "id": "blogs_id",
         "tableId": "blogs_table",
         "name": "id",
-        "comment": "블로그 고유 ID",
+        "comment": "노트 고유 ID",
         "dataType": "BIGINT",
         "default": "",
         "options": 11,
         "ui": {
           "keys": 1,
           "widthName": 60,
-          "widthComment": 73,
+          "widthComment": 62,
           "widthDataType": 60,
           "widthDefault": 60
         },
         "meta": {
-          "updateAt": 1763457794354,
+          "updateAt": 1777279615443,
           "createAt": 1699999999999
         }
       },
@@ -641,19 +641,19 @@
         "id": "blogs_content",
         "tableId": "blogs_table",
         "name": "content",
-        "comment": "본문 (16MB)",
-        "dataType": "MEDIUMTEXT",
+        "comment": "본문",
+        "dataType": "TEXT",
         "default": "",
         "options": 8,
         "ui": {
           "keys": 0,
           "widthName": 60,
-          "widthComment": 67,
-          "widthDataType": 81,
+          "widthComment": 60,
+          "widthDataType": 60,
           "widthDefault": 60
         },
         "meta": {
-          "updateAt": 1699999999999,
+          "updateAt": 1777279615443,
           "createAt": 1699999999999
         }
       },
@@ -661,19 +661,19 @@
         "id": "blogs_visibility",
         "tableId": "blogs_table",
         "name": "visibility",
-        "comment": "공개 여부",
+        "comment": "공개 범위 (PUBLIC/PRIVATE/UNLISTED)",
         "dataType": "ENUM('PUBLIC','PRIVATE','UNLISTED')",
         "default": "'PRIVATE'",
         "options": 8,
         "ui": {
           "keys": 0,
           "widthName": 60,
-          "widthComment": 60,
+          "widthComment": 216,
           "widthDataType": 220,
           "widthDefault": 60
         },
         "meta": {
-          "updateAt": 1699999999999,
+          "updateAt": 1777279615443,
           "createAt": 1699999999999
         }
       },
@@ -1688,7 +1688,7 @@
         "ui": {
           "keys": 2,
           "widthName": 60,
-          "widthComment": 151,
+          "widthComment": 100,
           "widthDataType": 60,
           "widthDefault": 60
         },
@@ -1878,8 +1878,8 @@
           "columnIds": [
             "blogs_author_id"
           ],
-          "x": 9425.065,
-          "y": 8455.7145,
+          "x": 9446.565,
+          "y": 8503.7145,
           "direction": 8
         },
         "meta": {
@@ -1898,7 +1898,7 @@
             "blogs_id"
           ],
           "x": 9243.065,
-          "y": 8233.7145,
+          "y": 8245.7145,
           "direction": 1
         },
         "end": {
@@ -2102,8 +2102,8 @@
           "columnIds": [
             "blogs_folder_id"
           ],
-          "x": 9971.065,
-          "y": 8307.7145,
+          "x": 10057.065,
+          "y": 8331.7145,
           "direction": 2
         },
         "meta": {
@@ -2149,8 +2149,8 @@
           "columnIds": [
             "blogs_id"
           ],
-          "x": 9789.065,
-          "y": 8455.7145,
+          "x": 9853.565,
+          "y": 8503.7145,
           "direction": 8
         },
         "end": {
@@ -2178,7 +2178,7 @@
             "blogs_id"
           ],
           "x": 9243.065,
-          "y": 8381.7145,
+          "y": 8417.7145,
           "direction": 1
         },
         "end": {
@@ -2186,7 +2186,7 @@
           "columnIds": [
             "note_images_note_id"
           ],
-          "x": 9143.75,
+          "x": 9103.75,
           "y": 8762,
           "direction": 2
         },
@@ -2214,7 +2214,7 @@
           "columnIds": [
             "note_images_uploader_id"
           ],
-          "x": 9143.75,
+          "x": 9103.75,
           "y": 8922,
           "direction": 2
         },

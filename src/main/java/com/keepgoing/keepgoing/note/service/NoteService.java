@@ -2,8 +2,7 @@ package com.keepgoing.keepgoing.note.service;
 
 import com.keepgoing.keepgoing.activity.service.ActivityEventRecord;
 import com.keepgoing.keepgoing.folder.domain.Folder;
-import com.keepgoing.keepgoing.folder.repository.FolderRepository;
-import com.keepgoing.keepgoing.folder.service.FolderLockService;
+import com.keepgoing.keepgoing.folder.service.FolderLocker;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import com.keepgoing.keepgoing.note.domain.Note;
@@ -35,8 +34,7 @@ public class NoteService {
 	private final NoteRepository noteRepository;
 	private final NoteImageRepository noteImageRepository;
 	private final UserRepository userRepository;
-	private final FolderRepository folderRepository;
-	private final FolderLockService folderLockService;
+	private final FolderLocker folderLocker;
 	private final ActivityEventRecord activityEventRecord;
 
 	/**
@@ -47,10 +45,7 @@ public class NoteService {
 		User author = userRepository.findById(command.userId())
 				.orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-		Folder folder = null;
-		if (command.folderId() != null) {
-			folder = folderLockService.lockActiveFolder(command.folderId());
-		}
+		Folder folder = lockActiveFolderOrRoot(command.folderId());
 
 		Note note = Note.create(
 				author,
@@ -95,14 +90,12 @@ public class NoteService {
 		Note note = noteRepository.findById(command.noteId())
 				.orElseThrow(() -> new BusinessException(ErrorCode.NOTE_NOT_FOUND));
 
-		note.validateAuthor(command.userId());
-
 		note.update(
+				command.userId(),
 				command.title(),
 				command.content(),
 				command.visibility(),
-				command.aiCollectable()
-		);
+				command.aiCollectable());
 
 		activityEventRecord.recordNoteUpdated(note.getAuthor(), note);
 		return NoteDetailResult.from(note);
@@ -116,8 +109,7 @@ public class NoteService {
 		Note note = noteRepository.findById(noteId)
 				.orElseThrow(() -> new BusinessException(ErrorCode.NOTE_NOT_FOUND));
 
-		note.validateAuthor(userId);
-		note.softDelete();
+		note.softDeleteBy(userId);
 		noteImageRepository.softDeleteByNoteId(noteId);
 	}
 
@@ -163,7 +155,7 @@ public class NoteService {
 		Long sourceFolderId = note.getFolder() != null ? note.getFolder().getId() : null;
 		Long targetFolderId = command.targetFolderId();
 
-		Map<Long, Folder> lockedFolders = folderLockService.lockActiveFolders(
+		Map<Long, Folder> lockedFolders = folderLocker.lockActiveFolders(
 				Arrays.asList(sourceFolderId, targetFolderId)
 		);
 
@@ -201,5 +193,12 @@ public class NoteService {
 		if (query == null || !query.hasKeyword()) {
 			throw new BusinessException(ErrorCode.NOTE_SEARCH_KEYWORD_REQUIRED);
 		}
+	}
+
+	private Folder lockActiveFolderOrRoot(Long folderId) {
+		if (folderId == null) {
+			return null;
+		}
+		return folderLocker.lockActiveFolder(folderId);
 	}
 }

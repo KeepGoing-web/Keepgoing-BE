@@ -1,4 +1,4 @@
-package com.keepgoing.keepgoing.note.controller.dto;
+package com.keepgoing.keepgoing.note.controller.dto.request;
 
 import com.keepgoing.keepgoing.note.service.dto.NoteRenameCommand;
 import jakarta.validation.constraints.NotBlank;

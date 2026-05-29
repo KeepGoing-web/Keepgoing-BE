@@ -176,6 +176,16 @@ public enum ErrorCode {
 			"NOTE_003",
 			"검색어(keyword)는 필수입니다."
 	),
+	NOTE_TITLE_INVALID(
+			HttpStatus.BAD_REQUEST,
+			"NOTE_004",
+			"제목은 1자 이상 200자 이하여야 합니다."
+	),
+	NOTE_CONTENT_REQUIRED(
+			HttpStatus.BAD_REQUEST,
+			"NOTE_005",
+			"본문은 비어 있을 수 없습니다."
+	),
 
 	// ===== NOTE_IMAGE =====
 	NOTE_IMAGE_ACCESS_DENIED(

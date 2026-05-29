@@ -51,7 +51,7 @@ class FolderServiceTest {
 	NoteRepository noteRepository;
 
 	@Mock
-	FolderLockService folderLockService;
+	FolderLocker folderLockService;
 
 	@InjectMocks
 	FolderService folderService;
