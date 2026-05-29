@@ -45,6 +45,13 @@ services:
       mc anonymous set none keepgoing/${STORAGE_BUCKET_SECURE:-secure-bucket};
       "
 
+  redis:
+    image: redis:7-alpine
+    container_name: keepgoing-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
 volumes:
   keepgoing-postgres-data:
   keepgoing-minio-data:

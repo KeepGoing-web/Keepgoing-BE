@@ -11,13 +11,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.keepgoing.keepgoing.common.image.domain.ImageProcessingStatus;
 import com.keepgoing.keepgoing.global.api.exception.GlobalExceptionHandler;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import com.keepgoing.keepgoing.global.config.JacksonConfig;
 import com.keepgoing.keepgoing.global.security.cookie.CookieConfig;
 import com.keepgoing.keepgoing.global.security.jwt.JwtProvider;
-import com.keepgoing.keepgoing.note.domain.NoteImageStatus;
 import com.keepgoing.keepgoing.note.service.NoteImageService;
 import com.keepgoing.keepgoing.note.service.dto.NoteImageUploadCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteImageUploadResult;
@@ -80,7 +80,7 @@ class NoteImageControllerTest {
 					MediaType.IMAGE_PNG_VALUE,
 					fileContent
 			);
-			NoteImageUploadResult result = new NoteImageUploadResult(publicId, NoteImageStatus.PENDING);
+			NoteImageUploadResult result = new NoteImageUploadResult(publicId, ImageProcessingStatus.PENDING);
 
 			mockLoginUser(userId);
 			given(noteImageService.uploadImage(eq(userId), any(NoteImageUploadCommand.class)))
@@ -93,7 +93,7 @@ class NoteImageControllerTest {
 					.andExpect(status().isCreated())
 					.andExpect(jsonPath("$.success").value(true))
 					.andExpect(jsonPath("$.data.publicId").value(publicId.toString()))
-					.andExpect(jsonPath("$.data.status").value(NoteImageStatus.PENDING.name()));
+					.andExpect(jsonPath("$.data.status").value(ImageProcessingStatus.PENDING.name()));
 
 			ArgumentCaptor<NoteImageUploadCommand> captor = ArgumentCaptor.forClass(NoteImageUploadCommand.class);
 			then(noteImageService).should().uploadImage(eq(userId), captor.capture());

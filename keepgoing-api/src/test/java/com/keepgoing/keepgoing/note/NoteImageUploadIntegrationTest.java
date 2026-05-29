@@ -11,13 +11,15 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.keepgoing.keepgoing.common.image.domain.ImageProcessingStatus;
+import com.keepgoing.keepgoing.common.image.event.ImageProcessingRequestedEvent;
 import com.keepgoing.keepgoing.global.storage.InputStreamSupplier;
 import com.keepgoing.keepgoing.global.storage.ObjectStorageClient;
 import com.keepgoing.keepgoing.global.storage.ObjectStorageException;
 import com.keepgoing.keepgoing.note.domain.Note;
 import com.keepgoing.keepgoing.note.domain.NoteImage;
-import com.keepgoing.keepgoing.note.domain.NoteImageStatus;
 import com.keepgoing.keepgoing.note.domain.NoteVisibility;
+import com.keepgoing.keepgoing.note.event.NoteImageProcessingRequestPublisher;
 import com.keepgoing.keepgoing.note.repository.NoteImageRepository;
 import com.keepgoing.keepgoing.note.repository.NoteRepository;
 import com.keepgoing.keepgoing.user.domain.User;
@@ -71,6 +73,9 @@ class NoteImageUploadIntegrationTest {
 	@MockitoBean
 	ObjectStorageClient objectStorageClient;
 
+	@MockitoBean
+	NoteImageProcessingRequestPublisher requestPublisher;
+
 	@AfterEach
 	void tearDown() {
 		SecurityContextHolder.clearContext();
@@ -102,7 +107,7 @@ class NoteImageUploadIntegrationTest {
 					.andExpect(status().isCreated())
 					.andExpect(jsonPath("$.success").value(true))
 					.andExpect(jsonPath("$.data.publicId").isNotEmpty())
-					.andExpect(jsonPath("$.data.status").value(NoteImageStatus.PENDING.name()));
+					.andExpect(jsonPath("$.data.status").value(ImageProcessingStatus.PENDING.name()));
 
 			entityManager.flush();
 			entityManager.clear();
@@ -112,7 +117,7 @@ class NoteImageUploadIntegrationTest {
 			assertThat(savedImage.getOriginalName()).isEqualTo(IMAGE_NAME);
 			assertThat(savedImage.getContentType()).isEqualTo(CONTENT_TYPE);
 			assertThat(savedImage.getFileSize()).isEqualTo(IMAGE_CONTENT.length);
-			assertThat(savedImage.getStatus()).isEqualTo(NoteImageStatus.PENDING);
+			assertThat(savedImage.getStatus()).isEqualTo(ImageProcessingStatus.PENDING);
 			assertThat(savedImage.getUploader().getId()).isEqualTo(author.getId());
 			assertThat(savedImage.getPublicId()).isNotNull();
 
@@ -125,6 +130,16 @@ class NoteImageUploadIntegrationTest {
 			);
 			assertThat(supplierCaptor.getValue().get().readAllBytes()).isEqualTo(IMAGE_CONTENT);
 			then(objectStorageClient).should(never()).delete(any());
+
+			ArgumentCaptor<ImageProcessingRequestedEvent> eventCaptor =
+					ArgumentCaptor.forClass(ImageProcessingRequestedEvent.class);
+			then(requestPublisher).should().publish(eventCaptor.capture());
+			ImageProcessingRequestedEvent event = eventCaptor.getValue();
+			assertThat(event.publicId()).isEqualTo(savedImage.getPublicId());
+			assertThat(event.storageKey()).isEqualTo(storageKey);
+			assertThat(event.contentType()).isEqualTo(CONTENT_TYPE);
+			assertThat(event.fileSize()).isEqualTo(IMAGE_CONTENT.length);
+			assertThat(event.requestedAt()).isNotNull();
 		}
 
 		@Test
@@ -151,6 +166,7 @@ class NoteImageUploadIntegrationTest {
 
 			assertThat(countAllImageRows()).isZero();
 			then(objectStorageClient).shouldHaveNoInteractions();
+			then(requestPublisher).shouldHaveNoInteractions();
 		}
 
 		@Test
@@ -170,6 +186,7 @@ class NoteImageUploadIntegrationTest {
 
 			assertThat(countAllImageRows()).isZero();
 			then(objectStorageClient).shouldHaveNoInteractions();
+			then(requestPublisher).shouldHaveNoInteractions();
 		}
 
 		@Test
@@ -191,6 +208,7 @@ class NoteImageUploadIntegrationTest {
 
 			assertThat(countAllImageRows()).isZero();
 			then(objectStorageClient).shouldHaveNoInteractions();
+			then(requestPublisher).shouldHaveNoInteractions();
 		}
 
 		@Test
@@ -217,6 +235,46 @@ class NoteImageUploadIntegrationTest {
 			then(objectStorageClient).should()
 					.upload(any(), eq("notes/" + note.getId()), eq((long) IMAGE_CONTENT.length));
 			then(objectStorageClient).should(never()).delete(any());
+			then(requestPublisher).shouldHaveNoInteractions();
+		}
+
+		@Test
+		@DisplayName("이미지 처리 요청 이벤트 발행이 실패하면 503을 반환하고 저장된 메타데이터는 유지한다")
+		void returnsServiceUnavailableWhenProcessingRequestPublishFails() throws Exception {
+			// given
+			User author = saveUser("author@test.com", "작성자");
+			Note note = saveNote(author, "이미지 처리 요청 실패 노트");
+			String storageKey = "notes/" + note.getId() + "/generated-image-key";
+			mockLoginUser(author.getId());
+
+			given(objectStorageClient.upload(any(), eq("notes/" + note.getId()),
+					eq((long) IMAGE_CONTENT.length)))
+					.willReturn(storageKey);
+			given(requestPublisher.publish(any(ImageProcessingRequestedEvent.class)))
+					.willThrow(new RuntimeException("redis unavailable"));
+
+			// when & then
+			mockMvc.perform(multipart("/api/notes/{noteId}/images", note.getId())
+							.file(imageFile())
+							.contentType(MediaType.MULTIPART_FORM_DATA))
+					.andExpect(status().isServiceUnavailable())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value("SERVICE_UNAVAILABLE"));
+
+			entityManager.flush();
+			entityManager.clear();
+
+			NoteImage savedImage = findSingleImage(note.getId());
+			assertThat(savedImage.getStorageKey()).isEqualTo(storageKey);
+			assertThat(savedImage.getStatus()).isEqualTo(ImageProcessingStatus.PENDING);
+
+			then(objectStorageClient).should().upload(
+					any(),
+					eq("notes/" + note.getId()),
+					eq((long) IMAGE_CONTENT.length)
+			);
+			then(objectStorageClient).should(never()).delete(any());
+			then(requestPublisher).should().publish(any(ImageProcessingRequestedEvent.class));
 		}
 
 		@Test
@@ -249,6 +307,7 @@ class NoteImageUploadIntegrationTest {
 					eq((long) IMAGE_CONTENT.length)
 			);
 			then(objectStorageClient).should().delete(duplicatedStorageKey);
+			then(requestPublisher).shouldHaveNoInteractions();
 		}
 	}
 

@@ -193,6 +193,11 @@ public enum ErrorCode {
 			"NOTE_IMAGE_001",
 			"해당 이미지에 대한 권한이 없습니다."
 	),
+	NOTE_IMAGE_NOT_FOUND(
+			HttpStatus.NOT_FOUND,
+			"NOTE_IMAGE_002",
+			"해당 이미지가 없습니다."
+	),
 
 	// ===== Folder =====
 	FOLDER_ACCESS_DENIED(
