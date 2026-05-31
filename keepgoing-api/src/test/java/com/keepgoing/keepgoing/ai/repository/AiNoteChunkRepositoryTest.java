@@ -1,5 +1,7 @@
 package com.keepgoing.keepgoing.ai.repository;
 
+import com.keepgoing.keepgoing.support.PostgreSqlTestContainerSupport;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.keepgoing.keepgoing.ai.domain.AiNoteChunk;
@@ -18,12 +20,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 
 @DataJpaTest
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import(JpaAuditingConfig.class)
-class AiNoteChunkRepositoryTest {
+class AiNoteChunkRepositoryTest extends PostgreSqlTestContainerSupport {
 
 	private static final LocalDateTime REQUESTED_AT = LocalDateTime.of(2026, 5, 28, 10, 0);
 	private static final LocalDateTime INDEXED_AT = LocalDateTime.of(2026, 5, 28, 10, 5);

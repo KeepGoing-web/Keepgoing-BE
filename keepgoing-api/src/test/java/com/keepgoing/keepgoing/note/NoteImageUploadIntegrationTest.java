@@ -1,5 +1,7 @@
 package com.keepgoing.keepgoing.note;
 
+import com.keepgoing.keepgoing.support.PostgreSqlTestContainerSupport;
+
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -49,7 +51,7 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest
 @AutoConfigureMockMvc(addFilters = false)
 @Transactional
-class NoteImageUploadIntegrationTest {
+class NoteImageUploadIntegrationTest extends PostgreSqlTestContainerSupport {
 
 	private static final String IMAGE_NAME = "image.png";
 	private static final String CONTENT_TYPE = MediaType.IMAGE_PNG_VALUE;
