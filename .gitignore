@@ -60,3 +60,12 @@ GEMINI.md
 conductor/
 
 cookies.txt
+.copilot/
+mcp-server/
+
+# Local AI assistant / orchestration files
+.github/agents/
+.github/copilot-instructions.md
+.github/hooks/
+.github/prompts/
+.github/skills/

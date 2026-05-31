@@ -1,0 +1,83 @@
+spring:
+  application:
+    name: keepgoing
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+  flyway:
+    enabled: false
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${OAUTH_GOOGLE_CLIENT_ID}
+            client-secret: ${OAUTH_GOOGLE_CLIENT_SECRET}
+
+  ai:
+    retry:
+      max-attempts: 3
+      backoff:
+        initial-interval: 2s
+        multiplier: 2
+        max-interval: 10s
+      on-client-errors: false
+
+    openai:
+      api-key: ${OPENAI_API_KEY}
+      chat:
+        options:
+          model: gpt-4o-mini
+          temperature: 0.7
+
+    zhipuai:
+      api-key: ${ZHIPUAI_API_KEY}
+      base-url: ${ZHIPUAI_BASE_URL:https://api.z.ai/api/coding/paas}
+
+      chat:
+        options:
+          model: glm-5.1
+          temperature: 0.7
+
+    logging:
+      prompt-response:
+        enabled: false
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+image-processing:
+  streams:
+    request: ${IMAGE_PROCESSING_REQUEST_STREAM:note-image-processing-requests}
+    result: ${IMAGE_PROCESSING_RESULT_STREAM:note-image-processing-results}
+    result-group: ${IMAGE_PROCESSING_RESULT_GROUP:keepgoing-api}
+    result-consumer: ${IMAGE_PROCESSING_RESULT_CONSUMER:api-1}
+    enabled: ${IMAGE_PROCESSING_STREAMS_ENABLED:true}
+
+jwt:
+  secret-key: ${JWT_SECRET_KEY}
+  access-token-expiry: 3600000      # 1시간
+  refresh-token-expiry: 604800000   # 7일
+  issuer: keepgoing
+
+auth:
+  cookie:
+    access-token:
+      name: access_token
+      path: /api
+      max-age: 3600
+    refresh-token:
+      name: refresh_token
+      path: /api/auth
+      max-age: 604800
+
+storage:
+  endpoint: ${STORAGE_ENDPOINT}
+  access-key: ${STORAGE_ACCESS_KEY}
+  secret-key: ${STORAGE_SECRET_KEY}
+  region: ${STORAGE_REGION}
+  bucket-names:
+    quarantine: ${STORAGE_BUCKET_QUARANTINE}
+    secure: ${STORAGE_BUCKET_SECURE}

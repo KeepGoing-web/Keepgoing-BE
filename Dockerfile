@@ -5,12 +5,14 @@ WORKDIR /workspace
 COPY gradlew gradlew.bat settings.gradle build.gradle ./
 COPY gradle ./gradle
 
+COPY keepgoing-api ./keepgoing-api
+COPY keepgoing-worker ./keepgoing-worker
+COPY keepgoing-common ./keepgoing-common
+
 RUN chmod +x gradlew
 
-COPY src ./src
-
-RUN ./gradlew bootJar --no-daemon \
-    && cp /workspace/build/libs/*.jar /workspace/app.jar
+RUN ./gradlew :keepgoing-api:bootJar --no-daemon \
+    && cp /workspace/keepgoing-api/build/libs/*.jar /workspace/app.jar
 
 FROM eclipse-temurin:21-jre-jammy AS runtime
 

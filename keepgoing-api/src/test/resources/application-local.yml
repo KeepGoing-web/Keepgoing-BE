@@ -1,0 +1,34 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+
+  flyway:
+    enabled: false
+
+jwt:
+  secret-key: "test-secret-key-for-testing-purpose-only-32bytes!!"
+  access-token-expiry: 3600000
+  refresh-token-expiry: 604800000
+  issuer: keepgoing-test
+
+cors:
+  allowed-origins:
+    - http://localhost:5173
+  max-age: 3600
+
+storage:
+  endpoint: http://localhost:9000
+  access-key: test-access-key
+  secret-key: test-secret-key
+  region: us-east-1
+  bucket-names:
+    quarantine: test-quarantine-bucket
+    secure: test-secure-bucket
