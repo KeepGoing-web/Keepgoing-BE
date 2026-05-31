@@ -75,4 +75,26 @@ class AiNoteIndexingServiceTest {
 				"db read fail"
 		);
 	}
+
+	@Test
+	@DisplayName("예외 메세지가 없으면 예외 클래스명으로 FAILED 사유를 기록한다")
+	void recordsExceptionClassNameWhenMessageIsNull() {
+		// given
+		Long noteId = 10L;
+		RuntimeException exception = new RuntimeException();
+
+		willThrow(exception)
+				.given(aiNoteIndexingProcessor)
+				.processInTransaction(noteId);
+
+		// when & then
+		assertThatThrownBy(() -> aiNoteIndexingService.process(noteId))
+				.isSameAs(exception);
+
+		verify(aiNoteIndexFailureRecorder).markFailed(
+				noteId,
+				LocalDateTime.of(2026, 5, 14, 9, 0),
+				"RuntimeException"
+		);
+	}
 }
