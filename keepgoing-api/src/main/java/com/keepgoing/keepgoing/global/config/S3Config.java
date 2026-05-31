@@ -1,5 +1,6 @@
-package com.keepgoing.keepgoing.global.storage;
+package com.keepgoing.keepgoing.global.config;
 
+import com.keepgoing.keepgoing.global.storage.StorageProperties;
 import java.net.URI;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
