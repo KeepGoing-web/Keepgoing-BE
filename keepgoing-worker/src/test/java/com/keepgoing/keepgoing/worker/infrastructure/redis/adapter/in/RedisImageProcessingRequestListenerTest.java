@@ -1,29 +1,23 @@
-package com.keepgoing.keepgoing.worker.image.event;
+package com.keepgoing.keepgoing.worker.infrastructure.redis.adapter.in;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
-import static org.mockito.BDDMockito.willAnswer;
+import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 
-import com.keepgoing.keepgoing.common.image.domain.ImageProcessingStatus;
 import com.keepgoing.keepgoing.common.image.event.ImageProcessingRequestedEvent;
-import com.keepgoing.keepgoing.common.image.event.ImageProcessingResultEvent;
-import com.keepgoing.keepgoing.worker.global.redis.WorkerRedisStreamProperties;
-import java.time.Clock;
+import com.keepgoing.keepgoing.worker.image.application.port.in.ImageProcessingCommand;
+import com.keepgoing.keepgoing.worker.image.application.port.in.ImageProcessingUseCase;
+import com.keepgoing.keepgoing.worker.infrastructure.redis.WorkerRedisStreamProperties;
 import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -33,7 +27,7 @@ import org.springframework.data.redis.core.StreamOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 @ExtendWith(MockitoExtension.class)
-class ImageProcessingRequestListenerTest {
+class RedisImageProcessingRequestListenerTest {
 
 	private static final String REQUEST_STREAM = "note-image-processing-requests";
 	private static final String RESULT_STREAM = "note-image-processing-results";
@@ -50,10 +44,10 @@ class ImageProcessingRequestListenerTest {
 	StreamOperations<String, Object, Object> streamOperations;
 
 	@Mock
-	ImageProcessingResultPublisher resultPublisher;
+	ImageProcessingUseCase useCase;
 
 	WorkerRedisStreamProperties properties;
-	ImageProcessingRequestListener listener;
+	RedisImageProcessingRequestListener listener;
 
 	@BeforeEach
 	void setUp() {
@@ -64,16 +58,15 @@ class ImageProcessingRequestListenerTest {
 				REQUEST_GROUP,
 				REQUEST_CONSUMER
 		);
-		listener = new ImageProcessingRequestListener(
-				Clock.fixed(PROCESSED_AT, ZoneOffset.UTC),
+		listener = new RedisImageProcessingRequestListener(
 				redisTemplate,
 				properties,
-				resultPublisher
+				useCase
 		);
 	}
 
 	@Test
-	@DisplayName("이미지 처리 요청을 받으면 SCANNING과 SAFE 결과를 순서대로 발행한 뒤 request stream 메시지를 ack한다")
+	@DisplayName("이미지 처리 요청 메시지를 use case에 전달한 뒤 ack한다")
 	void publishesScanningAndSafeResultsThenAcknowledgesMessage() {
 		// given
 		ImageProcessingRequestedEvent requestedEvent = requestedEvent();
@@ -84,48 +77,29 @@ class ImageProcessingRequestListenerTest {
 		listener.handle(message);
 
 		// then
-		ArgumentCaptor<ImageProcessingResultEvent> eventCaptor =
-				ArgumentCaptor.forClass(ImageProcessingResultEvent.class);
-		InOrder inOrder = inOrder(resultPublisher, streamOperations);
-		inOrder.verify(resultPublisher, times(2)).publish(eventCaptor.capture());
+		InOrder inOrder = inOrder(useCase, redisTemplate, streamOperations);
+		inOrder.verify(useCase).process(any(ImageProcessingCommand.class));
+		inOrder.verify(redisTemplate).opsForStream();
 		inOrder.verify(streamOperations).acknowledge(REQUEST_STREAM, REQUEST_GROUP, RECORD_ID);
-
-		assertThat(eventCaptor.getAllValues())
-				.extracting(ImageProcessingResultEvent::status)
-				.containsExactly(ImageProcessingStatus.SCANNING, ImageProcessingStatus.SAFE);
-		assertThat(eventCaptor.getAllValues())
-				.allSatisfy(event -> {
-					assertThat(event.publicId()).isEqualTo(requestedEvent.publicId());
-					assertThat(event.reason()).isEmpty();
-					assertThat(event.processedAt()).isEqualTo(PROCESSED_AT);
-				});
 	}
 
 	@Test
-	@DisplayName("이미지 처리 결과 발행이 실패하면 request stream 메시지를 ack하지 않는다")
+	@DisplayName("use case 처리 중 예외가 발생하면 request stream 메시지를 ack하지 않는다.")
 	void doesNotAcknowledgeMessageWhenPublishingResultFails() {
 		// given
 		ImageProcessingRequestedEvent requestedEvent = requestedEvent();
 		MapRecord<String, String, String> message = message(requestedEvent);
 		RuntimeException exception = new RuntimeException("publish failed");
-		willAnswer(invocation -> {
-			ImageProcessingResultEvent event = invocation.getArgument(0);
-			if (event.status() == ImageProcessingStatus.SAFE) {
-				throw exception;
-			}
-			return null;
-		}).given(resultPublisher).publish(any(ImageProcessingResultEvent.class));
+
+		willThrow(exception)
+				.given(useCase)
+				.process(any(ImageProcessingCommand.class));
 
 		// when & then
 		assertThatThrownBy(() -> listener.handle(message))
 				.isSameAs(exception);
 
-		then(resultPublisher).should().publish(argThat(event ->
-				event.status() == ImageProcessingStatus.SCANNING
-		));
-		then(resultPublisher).should().publish(argThat(event ->
-				event.status() == ImageProcessingStatus.SAFE
-		));
+		then(useCase).should().process(any(ImageProcessingCommand.class));
 		then(redisTemplate).should(never()).opsForStream();
 		then(streamOperations).shouldHaveNoInteractions();
 	}

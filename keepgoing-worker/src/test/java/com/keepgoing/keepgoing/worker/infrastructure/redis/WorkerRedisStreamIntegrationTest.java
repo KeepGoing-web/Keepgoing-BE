@@ -1,11 +1,10 @@
-package com.keepgoing.keepgoing.worker.image.event;
+package com.keepgoing.keepgoing.worker.infrastructure.redis;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import com.keepgoing.keepgoing.common.image.domain.ImageProcessingStatus;
 import com.keepgoing.keepgoing.common.image.event.ImageProcessingRequestedEvent;
-import com.keepgoing.keepgoing.worker.global.redis.WorkerRedisStreamProperties;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
@@ -27,7 +26,7 @@ import org.testcontainers.utility.DockerImageName;
 		"image-processing.streams.enabled=true"
 })
 @Testcontainers
-class ImageProcessingEventRedisTest {
+class WorkerRedisStreamIntegrationTest {
 
 	@Container
 	@SuppressWarnings("resource")
