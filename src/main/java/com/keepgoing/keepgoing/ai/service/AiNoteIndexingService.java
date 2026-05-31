@@ -24,7 +24,7 @@ public class AiNoteIndexingService {
 			aiNoteIndexingProcessor.processInTransaction(noteId);
 		} catch (RuntimeException exception) {
 			LocalDateTime failedAt = LocalDateTime.now(clock);
-			aiNoteIndexFailureRecorder.markFailed(noteId, failedAt, exception.getMessage());
+			aiNoteIndexFailureRecorder.markFailed(noteId, failedAt, failureMessage(exception));
 
 			log.error("AI note indexing failed. noteId={}", noteId, exception);
 			throw exception;
@@ -42,5 +42,15 @@ public class AiNoteIndexingService {
 		public void handle(AiNoteIndexRequestedEvent event) {
 			aiNoteIndexingService.process(event.noteId());
 		}
+	}
+
+	private String failureMessage(RuntimeException exception) {
+		String message = exception.getMessage();
+
+		if (message == null || message.isBlank()) {
+			return exception.getClass().getSimpleName();
+		}
+
+		return message;
 	}
 }
