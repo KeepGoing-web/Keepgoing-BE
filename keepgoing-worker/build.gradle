@@ -17,6 +17,9 @@ dependencies {
     testImplementation 'org.testcontainers:junit-jupiter:1.21.4'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
+    // AWS S3 SDK v2
+    implementation 'software.amazon.awssdk:s3:2.25.10'
+
     // Lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'

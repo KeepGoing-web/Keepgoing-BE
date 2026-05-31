@@ -1,4 +1,4 @@
-package com.keepgoing.keepgoing.worker.global.redis;
+package com.keepgoing.keepgoing.worker.infrastructure.redis;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 

@@ -1,4 +1,4 @@
-package com.keepgoing.keepgoing.worker.global.config;
+package com.keepgoing.keepgoing.worker.infrastructure.time;
 
 import java.time.Clock;
 import java.time.ZoneId;
