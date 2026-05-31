@@ -1,6 +1,6 @@
 package com.keepgoing.keepgoing.ai.service;
 
-import com.keepgoing.keepgoing.ai.repository.AiNoteIndexRepository;
+import com.keepgoing.keepgoing.ai.repository.AiNoteIndexUpsertRepository;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
@@ -12,7 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AiNoteIndexingRequestService {
 
-	private final AiNoteIndexRepository aiNoteIndexRepository;
+	private final AiNoteIndexUpsertRepository aiNoteIndexUpsertRepository;
 	private final ApplicationEventPublisher applicationEventPublisher;
 	private final Clock clock;
 
@@ -20,7 +20,7 @@ public class AiNoteIndexingRequestService {
 	public void requestReindex(Long noteId, Long authorId) {
 		LocalDateTime now = LocalDateTime.now(clock);
 
-		aiNoteIndexRepository.upsertPending(noteId, authorId, now);
+		aiNoteIndexUpsertRepository.upsertPending(noteId, authorId, now);
 		applicationEventPublisher.publishEvent(new AiNoteIndexRequestedEvent(noteId, authorId));
 	}
 }

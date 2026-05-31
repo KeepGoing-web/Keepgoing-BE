@@ -4,7 +4,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import com.keepgoing.keepgoing.activity.service.ActivityDashboardService;
-import com.keepgoing.keepgoing.ai.repository.AiNoteIndexRepository;
+import com.keepgoing.keepgoing.ai.repository.AiNoteIndexUpsertRepository;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -22,7 +22,7 @@ import org.springframework.context.ApplicationEventPublisher;
 class AiNoteIndexingRequestServiceTest {
 
 	@Mock
-	AiNoteIndexRepository aiNoteIndexRepository;
+	AiNoteIndexUpsertRepository aiNoteIndexUpsertRepository;
 
 	@Mock
 	ApplicationEventPublisher applicationEventPublisher;
@@ -52,10 +52,10 @@ class AiNoteIndexingRequestServiceTest {
 			aiNoteIndexingRequestService.requestReindex(noteId, authorId);
 
 			// then
-			verify(aiNoteIndexRepository).upsertPending(noteId, authorId, requestedAt);
+			verify(aiNoteIndexUpsertRepository).upsertPending(noteId, authorId, requestedAt);
 			verify(applicationEventPublisher)
 					.publishEvent(new AiNoteIndexRequestedEvent(noteId, authorId));
-			verifyNoMoreInteractions(aiNoteIndexRepository, applicationEventPublisher);
+			verifyNoMoreInteractions(aiNoteIndexUpsertRepository, applicationEventPublisher);
 		}
 	}
 }
