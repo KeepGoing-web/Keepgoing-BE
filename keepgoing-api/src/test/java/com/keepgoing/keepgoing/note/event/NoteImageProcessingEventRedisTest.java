@@ -33,7 +33,7 @@ import org.testcontainers.utility.DockerImageName;
 @SpringBootTest(properties = {
 		"image-processing.streams.enabled=true"
 })
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 class NoteImageProcessingEventRedisTest {
 
 	@Container
