@@ -9,7 +9,10 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import com.keepgoing.keepgoing.ai.domain.AiNoteIndex;
 import com.keepgoing.keepgoing.ai.domain.AiNoteIndexStatus;
 import com.keepgoing.keepgoing.ai.repository.AiNoteIndexRepository;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -28,6 +31,9 @@ class AiNoteIndexRecoverySchedulerTest {
 
 	@Mock
 	AiNoteIndexingService aiNoteIndexingService;
+
+	@Mock
+	Clock clock;
 
 	@InjectMocks
 	AiNoteIndexRecoveryScheduler aiNoteIndexRecoveryScheduler;
@@ -54,10 +60,14 @@ class AiNoteIndexRecoverySchedulerTest {
 		);
 
 		given(aiNoteIndexRepository.findRetryTargets(
-				List.of(AiNoteIndexStatus.PENDING, AiNoteIndexStatus.FAILED),
+				AiNoteIndexStatus.FAILED,
+				AiNoteIndexStatus.PENDING,
 				3,
+				LocalDateTime.of(2026, 5, 14, 8, 55),
 				PageRequest.of(0, 50)
 		)).willReturn(List.of(pending, failed));
+		given(clock.instant()).willReturn(Instant.parse("2026-05-14T00:00:00Z"));
+		given(clock.getZone()).willReturn(ZoneId.of("Asia/Seoul"));
 
 		// when
 		aiNoteIndexRecoveryScheduler.recoverRetryTargets();
@@ -68,8 +78,10 @@ class AiNoteIndexRecoverySchedulerTest {
 		inOrder.verify(aiNoteIndexingService).process(20L);
 
 		verify(aiNoteIndexRepository).findRetryTargets(
-				List.of(AiNoteIndexStatus.PENDING, AiNoteIndexStatus.FAILED),
+				AiNoteIndexStatus.FAILED,
+				AiNoteIndexStatus.PENDING,
 				3,
+				LocalDateTime.of(2026, 5, 14, 8, 55),
 				PageRequest.of(0, 50)
 		);
 		verifyNoMoreInteractions(aiNoteIndexRepository, aiNoteIndexingService);
@@ -91,10 +103,14 @@ class AiNoteIndexRecoverySchedulerTest {
 		);
 
 		given(aiNoteIndexRepository.findRetryTargets(
-				List.of(AiNoteIndexStatus.PENDING, AiNoteIndexStatus.FAILED),
+				AiNoteIndexStatus.FAILED,
+				AiNoteIndexStatus.PENDING,
 				3,
+				LocalDateTime.of(2026, 5, 14, 8, 55),
 				PageRequest.of(0, 50)
 		)).willReturn(List.of(first, second));
+		given(clock.instant()).willReturn(Instant.parse("2026-05-14T00:00:00Z"));
+		given(clock.getZone()).willReturn(ZoneId.of("Asia/Seoul"));
 
 		willThrow(new RuntimeException("index failed"))
 				.given(aiNoteIndexingService)
@@ -109,8 +125,10 @@ class AiNoteIndexRecoverySchedulerTest {
 		inOrder.verify(aiNoteIndexingService).process(20L);
 
 		verify(aiNoteIndexRepository).findRetryTargets(
-				List.of(AiNoteIndexStatus.PENDING, AiNoteIndexStatus.FAILED),
+				AiNoteIndexStatus.FAILED,
+				AiNoteIndexStatus.PENDING,
 				3,
+				LocalDateTime.of(2026, 5, 14, 8, 55),
 				PageRequest.of(0, 50)
 		);
 		verifyNoMoreInteractions(aiNoteIndexRepository, aiNoteIndexingService);

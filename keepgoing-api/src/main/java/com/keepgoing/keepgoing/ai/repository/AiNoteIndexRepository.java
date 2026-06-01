@@ -4,7 +4,6 @@ import com.keepgoing.keepgoing.ai.domain.AiNoteIndex;
 import com.keepgoing.keepgoing.ai.domain.AiNoteIndexStatus;
 import jakarta.persistence.LockModeType;
 import java.time.LocalDateTime;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
@@ -22,12 +21,23 @@ public interface AiNoteIndexRepository extends JpaRepository<AiNoteIndex, Long> 
 
 	@Query("""
 			select i from AiNoteIndex i
-			where i.status in :statuses
-				and i.attemptCount < :maxAttemptCount
+			where i.attemptCount < :maxAttemptCount
+			    and (
+			        i.status = :failedStatus
+			        or (
+			            i.status = :pendingStatus
+			            and i.lastRequestedAt <= :stalePendingThreshold
+			        )
+			    )
 			order by i.lastRequestedAt asc
 			""")
-	List<AiNoteIndex> findRetryTargets(@Param("statuses") Collection<AiNoteIndexStatus> statuses,
-	                                   @Param("maxAttemptCount") int maxAttemptCount, Pageable pageable);
+	List<AiNoteIndex> findRetryTargets(
+			@Param("failedStatus") AiNoteIndexStatus failedStatus,
+			@Param("pendingStatus") AiNoteIndexStatus pendingStatus,
+			@Param("maxAttemptCount") int maxAttemptCount,
+			@Param("stalePendingThreshold") LocalDateTime stalePendingThreshold,
+			Pageable pageable
+	);
 
 	@Modifying
 	@Query(value = """
