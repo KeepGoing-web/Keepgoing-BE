@@ -2,14 +2,14 @@ package com.keepgoing.keepgoing.support;
 
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.postgresql.PostgreSQLContainer;
+import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 public abstract class PostgreSqlTestContainerSupport {
 
 	private static final DockerImageName POSTGRES_IMAGE = DockerImageName.parse("postgres:16-alpine");
 
-	private static final PostgreSQLContainer postgres = new PostgreSQLContainer(POSTGRES_IMAGE)
+	private static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>(POSTGRES_IMAGE)
 			.withDatabaseName("keepgoing_test")
 			.withUsername("test")
 			.withPassword("test");

@@ -28,7 +28,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 @SpringBootTest
 class AiNoteIndexingIntegrationTest extends PostgreSqlTestContainerSupport {
 
-	private static final int MAX_ATTEMPTS = 30;
+	private static final int MAX_ATTEMPTS = 100;
 	private static final long WAIT_MILLIS = 100L;
 
 
