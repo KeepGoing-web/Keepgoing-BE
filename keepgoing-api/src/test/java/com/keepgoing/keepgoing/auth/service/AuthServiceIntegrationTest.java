@@ -1,5 +1,7 @@
 package com.keepgoing.keepgoing.auth.service;
 
+import com.keepgoing.keepgoing.support.PostgreSqlTestContainerSupport;
+
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -31,7 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest(webEnvironment = WebEnvironment.NONE)
 @Transactional
 @Slf4j
-class AuthServiceIntegrationTest {
+class AuthServiceIntegrationTest extends PostgreSqlTestContainerSupport {
 
 	@Autowired
 	UserRepository userRepository;

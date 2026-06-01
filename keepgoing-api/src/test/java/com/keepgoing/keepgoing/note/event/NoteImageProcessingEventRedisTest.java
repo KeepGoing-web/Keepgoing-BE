@@ -1,5 +1,7 @@
 package com.keepgoing.keepgoing.note.event;
 
+import com.keepgoing.keepgoing.support.PostgreSqlTestContainerSupport;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.BDDMockito.then;
@@ -33,8 +35,8 @@ import org.testcontainers.utility.DockerImageName;
 @SpringBootTest(properties = {
 		"image-processing.streams.enabled=true"
 })
-@Testcontainers(disabledWithoutDocker = true)
-class NoteImageProcessingEventRedisTest {
+@Testcontainers
+class NoteImageProcessingEventRedisTest extends PostgreSqlTestContainerSupport {
 
 	@Container
 	@SuppressWarnings("resource")

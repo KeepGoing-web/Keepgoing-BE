@@ -1,5 +1,7 @@
 package com.keepgoing.keepgoing.auth.service;
 
+import com.keepgoing.keepgoing.support.PostgreSqlTestContainerSupport;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.keepgoing.keepgoing.auth.service.dto.SignupCommand;
@@ -21,7 +23,7 @@ import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 
 @SpringBootTest(webEnvironment = WebEnvironment.NONE)
 @Slf4j
-public class AuthServiceConcurrencyTest {
+public class AuthServiceConcurrencyTest extends PostgreSqlTestContainerSupport {
 
     @Autowired
     AuthService authService;

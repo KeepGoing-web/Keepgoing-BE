@@ -28,7 +28,7 @@ import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
-@Testcontainers(disabledWithoutDocker = true)
+@Testcontainers
 class MinioObjectStorageClientIntegrationTest {
 
 	private static final String ACCESS_KEY = "test-access-key";

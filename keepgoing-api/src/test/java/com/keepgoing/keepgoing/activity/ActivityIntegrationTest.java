@@ -1,5 +1,7 @@
 package com.keepgoing.keepgoing.activity;
 
+import com.keepgoing.keepgoing.support.PostgreSqlTestContainerSupport;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -48,7 +50,7 @@ import org.springframework.transaction.annotation.Transactional;
 @AutoConfigureMockMvc(addFilters = false)
 @Transactional
 @Import(ActivityIntegrationTest.FixedClockConfig.class)
-class ActivityIntegrationTest {
+class ActivityIntegrationTest extends PostgreSqlTestContainerSupport {
 
 	private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 

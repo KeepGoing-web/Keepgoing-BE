@@ -1,5 +1,7 @@
 package com.keepgoing.keepgoing.ai;
 
+import com.keepgoing.keepgoing.support.PostgreSqlTestContainerSupport;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
@@ -48,7 +50,7 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest
 @AutoConfigureMockMvc(addFilters = false)
 @Transactional
-class AiPanelIntegrationTest {
+class AiPanelIntegrationTest extends PostgreSqlTestContainerSupport {
 
 	@Autowired
 	MockMvc mockMvc;

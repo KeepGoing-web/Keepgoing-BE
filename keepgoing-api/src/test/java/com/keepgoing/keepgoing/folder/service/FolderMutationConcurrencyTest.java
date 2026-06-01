@@ -1,5 +1,7 @@
 package com.keepgoing.keepgoing.folder.service;
 
+import com.keepgoing.keepgoing.support.PostgreSqlTestContainerSupport;
+
 import com.keepgoing.keepgoing.activity.repository.ActivityEventRepository;
 import com.keepgoing.keepgoing.folder.domain.Folder;
 import com.keepgoing.keepgoing.folder.repository.FolderRepository;
@@ -30,7 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = WebEnvironment.NONE)
-public class FolderMutationConcurrencyTest {
+public class FolderMutationConcurrencyTest extends PostgreSqlTestContainerSupport {
 
 	@Autowired
 	FolderService folderService;
