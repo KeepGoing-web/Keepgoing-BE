@@ -1,5 +1,7 @@
 package com.keepgoing.keepgoing.ai;
 
+import com.keepgoing.keepgoing.support.PostgreSqlTestContainerSupport;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.keepgoing.keepgoing.ai.domain.AiNoteChunk;
@@ -21,35 +23,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
-@Testcontainers(disabledWithoutDocker = true)
 @SpringBootTest
-class AiNoteIndexingIntegrationTest {
+class AiNoteIndexingIntegrationTest extends PostgreSqlTestContainerSupport {
 
 	private static final int MAX_ATTEMPTS = 30;
 	private static final long WAIT_MILLIS = 100L;
 
-	@Container
-	static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
-			.withDatabaseName("keepgoing_test")
-			.withUsername("test")
-			.withPassword("test");
-
-	@DynamicPropertySource
-	static void registerProperties(DynamicPropertyRegistry registry) {
-		registry.add("spring.datasource.url", postgres::getJdbcUrl);
-		registry.add("spring.datasource.username", postgres::getUsername);
-		registry.add("spring.datasource.password", postgres::getPassword);
-		registry.add("spring.datasource.driver-class-name", postgres::getDriverClassName);
-		registry.add("spring.jpa.hibernate.ddl-auto", () -> "create");
-		registry.add("spring.flyway.enabled", () -> "false");
-	}
 
 	@Autowired
 	NoteService noteService;
@@ -123,7 +104,7 @@ class AiNoteIndexingIntegrationTest {
 			AiNoteIndex index = findIndex(note.noteId());
 
 			assertThat(index.getStatus()).isEqualTo(AiNoteIndexStatus.COMPLETED);
-			assertThat(index.getAttemptCount()).isGreaterThanOrEqualTo(2);
+			assertThat(index.getAttemptCount()).isEqualTo(1);
 			assertThat(index.getLastError()).isNull();
 
 			List<AiNoteChunk> chunks = findChunks(note.noteId());

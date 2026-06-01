@@ -4,10 +4,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import com.keepgoing.keepgoing.activity.service.ActivityDashboardService;
-import com.keepgoing.keepgoing.ai.repository.AiNoteIndexUpsertRepository;
+
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import com.keepgoing.keepgoing.ai.repository.AiNoteIndexRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -22,7 +23,7 @@ import org.springframework.context.ApplicationEventPublisher;
 class AiNoteIndexingRequestServiceTest {
 
 	@Mock
-	AiNoteIndexUpsertRepository aiNoteIndexUpsertRepository;
+	AiNoteIndexRepository aiNoteIndexRepository;
 
 	@Mock
 	ApplicationEventPublisher applicationEventPublisher;
@@ -52,10 +53,10 @@ class AiNoteIndexingRequestServiceTest {
 			aiNoteIndexingRequestService.requestReindex(noteId, authorId);
 
 			// then
-			verify(aiNoteIndexUpsertRepository).upsertPending(noteId, authorId, requestedAt);
+			verify(aiNoteIndexRepository).upsertPending(noteId, authorId, requestedAt);
 			verify(applicationEventPublisher)
 					.publishEvent(new AiNoteIndexRequestedEvent(noteId, authorId));
-			verifyNoMoreInteractions(aiNoteIndexUpsertRepository, applicationEventPublisher);
+			verifyNoMoreInteractions(aiNoteIndexRepository, applicationEventPublisher);
 		}
 	}
 }

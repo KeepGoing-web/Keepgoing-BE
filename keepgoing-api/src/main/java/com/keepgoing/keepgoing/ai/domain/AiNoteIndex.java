@@ -61,6 +61,7 @@ public class AiNoteIndex {
 		this.status = AiNoteIndexStatus.PENDING;
 		this.lastRequestedAt = requestedAt;
 		this.lastError = null;
+		this.attemptCount = 0;
 	}
 
 	public void markCompleted(LocalDateTime processedAt) {
