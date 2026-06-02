@@ -1,11 +1,10 @@
 package com.keepgoing.keepgoing.auth.service;
 
-import com.keepgoing.keepgoing.support.PostgreSqlTestContainerSupport;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.keepgoing.keepgoing.auth.service.dto.SignupCommand;
-import com.keepgoing.keepgoing.user.repository.UserPasswordCredentialRepository;
+import com.keepgoing.keepgoing.support.DatabaseCleaner;
+import com.keepgoing.keepgoing.support.PostgreSqlTestContainerSupport;
 import com.keepgoing.keepgoing.user.repository.UserRepository;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -25,65 +24,68 @@ import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 @Slf4j
 public class AuthServiceConcurrencyTest extends PostgreSqlTestContainerSupport {
 
-    @Autowired
-    AuthService authService;
+	@Autowired
+	AuthService authService;
 
-    @Autowired
-    UserRepository userRepository;
+	@Autowired
+	UserRepository userRepository;
 
-    @Autowired
-    UserPasswordCredentialRepository credentialRepository;
+	@Autowired
+	DatabaseCleaner databaseCleaner;
 
-    @BeforeEach
-    void setup() {
-        credentialRepository.deleteAll();
-        userRepository.deleteAll();
-    }
+	@BeforeEach
+	void setup() {
+		databaseCleaner.clean();
+	}
 
-    @AfterEach
-    void cleanup() {
-        credentialRepository.deleteAll();
-        userRepository.deleteAll();
-    }
+	@AfterEach
+	void cleanup() {
+		databaseCleaner.clean();
+	}
 
-    @Test
-    @DisplayName("동시에 같은 이메일로 회원가입 시 하나만 성공해야 한다.")
-    void concurrentSignupStartTogether() throws InterruptedException {
-        String email = "test@example.com";
+	@Test
+	@DisplayName("동시에 같은 이메일로 회원가입 시 하나만 성공해야 한다.")
+	void concurrentSignupStartTogether() throws InterruptedException {
+		String email = "test@example.com";
 
-        int threadCount = 10;
+		int threadCount = 10;
 
-        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
-        CountDownLatch readyLatch = new CountDownLatch(threadCount);  // 준비 완료
-        CountDownLatch startLatch = new CountDownLatch(1);            // 시작 신호
-        CountDownLatch doneLatch = new CountDownLatch(threadCount);   // 완료 대기
+		ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+		CountDownLatch readyLatch = new CountDownLatch(threadCount);  // 준비 완료
+		CountDownLatch startLatch = new CountDownLatch(1);            // 시작 신호
+		CountDownLatch doneLatch = new CountDownLatch(threadCount);   // 완료 대기
 
-        AtomicInteger successCount = new AtomicInteger(0);
-        AtomicInteger failCount = new AtomicInteger(0);
+		AtomicInteger successCount = new AtomicInteger(0);
+		AtomicInteger failCount = new AtomicInteger(0);
 
-        for (int i = 0; i < threadCount; i++) {
-            executor.submit(() -> {
-                try {
-                    readyLatch.countDown();      // 준비 완료 신호
-                    startLatch.await();          // 시작 신호 대기 (모두 여기서 대기)
+		for (int i = 0; i < threadCount; i++) {
+			executor.submit(() -> {
+				try {
+					readyLatch.countDown();      // 준비 완료 신호
+					startLatch.await();          // 시작 신호 대기 (모두 여기서 대기)
 
-                    authService.signup(new SignupCommand(email, "User", "P@ssw0rd!"));
-                    successCount.incrementAndGet();
-                } catch (Exception e) {
-                    log.error("예외", e);
-                    failCount.incrementAndGet();
-                } finally {
-                    doneLatch.countDown();
-                }
-            });
-        }
+					authService.signup(new SignupCommand(email, "User", "P@ssw0rd!"));
+					successCount.incrementAndGet();
+				} catch (Exception e) {
+					log.error("예외", e);
+					failCount.incrementAndGet();
+				} finally {
+					doneLatch.countDown();
+				}
+			});
+		}
 
-        readyLatch.await();           // 모든 스레드 준비 완료 대기
-        startLatch.countDown();       // 🚀 동시 시작!
-        doneLatch.await(10, TimeUnit.SECONDS);
-        executor.shutdown();
+		assertThat(readyLatch.await(5, TimeUnit.SECONDS))           // 모든 스레드 준비 완료 대기
+				.as("signup worker threads did not become ready in time")
+				.isTrue();
+		startLatch.countDown();       // 🚀 동시 시작!
+		assertThat(doneLatch.await(10, TimeUnit.SECONDS))
+				.as("concurrent signup tasks did not finish in time")
+				.isTrue();
+		executor.shutdown();
 
-        assertThat(successCount.get()).isEqualTo(1);
-        assertThat(failCount.get()).isEqualTo(threadCount - 1);
-    }
+		assertThat(successCount.get()).isEqualTo(1);
+		assertThat(failCount.get()).isEqualTo(threadCount - 1);
+		assertThat(userRepository.countByEmail(email)).isEqualTo(1);
+	}
 }

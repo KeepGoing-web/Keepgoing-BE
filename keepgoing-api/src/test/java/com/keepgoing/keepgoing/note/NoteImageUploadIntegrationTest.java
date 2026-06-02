@@ -1,7 +1,5 @@
 package com.keepgoing.keepgoing.note;
 
-import com.keepgoing.keepgoing.support.PostgreSqlTestContainerSupport;
-
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -24,6 +22,8 @@ import com.keepgoing.keepgoing.note.domain.NoteVisibility;
 import com.keepgoing.keepgoing.note.event.NoteImageProcessingRequestPublisher;
 import com.keepgoing.keepgoing.note.repository.NoteImageRepository;
 import com.keepgoing.keepgoing.note.repository.NoteRepository;
+import com.keepgoing.keepgoing.support.DatabaseCleaner;
+import com.keepgoing.keepgoing.support.PostgreSqlTestContainerSupport;
 import com.keepgoing.keepgoing.user.domain.User;
 import com.keepgoing.keepgoing.user.domain.UserRole;
 import com.keepgoing.keepgoing.user.repository.UserRepository;
@@ -78,12 +78,12 @@ class NoteImageUploadIntegrationTest extends PostgreSqlTestContainerSupport {
 	@MockitoBean
 	NoteImageProcessingRequestPublisher requestPublisher;
 
+	@Autowired
+	private DatabaseCleaner databaseCleaner;
+
 	@AfterEach
 	void tearDown() {
 		SecurityContextHolder.clearContext();
-		noteImageRepository.deleteAllInBatch();
-		noteRepository.deleteAllInBatch();
-		userRepository.deleteAllInBatch();
 	}
 
 	@Nested
@@ -283,33 +283,37 @@ class NoteImageUploadIntegrationTest extends PostgreSqlTestContainerSupport {
 		@Transactional(propagation = Propagation.NOT_SUPPORTED)
 		@DisplayName("스토리지 업로드 후 DB 저장이 실패하면 업로드된 파일을 삭제하고 500을 반환한다")
 		void cleansUpUploadedFileWhenMetadataSaveFails() throws Exception {
-			// given
-			User author = saveUser("author@test.com", "작성자");
-			Note note = saveNote(author, "이미지 메타데이터 저장 실패 노트");
-			String duplicatedStorageKey = "notes/" + note.getId() + "/duplicated-image-key";
-			saveNoteImage(note, author, duplicatedStorageKey);
-			mockLoginUser(author.getId());
+			try {
+				// given
+				User author = saveUser("author@test.com", "작성자");
+				Note note = saveNote(author, "이미지 메타데이터 저장 실패 노트");
+				String duplicatedStorageKey = "notes/" + note.getId() + "/duplicated-image-key";
+				saveNoteImage(note, author, duplicatedStorageKey);
+				mockLoginUser(author.getId());
 
-			given(objectStorageClient.upload(any(), eq("notes/" + note.getId()),
-					eq((long) IMAGE_CONTENT.length)))
-					.willReturn(duplicatedStorageKey);
+				given(objectStorageClient.upload(any(), eq("notes/" + note.getId()),
+						eq((long) IMAGE_CONTENT.length)))
+						.willReturn(duplicatedStorageKey);
 
-			// when & then
-			mockMvc.perform(multipart("/api/notes/{noteId}/images", note.getId())
-							.file(imageFile())
-							.contentType(MediaType.MULTIPART_FORM_DATA))
-					.andExpect(status().isInternalServerError())
-					.andExpect(jsonPath("$.success").value(false))
-					.andExpect(jsonPath("$.error.code").value("INTERNAL_SERVER_ERROR"));
+				// when & then
+				mockMvc.perform(multipart("/api/notes/{noteId}/images", note.getId())
+								.file(imageFile())
+								.contentType(MediaType.MULTIPART_FORM_DATA))
+						.andExpect(status().isInternalServerError())
+						.andExpect(jsonPath("$.success").value(false))
+						.andExpect(jsonPath("$.error.code").value("INTERNAL_SERVER_ERROR"));
 
-			assertThat(noteImageRepository.count()).isEqualTo(1);
-			then(objectStorageClient).should().upload(
-					any(),
-					eq("notes/" + note.getId()),
-					eq((long) IMAGE_CONTENT.length)
-			);
-			then(objectStorageClient).should().delete(duplicatedStorageKey);
-			then(requestPublisher).shouldHaveNoInteractions();
+				assertThat(noteImageRepository.count()).isEqualTo(1);
+				then(objectStorageClient).should().upload(
+						any(),
+						eq("notes/" + note.getId()),
+						eq((long) IMAGE_CONTENT.length)
+				);
+				then(objectStorageClient).should().delete(duplicatedStorageKey);
+				then(requestPublisher).shouldHaveNoInteractions();
+			} finally {
+				databaseCleaner.clean();
+			}
 		}
 	}
 

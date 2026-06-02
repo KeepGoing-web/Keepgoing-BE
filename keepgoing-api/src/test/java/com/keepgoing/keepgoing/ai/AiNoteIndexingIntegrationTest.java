@@ -1,7 +1,5 @@
 package com.keepgoing.keepgoing.ai;
 
-import com.keepgoing.keepgoing.support.PostgreSqlTestContainerSupport;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.keepgoing.keepgoing.ai.domain.AiNoteChunk;
@@ -15,9 +13,12 @@ import com.keepgoing.keepgoing.note.service.dto.NoteCreateCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteDetailResult;
 import com.keepgoing.keepgoing.note.service.dto.NoteRenameCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteUpdateCommand;
+import com.keepgoing.keepgoing.support.DatabaseCleaner;
+import com.keepgoing.keepgoing.support.PostgreSqlTestContainerSupport;
 import com.keepgoing.keepgoing.user.domain.User;
 import com.keepgoing.keepgoing.user.repository.UserRepository;
 import java.util.List;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.client.ChatClient;
@@ -30,7 +31,6 @@ class AiNoteIndexingIntegrationTest extends PostgreSqlTestContainerSupport {
 
 	private static final int MAX_ATTEMPTS = 100;
 	private static final long WAIT_MILLIS = 100L;
-
 
 	@Autowired
 	NoteService noteService;
@@ -46,6 +46,14 @@ class AiNoteIndexingIntegrationTest extends PostgreSqlTestContainerSupport {
 
 	@MockitoBean
 	ChatClient aiPanelChatClient;
+
+	@Autowired
+	DatabaseCleaner databaseCleaner;
+
+	@AfterEach
+	void tearDown() {
+		databaseCleaner.clean();
+	}
 
 	@Test
 	@DisplayName("노트 생성 커밋 후 AI 인덱스와 청크를 생성한다")
