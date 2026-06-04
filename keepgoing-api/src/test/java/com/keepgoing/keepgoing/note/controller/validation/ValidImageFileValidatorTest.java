@@ -3,17 +3,21 @@ package com.keepgoing.keepgoing.note.controller.validation;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
-import jakarta.validation.ConstraintViolation;
 import jakarta.validation.constraints.NotNull;
 import java.util.Set;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
@@ -93,14 +97,19 @@ class ValidImageFileValidatorTest {
 			assertViolationMessage(target, "이미지 Content-Type은 비어 있을 수 없습니다.");
 		}
 
-		@Test
-		@DisplayName("허용하지 않는 Content-Type이면 검증에 실패한다")
-		void returnsInvalidWhenContentTypeIsNotAllowed() {
+		@ParameterizedTest(name = "{0}")
+		@MethodSource("unsupportedImageFiles")
+		@DisplayName("허용 목록에 없는 Content-Type이면 검증에 실패한다")
+		void returnsInvalidWhenContentTypeIsNotAllowed(
+				String name,
+				String originalFilename,
+				String contentType
+		) {
 			// given
 			ImageFileOnly target = new ImageFileOnly(new MockMultipartFile(
 					"file",
-					"image.txt",
-					MediaType.TEXT_PLAIN_VALUE,
+					originalFilename,
+					contentType,
 					"image-content".getBytes(UTF_8)
 			));
 
@@ -123,19 +132,45 @@ class ValidImageFileValidatorTest {
 			assertViolationMessage(target, "이미지 파일 크기가 허용 범위를 초과했습니다.");
 		}
 
-		@Test
-		@DisplayName("허용된 이미지 파일이면 검증을 통과한다")
-		void returnsValidWhenImageFileIsAllowed() {
+		@ParameterizedTest(name = "{0}")
+		@MethodSource("allowedImageFiles")
+		@DisplayName("허용된 이미지 Content-Type이면 검증을 통과한다")
+		void returnsValidWhenContentTypeIsAllowed(
+				String name,
+				String originalFilename,
+				String contentType
+		) {
 			// given
 			ImageFileOnly target = new ImageFileOnly(new MockMultipartFile(
 					"file",
-					"image.png",
-					MediaType.IMAGE_PNG_VALUE,
+					originalFilename,
+					contentType,
 					"image-content".getBytes(UTF_8)
 			));
 
 			// when & then
 			assertThat(validator.validate(target)).isEmpty();
+		}
+
+		static Stream<Arguments> allowedImageFiles() {
+			return Stream.of(
+					Arguments.of(".jpg 파일 + image/jpeg", "image.jpg", MediaType.IMAGE_JPEG_VALUE),
+					Arguments.of(".jpeg 파일 + image/jpeg", "image.jpeg", MediaType.IMAGE_JPEG_VALUE),
+					Arguments.of(".png 파일 + image/png", "image.png", MediaType.IMAGE_PNG_VALUE),
+					Arguments.of(".webp 파일 + image/webp", "image.webp", "image/webp"),
+					Arguments.of("대소문자 MIME 정규화", "image.jpg", "IMAGE/JPEG"),
+					Arguments.of("앞뒤 공백 MIME 정규화", "image.png", " image/png ")
+			);
+		}
+
+		static Stream<Arguments> unsupportedImageFiles() {
+			return Stream.of(
+					Arguments.of("text/plain", "image.txt", MediaType.TEXT_PLAIN_VALUE),
+					Arguments.of("비표준 image/jpg", "image.jpg", "image/jpg"),
+					Arguments.of("GIF", "image.gif", "image/gif"),
+					Arguments.of("SVG", "image.svg", "image/svg+xml"),
+					Arguments.of("AVIF", "image.avif", "image/avif")
+			);
 		}
 	}
 

@@ -1,6 +1,6 @@
 package com.keepgoing.keepgoing.worker.image.domain;
 
-import java.util.Locale;
+import com.keepgoing.keepgoing.common.image.domain.ImageContentTypePolicy;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.apache.tika.Tika;
@@ -9,13 +9,12 @@ import org.apache.tika.Tika;
 public class ImageMediaTypeValidator {
 
 	private static final Tika TIKA = new Tika();
-	private static final String IMAGE_PREFIX = "image/";
 
 	public static ImageValidationResult validate(byte[] bytes, String requestedContentType) {
-		String normalizedRequestedContentType = normalize(requestedContentType);
-		String detectedContentType = detect(bytes);
+		String normalizedRequestedContentType = ImageContentTypePolicy.normalize(requestedContentType);
+		String detectedContentType = ImageContentTypePolicy.normalize(detect(bytes));
 
-		if (!isImageContentType(normalizedRequestedContentType)) {
+		if (!ImageContentTypePolicy.isAllowed(normalizedRequestedContentType)) {
 			return new ImageValidationResult(
 					false,
 					detectedContentType,
@@ -23,10 +22,10 @@ public class ImageMediaTypeValidator {
 			);
 		}
 
-		if (!isImageContentType(detectedContentType)) {
+		if (!ImageContentTypePolicy.isAllowed(detectedContentType)) {
 			return new ImageValidationResult(
 					false,
-					null,
+					detectedContentType,
 					ImageValidationFailureReason.UNSUPPORTED_IMAGE_SIGNATURE
 			);
 		}
@@ -46,21 +45,10 @@ public class ImageMediaTypeValidator {
 		);
 	}
 
-	private static String normalize(String contentType) {
-		if (contentType == null) {
-			return null;
-		}
-		return contentType.trim().toLowerCase(Locale.ROOT);
-	}
-
-	private static boolean isImageContentType(String contentType) {
-		return contentType != null && contentType.startsWith(IMAGE_PREFIX);
-	}
-
 	private static String detect(byte[] bytes) {
 		if (bytes == null || bytes.length == 0) {
 			return null;
 		}
-		return normalize(TIKA.detect(bytes));
+		return TIKA.detect(bytes);
 	}
 }

@@ -1,5 +1,6 @@
 package com.keepgoing.keepgoing.note.controller.dto.request;
 
+import com.keepgoing.keepgoing.common.image.domain.ImageContentTypePolicy;
 import com.keepgoing.keepgoing.note.controller.validation.ValidImageFile;
 import com.keepgoing.keepgoing.note.service.dto.NoteImageUploadCommand;
 import jakarta.validation.constraints.NotNull;
@@ -16,7 +17,7 @@ public record NoteImageUploadRequest(
 				noteId,
 				file::getInputStream,
 				StringUtils.getFilename(file.getOriginalFilename()),
-				file.getContentType(),
+				ImageContentTypePolicy.normalize(file.getContentType()),
 				file.getSize()
 		);
 	}

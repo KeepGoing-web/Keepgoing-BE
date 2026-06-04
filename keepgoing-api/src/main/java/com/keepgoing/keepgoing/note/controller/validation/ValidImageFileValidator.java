@@ -1,25 +1,18 @@
 package com.keepgoing.keepgoing.note.controller.validation;
 
+import com.keepgoing.keepgoing.common.image.domain.ImageContentTypePolicy;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
-import java.util.Arrays;
-import java.util.Locale;
-import java.util.Set;
-import java.util.stream.Collectors;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 public class ValidImageFileValidator implements ConstraintValidator<ValidImageFile, MultipartFile> {
 
 	private long maxSize;
-	private Set<String> allowedContentTypes;
 
 	@Override
 	public void initialize(ValidImageFile constraintAnnotation) {
 		this.maxSize = constraintAnnotation.maxSize();
-		this.allowedContentTypes = Arrays.stream(constraintAnnotation.allowedContentTypes())
-				.map(contentType -> contentType.toLowerCase(Locale.ROOT))
-				.collect(Collectors.toUnmodifiableSet());
 	}
 
 	@Override
@@ -31,6 +24,7 @@ public class ValidImageFileValidator implements ConstraintValidator<ValidImageFi
 			addViolation(context, "이미지 파일은 비어 있을 수 없습니다.");
 			return false;
 		}
+
 		String originalFilename = StringUtils.getFilename(file.getOriginalFilename());
 		if (originalFilename == null || originalFilename.isBlank()) {
 			addViolation(context, "이미지 파일명은 비어 있을 수 없습니다.");
@@ -40,13 +34,13 @@ public class ValidImageFileValidator implements ConstraintValidator<ValidImageFi
 			addViolation(context, "이미지 파일명은 255자를 초과할 수 없습니다.");
 			return false;
 		}
-		String contentType = file.getContentType();
 
+		String contentType = file.getContentType();
 		if (contentType == null || contentType.isBlank()) {
 			addViolation(context, "이미지 Content-Type은 비어 있을 수 없습니다.");
 			return false;
 		}
-		if (!allowedContentTypes.contains(contentType.toLowerCase(Locale.ROOT))) {
+		if (!ImageContentTypePolicy.isAllowed(contentType)) {
 			addViolation(context, "지원하지 않는 이미지 형식입니다.");
 			return false;
 		}
