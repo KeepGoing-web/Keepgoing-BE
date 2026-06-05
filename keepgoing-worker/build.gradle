@@ -21,6 +21,10 @@ dependencies {
 
     // AWS S3 SDK v2
     implementation 'software.amazon.awssdk:s3:2.25.10'
+
+    // TwelveMonkeys ImageIO plugins
+    implementation 'com.twelvemonkeys.imageio:imageio-jpeg:3.13.1'
+    implementation 'com.twelvemonkeys.imageio:imageio-webp:3.13.1'
 }
 
 tasks.named('jar') {
