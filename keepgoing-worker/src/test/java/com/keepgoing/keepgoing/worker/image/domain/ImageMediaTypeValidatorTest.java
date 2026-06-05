@@ -1,5 +1,7 @@
 package com.keepgoing.keepgoing.worker.image.domain;
 
+import static com.keepgoing.keepgoing.worker.support.ImageBytesFixture.jpegBytes;
+import static com.keepgoing.keepgoing.worker.support.ImageBytesFixture.pngBytes;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.StandardCharsets;
@@ -169,21 +171,6 @@ class ImageMediaTypeValidatorTest {
 				Arguments.of("PNG 파일인데 image/jpeg로 요청", pngBytes(), CONTENT_TYPE_JPEG, CONTENT_TYPE_PNG),
 				Arguments.of("WebP 파일인데 image/png로 요청", webpBytes(), CONTENT_TYPE_PNG, CONTENT_TYPE_WEBP)
 		);
-	}
-
-	private static byte[] jpegBytes() {
-		return new byte[]{
-				(byte) 0xFF, (byte) 0xD8, (byte) 0xFF,
-				0x00, 0x00, 0x00
-		};
-	}
-
-	private static byte[] pngBytes() {
-		return new byte[]{
-				(byte) 0x89, 0x50, 0x4E, 0x47,
-				0x0D, 0x0A, 0x1A, 0x0A,
-				0x00, 0x00
-		};
 	}
 
 	private static byte[] webpBytes() {

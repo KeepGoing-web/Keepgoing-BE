@@ -1,5 +1,6 @@
 package com.keepgoing.keepgoing.worker.image.application.service;
 
+import static com.keepgoing.keepgoing.worker.support.ImageBytesFixture.pngBytes;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -158,11 +159,4 @@ class ImageProcessingServiceTest {
 		);
 	}
 
-	private static byte[] pngBytes() {
-		return new byte[]{
-				(byte) 0x89, 0x50, 0x4E, 0x47,
-				0x0D, 0x0A, 0x1A, 0x0A,
-				0x00, 0x00
-		};
-	}
 }
