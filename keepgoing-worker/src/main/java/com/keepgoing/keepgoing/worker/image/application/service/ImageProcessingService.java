@@ -2,6 +2,7 @@ package com.keepgoing.keepgoing.worker.image.application.service;
 
 import com.keepgoing.keepgoing.common.image.domain.ImageProcessingStatus;
 import com.keepgoing.keepgoing.common.image.event.ImageProcessingResultEvent;
+import com.keepgoing.keepgoing.worker.image.application.dto.PreValidatedImage;
 import com.keepgoing.keepgoing.worker.image.application.port.in.ImageProcessingCommand;
 import com.keepgoing.keepgoing.worker.image.application.port.in.ImageProcessingUseCase;
 import com.keepgoing.keepgoing.worker.image.application.port.out.ImageProcessingResultPublisherPort;

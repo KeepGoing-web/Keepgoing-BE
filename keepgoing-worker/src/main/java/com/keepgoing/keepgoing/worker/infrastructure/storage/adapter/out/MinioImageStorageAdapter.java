@@ -1,7 +1,8 @@
-package com.keepgoing.keepgoing.worker.infrastructure.storage;
+package com.keepgoing.keepgoing.worker.infrastructure.storage.adapter.out;
 
 import com.keepgoing.keepgoing.worker.image.application.port.out.ImageStorageException;
 import com.keepgoing.keepgoing.worker.image.application.port.out.ImageStoragePort;
+import com.keepgoing.keepgoing.worker.infrastructure.storage.StorageProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
