@@ -98,20 +98,28 @@ class ImageProcessingServiceTest {
 				sanitizedImage.contentType()
 		);
 		inOrder.verify(imageStoragePort).deleteQuarantineObject(command.storageKey());
+		inOrder.verify(resultPublisher).publish(eventCaptor.capture());
 
-		ImageProcessingResultEvent scanningEvent = eventCaptor.getValue();
-		assertThat(scanningEvent.publicId()).isEqualTo(command.publicId());
-		assertThat(scanningEvent.status()).isEqualTo(ImageProcessingStatus.SCANNING);
-		assertThat(scanningEvent.reason()).isEmpty();
-		assertThat(scanningEvent.processedAt()).isEqualTo(PROCESSED_AT);
+		assertThat(eventCaptor.getAllValues())
+				.extracting(ImageProcessingResultEvent::status)
+				.containsExactly(
+						ImageProcessingStatus.SCANNING,
+						ImageProcessingStatus.SAFE
+				);
 
-		PreValidatedImage preValidatedImage = preValidatedImageCaptor.getValue();
-		assertThat(preValidatedImage.publicId()).isEqualTo(command.publicId());
-		assertThat(preValidatedImage.storageKey()).isEqualTo(command.storageKey());
-		assertThat(preValidatedImage.requestedContentType()).isEqualTo(command.contentType());
-		assertThat(preValidatedImage.detectedContentType()).isEqualTo("image/png");
-		assertThat(preValidatedImage.fileSize()).isEqualTo(command.fileSize());
-		assertThat(preValidatedImage.requestedAt()).isEqualTo(command.requestedAt());
+		assertThat(preValidatedImageCaptor.getValue()).isEqualTo(new PreValidatedImage(
+				command.publicId(),
+				command.storageKey(),
+				command.contentType(),
+				"image/png",
+				command.fileSize(),
+				command.requestedAt()
+		));
+
+		ImageProcessingResultEvent safeEvent = eventCaptor.getAllValues().get(1);
+		assertThat(safeEvent.secureStorageKey()).isEqualTo(command.storageKey());
+		assertThat(safeEvent.contentType()).isEqualTo(sanitizedImage.contentType());
+		assertThat(safeEvent.fileSize()).isEqualTo(sanitizedImage.fileSize());
 	}
 
 	@Test
@@ -144,7 +152,7 @@ class ImageProcessingServiceTest {
 						ImageProcessingStatus.REJECTED
 				);
 
-		ImageProcessingResultEvent scanningEvent = eventCaptor.getAllValues().get(0);
+		ImageProcessingResultEvent scanningEvent = eventCaptor.getAllValues().getFirst();
 		assertThat(scanningEvent.publicId()).isEqualTo(command.publicId());
 		assertThat(scanningEvent.reason()).isEmpty();
 		assertThat(scanningEvent.processedAt()).isEqualTo(PROCESSED_AT);

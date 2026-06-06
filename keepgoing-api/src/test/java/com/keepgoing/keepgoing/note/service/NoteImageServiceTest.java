@@ -1,5 +1,9 @@
 package com.keepgoing.keepgoing.note.service;
 
+import static com.keepgoing.keepgoing.support.ImageProcessingResultEventFixture.pendingEvent;
+import static com.keepgoing.keepgoing.support.ImageProcessingResultEventFixture.rejectedEvent;
+import static com.keepgoing.keepgoing.support.ImageProcessingResultEventFixture.safeEvent;
+import static com.keepgoing.keepgoing.support.ImageProcessingResultEventFixture.scanningEvent;
 import static com.keepgoing.keepgoing.support.UserFixture.user;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
@@ -432,7 +436,12 @@ class NoteImageServiceTest {
 			UUID publicId,
 			ImageProcessingStatus status
 	) {
-		return new ImageProcessingResultEvent(publicId, status, "", REQUESTED_AT);
+		return switch (status) {
+			case SCANNING -> scanningEvent(publicId);
+			case SAFE -> safeEvent(publicId);
+			case REJECTED -> rejectedEvent(publicId, "");
+			case PENDING -> pendingEvent(publicId);
+		};
 	}
 
 	private void givenUploadAndSaveSucceed(NoteImageUploadCommand command, Note note, User uploader) {

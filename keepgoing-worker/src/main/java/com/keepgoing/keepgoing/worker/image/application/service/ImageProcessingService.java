@@ -1,6 +1,5 @@
 package com.keepgoing.keepgoing.worker.image.application.service;
 
-import com.keepgoing.keepgoing.common.image.domain.ImageProcessingStatus;
 import com.keepgoing.keepgoing.common.image.event.ImageProcessingResultEvent;
 import com.keepgoing.keepgoing.worker.image.application.dto.PreValidatedImage;
 import com.keepgoing.keepgoing.worker.image.application.dto.SanitizedImage;
@@ -29,14 +28,14 @@ public class ImageProcessingService implements ImageProcessingUseCase {
 	public void process(ImageProcessingCommand command) {
 		byte[] imageBytes = imageStoragePort.readQuarantineObject(command.storageKey());
 
-		publishResultEvent(command, ImageProcessingStatus.SCANNING, "");
+		publishScanningEvent(command);
 
 		ImageValidationResult validationResult
 				= ImageMediaTypeValidator.validate(imageBytes, command.contentType());
 
 		if (!validationResult.valid()) {
 			imageStoragePort.deleteQuarantineObject(command.storageKey());
-			publishResultEvent(command, ImageProcessingStatus.REJECTED, validationResult.reason().name());
+			publishRejectedEvent(command, validationResult.reason().name());
 			return;
 		}
 
@@ -58,14 +57,31 @@ public class ImageProcessingService implements ImageProcessingUseCase {
 		);
 
 		imageStoragePort.deleteQuarantineObject(command.storageKey());
+		publishSafeEvent(preValidatedImage, sanitizedImage);
 	}
 
-	private void publishResultEvent(ImageProcessingCommand command, ImageProcessingStatus status, String reason) {
-		resultPublisher.publish(new ImageProcessingResultEvent(
+	private void publishScanningEvent(ImageProcessingCommand command) {
+		resultPublisher.publish(ImageProcessingResultEvent.scanning(
 				command.publicId(),
-				status,
+				Instant.now(clock)
+		));
+	}
+
+	private void publishRejectedEvent(ImageProcessingCommand command, String reason) {
+		resultPublisher.publish(ImageProcessingResultEvent.rejected(
+				command.publicId(),
 				reason,
 				Instant.now(clock)
+		));
+	}
+
+	private void publishSafeEvent(PreValidatedImage image, SanitizedImage sanitizedImage) {
+		resultPublisher.publish(ImageProcessingResultEvent.safe(
+				image.publicId(),
+				Instant.now(clock),
+				image.storageKey(),
+				sanitizedImage.contentType(),
+				sanitizedImage.fileSize()
 		));
 	}
 }
