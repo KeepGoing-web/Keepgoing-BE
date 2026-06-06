@@ -326,8 +326,8 @@ class NoteImageServiceTest {
 		}
 
 		@Test
-		@DisplayName("SAFE 결과를 반영하면 이미지 상태를 SAFE로 변경한다")
-		void marksImageAsSafe() {
+		@DisplayName("SAFE 결과를 반영하면 이미지 저장 정보를 갱신하고 상태를 SAFE로 변경한다")
+		void updatesImageMetadataAndMarksImageAsSafe() {
 			// given
 			NoteImage noteImage = noteImage();
 			ImageProcessingResultEvent event = processingResultEvent(
@@ -342,6 +342,9 @@ class NoteImageServiceTest {
 
 			// then
 			assertThat(noteImage.getStatus()).isEqualTo(ImageProcessingStatus.SAFE);
+			assertThat(noteImage.getStorageKey()).isEqualTo(event.secureStorageKey());
+			assertThat(noteImage.getContentType()).isEqualTo(event.contentType());
+			assertThat(noteImage.getFileSize()).isEqualTo(event.fileSize());
 			verify(noteImageRepository).findByPublicId(noteImage.getPublicId());
 		}
 

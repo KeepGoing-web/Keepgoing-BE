@@ -89,21 +89,15 @@ public class NoteImage extends BaseEntity {
 			throw new BusinessException(ErrorCode.NOTE_IMAGE_ACCESS_DENIED);
 		}
 
-		if (storageKey == null || storageKey.isBlank() || storageKey.length() > 512) {
-			throw new BusinessException(ErrorCode.INVALID_INPUT);
-		}
+		validateStorageKey(storageKey);
 
 		if (originalName == null || originalName.isBlank() || originalName.length() > 255) {
 			throw new BusinessException(ErrorCode.INVALID_INPUT);
 		}
 
-		if (contentType == null || contentType.isBlank() || contentType.length() > 100) {
-			throw new BusinessException(ErrorCode.INVALID_INPUT);
-		}
+		validateContentType(contentType);
 
-		if (fileSize == null || fileSize <= 0) {
-			throw new BusinessException(ErrorCode.INVALID_INPUT);
-		}
+		validateFileSize(fileSize);
 
 		return NoteImage.builder()
 				.publicId(UUID.randomUUID())
@@ -115,6 +109,24 @@ public class NoteImage extends BaseEntity {
 				.fileSize(fileSize)
 				.status(ImageProcessingStatus.PENDING)
 				.build();
+	}
+
+	private static void validateFileSize(Long fileSize) {
+		if (fileSize == null || fileSize <= 0) {
+			throw new BusinessException(ErrorCode.INVALID_INPUT);
+		}
+	}
+
+	private static void validateContentType(String contentType) {
+		if (contentType == null || contentType.isBlank() || contentType.length() > 100) {
+			throw new BusinessException(ErrorCode.INVALID_INPUT);
+		}
+	}
+
+	private static void validateStorageKey(String storageKey) {
+		if (storageKey == null || storageKey.isBlank() || storageKey.length() > 512) {
+			throw new BusinessException(ErrorCode.INVALID_INPUT);
+		}
 	}
 
 	public void validateUploader(Long userId) {
@@ -139,7 +151,14 @@ public class NoteImage extends BaseEntity {
 		this.status = ImageProcessingStatus.SCANNING;
 	}
 
-	public void markSafe() {
+	public void markSafe(String storageKey, String contentType, Long fileSize) {
+		validateStorageKey(storageKey);
+		validateContentType(contentType);
+		validateFileSize(fileSize);
+
+		this.storageKey = storageKey;
+		this.contentType = contentType;
+		this.fileSize = fileSize;
 		this.status = ImageProcessingStatus.SAFE;
 	}
 

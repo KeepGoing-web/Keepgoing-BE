@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.keepgoing.keepgoing.common.image.domain.ImageProcessingStatus;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import com.keepgoing.keepgoing.user.domain.User;
@@ -297,6 +298,73 @@ class NoteImageTest {
 
 			// then
 			assertThat(noteImage.getDeletedAt()).isEqualTo(firstDeletedAt);
+		}
+	}
+
+	@Nested
+	@DisplayName("markSafe")
+	class MarkSafe {
+
+		private static final String SECURE_STORAGE_KEY = "secure/notes/1/image";
+		private static final String SANITIZED_CONTENT_TYPE = "image/jpeg";
+		private static final Long SANITIZED_FILE_SIZE = 512L;
+
+		@Test
+		@DisplayName("secure 저장 정보를 반영하고 SAFE 상태로 변경한다")
+		void markSafe_updatesSecureImageMetadataAndStatus() {
+			// given
+			NoteImage noteImage = noteImage(user(1L));
+
+			// when
+			noteImage.markSafe(
+					SECURE_STORAGE_KEY,
+					SANITIZED_CONTENT_TYPE,
+					SANITIZED_FILE_SIZE
+			);
+
+			// then
+			assertThat(noteImage.getStorageKey()).isEqualTo(SECURE_STORAGE_KEY);
+			assertThat(noteImage.getContentType()).isEqualTo(SANITIZED_CONTENT_TYPE);
+			assertThat(noteImage.getFileSize()).isEqualTo(SANITIZED_FILE_SIZE);
+			assertThat(noteImage.getStatus()).isEqualTo(ImageProcessingStatus.SAFE);
+		}
+
+		@ParameterizedTest(name = "[{index}] {0}")
+		@MethodSource("invalidSafeResultCases")
+		@DisplayName("유효하지 않은 secure 저장 정보로는 SAFE 상태로 변경할 수 없다")
+		void markSafe_throwsWhenSecureResultIsInvalid(
+				String label,
+				String storageKey,
+				String contentType,
+				Long fileSize
+		) {
+			// given
+			NoteImage noteImage = noteImage(user(1L));
+
+			// when & then
+			assertThatThrownBy(() -> noteImage.markSafe(storageKey, contentType, fileSize))
+					.as("invalid safe result case: %s", label)
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_INPUT);
+
+			assertThat(noteImage.getStorageKey()).isEqualTo(STORAGE_KEY);
+			assertThat(noteImage.getContentType()).isEqualTo(CONTENT_TYPE);
+			assertThat(noteImage.getFileSize()).isEqualTo(FILE_SIZE);
+			assertThat(noteImage.getStatus()).isEqualTo(ImageProcessingStatus.PENDING);
+		}
+
+		static Stream<Arguments> invalidSafeResultCases() {
+			return Stream.of(
+					Arguments.of("storageKey가 null", null, CONTENT_TYPE, FILE_SIZE),
+					Arguments.of("storageKey가 공백", "   ", CONTENT_TYPE, FILE_SIZE),
+					Arguments.of("storageKey가 512자 초과", "a".repeat(513), CONTENT_TYPE, FILE_SIZE),
+					Arguments.of("contentType이 null", STORAGE_KEY, null, FILE_SIZE),
+					Arguments.of("contentType이 공백", STORAGE_KEY, "   ", FILE_SIZE),
+					Arguments.of("contentType이 100자 초과", STORAGE_KEY, "a".repeat(101), FILE_SIZE),
+					Arguments.of("fileSize가 null", STORAGE_KEY, CONTENT_TYPE, null),
+					Arguments.of("fileSize가 0", STORAGE_KEY, CONTENT_TYPE, 0L),
+					Arguments.of("fileSize가 음수", STORAGE_KEY, CONTENT_TYPE, -1L)
+			);
 		}
 	}
 
