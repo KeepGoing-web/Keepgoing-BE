@@ -9,14 +9,18 @@ import com.keepgoing.keepgoing.worker.image.application.port.out.ImageProcessing
 import com.keepgoing.keepgoing.worker.image.application.port.out.ImageSanitizerPort;
 import com.keepgoing.keepgoing.worker.image.application.port.out.ImageStoragePort;
 import com.keepgoing.keepgoing.worker.image.domain.ImageMediaTypeValidator;
+import com.keepgoing.keepgoing.worker.image.domain.ImageValidationFailureReason;
 import com.keepgoing.keepgoing.worker.image.domain.ImageValidationResult;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ImageProcessingService implements ImageProcessingUseCase {
 
 	private final Clock clock;
@@ -26,29 +30,41 @@ public class ImageProcessingService implements ImageProcessingUseCase {
 
 	@Override
 	public void process(ImageProcessingCommand command) {
-		byte[] imageBytes = imageStoragePort.readQuarantineObject(command.storageKey());
+		UUID publicId = command.publicId();
+		String storageKey = command.storageKey();
+		String requestedContentType = command.contentType();
+
+		byte[] imageBytes = imageStoragePort.readQuarantineObject(storageKey);
 
 		publishScanningEvent(command);
 
 		ImageValidationResult validationResult
-				= ImageMediaTypeValidator.validate(imageBytes, command.contentType());
+				= ImageMediaTypeValidator.validate(imageBytes, requestedContentType);
 
 		if (!validationResult.valid()) {
-			imageStoragePort.deleteQuarantineObject(command.storageKey());
+			imageStoragePort.deleteQuarantineObject(storageKey);
 			publishRejectedEvent(command, validationResult.reason().name());
 			return;
 		}
 
 		var preValidatedImage = new PreValidatedImage(
-				command.publicId(),
-				command.storageKey(),
-				command.contentType(),
+				publicId,
+				storageKey,
+				requestedContentType,
 				validationResult.detectedContentType(),
 				command.fileSize(),
 				command.requestedAt()
 		);
 
-		SanitizedImage sanitizedImage = imageSanitizerPort.sanitize(preValidatedImage, imageBytes);
+		SanitizedImage sanitizedImage;
+		try {
+			sanitizedImage = imageSanitizerPort.sanitize(preValidatedImage, imageBytes);
+		} catch (RuntimeException e) {
+			log.warn("이미지 정제 실패: publicId={}, storageKey={}", publicId, storageKey, e);
+			imageStoragePort.deleteQuarantineObject(storageKey);
+			publishRejectedEvent(command, ImageValidationFailureReason.SANITIZATION_FAILED.name());
+			return;
+		}
 
 		imageStoragePort.putSecureObject(
 				preValidatedImage.storageKey(),
@@ -56,7 +72,7 @@ public class ImageProcessingService implements ImageProcessingUseCase {
 				sanitizedImage.contentType()
 		);
 
-		imageStoragePort.deleteQuarantineObject(command.storageKey());
+		imageStoragePort.deleteQuarantineObject(storageKey);
 		publishSafeEvent(preValidatedImage, sanitizedImage);
 	}
 

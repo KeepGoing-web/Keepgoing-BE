@@ -194,6 +194,49 @@ class ImageProcessingServiceTest {
 				.putSecureObject(anyString(), any(), anyString());
 	}
 
+	@Test
+	@DisplayName("이미지 정제에 실패하면 object를 삭제하고 REJECTED 결과를 발행한다")
+	void deletesObjectAndPublishedRejectedWhenImageSanitizationFails() {
+		// given
+		ImageProcessingCommand command = command("image/png");
+		byte[] imageBytes = pngBytes();
+
+		given(imageStoragePort.readQuarantineObject(command.storageKey()))
+				.willReturn(imageBytes);
+		given(imageSanitizerPort.sanitize(any(PreValidatedImage.class), eq(imageBytes)))
+				.willThrow(new RuntimeException("sanitize faild"));
+
+		// when
+		imageProcessingService.process(command);
+
+		// then
+		ArgumentCaptor<ImageProcessingResultEvent> eventCaptor =
+				ArgumentCaptor.forClass(ImageProcessingResultEvent.class);
+
+		InOrder inOrder = inOrder(resultPublisher, imageStoragePort, imageSanitizerPort);
+		inOrder.verify(imageStoragePort).readQuarantineObject(command.storageKey());
+		inOrder.verify(resultPublisher).publish(eventCaptor.capture());
+		inOrder.verify(imageSanitizerPort).sanitize(any(PreValidatedImage.class), eq(imageBytes));
+		inOrder.verify(imageStoragePort).deleteQuarantineObject(command.storageKey());
+		inOrder.verify(resultPublisher).publish(eventCaptor.capture());
+
+		assertThat(eventCaptor.getAllValues())
+				.extracting(ImageProcessingResultEvent::status)
+				.containsExactly(
+						ImageProcessingStatus.SCANNING,
+						ImageProcessingStatus.REJECTED
+				);
+
+		ImageProcessingResultEvent rejectedEvent = eventCaptor.getAllValues().get(1);
+		assertThat(rejectedEvent.reason())
+				.isEqualTo(ImageValidationFailureReason.SANITIZATION_FAILED.name());
+
+		then(imageStoragePort).should(never())
+				.putSecureObject(anyString(), any(), anyString());
+
+	}
+
+
 	private static ImageProcessingCommand command(String contentType) {
 		return new ImageProcessingCommand(
 				UUID.randomUUID(),
