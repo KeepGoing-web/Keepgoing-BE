@@ -5,9 +5,14 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import javax.imageio.ImageIO;
 
-public final class ImageBytesFixture {
+public final class ImageFixture {
 
-	private ImageBytesFixture() {
+	public static final String CONTENT_TYPE_JPEG = "image/jpeg";
+	public static final String CONTENT_TYPE_PNG= "image/png";
+	public static final String CONTENT_TYPE_WEBP= "image/webp";
+
+
+	private ImageFixture() {
 	}
 
 	public static byte[] jpegBytes() {
@@ -39,6 +44,14 @@ public final class ImageBytesFixture {
 
 	public static byte[] decodablePngBytes(int width, int height) {
 		return imageBytes("png", BufferedImage.TYPE_INT_ARGB, width, height);
+	}
+
+	public static byte[] decodableWebpBytes() {
+		return imageBytes("webp", BufferedImage.TYPE_INT_RGB);
+	}
+
+	public static byte[] decodableWebpBytes(int width, int height) {
+		return imageBytes("webp", BufferedImage.TYPE_INT_RGB, width, height);
 	}
 
 	private static byte[] imageBytes(String formatName, int imageType) {

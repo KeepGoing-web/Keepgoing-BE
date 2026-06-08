@@ -1,7 +1,7 @@
 package com.keepgoing.keepgoing.worker.image.domain;
 
-import static com.keepgoing.keepgoing.worker.support.ImageBytesFixture.jpegBytes;
-import static com.keepgoing.keepgoing.worker.support.ImageBytesFixture.pngBytes;
+import static com.keepgoing.keepgoing.worker.support.ImageFixture.jpegBytes;
+import static com.keepgoing.keepgoing.worker.support.ImageFixture.pngBytes;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.StandardCharsets;

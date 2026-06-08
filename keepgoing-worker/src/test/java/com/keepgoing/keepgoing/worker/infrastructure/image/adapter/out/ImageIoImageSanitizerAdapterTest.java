@@ -1,11 +1,14 @@
 package com.keepgoing.keepgoing.worker.infrastructure.image.adapter.out;
 
+import static com.keepgoing.keepgoing.worker.support.ImageFixture.CONTENT_TYPE_JPEG;
+import static com.keepgoing.keepgoing.worker.support.ImageFixture.CONTENT_TYPE_PNG;
+import static com.keepgoing.keepgoing.worker.support.ImageFixture.CONTENT_TYPE_WEBP;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.keepgoing.keepgoing.worker.image.application.dto.PreValidatedImage;
 import com.keepgoing.keepgoing.worker.image.application.dto.SanitizedImage;
-import com.keepgoing.keepgoing.worker.support.ImageBytesFixture;
+import com.keepgoing.keepgoing.worker.support.ImageFixture;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
@@ -17,8 +20,6 @@ import org.junit.jupiter.api.Test;
 
 class ImageIoImageSanitizerAdapterTest {
 
-	public static final String CONTENT_TYPE_PNG = "image/png";
-	public static final String CONTENT_TYPE_JPEG = "image/jpeg";
 	public static final int MAX_OUTPUT_WIDTH = 100;
 	public static final int MAX_OUTPUT_HEIGHT = 100;
 	private static final long DEFAULT_MAX_DECODE_PIXELS = 10_000_000L;
@@ -31,7 +32,7 @@ class ImageIoImageSanitizerAdapterTest {
 	@DisplayName("PNG 이미지를 디코딩 후 다시 PNG로 인코딩한다")
 	void sanitizesPngImage() throws Exception {
 		// given
-		byte[] originalBytes = ImageBytesFixture.decodablePngBytes();
+		byte[] originalBytes = ImageFixture.decodablePngBytes();
 		PreValidatedImage image = preValidatedImage("image/png", originalBytes.length);
 
 		// when
@@ -52,7 +53,7 @@ class ImageIoImageSanitizerAdapterTest {
 	@DisplayName("JPEG 이미지를 디코딩 후 다시 JPEG로 인코딩한다")
 	void sanitizesJpegImage() throws Exception {
 		// given
-		byte[] originalBytes = ImageBytesFixture.decodableJpegBytes();
+		byte[] originalBytes = ImageFixture.decodableJpegBytes();
 		PreValidatedImage image = preValidatedImage(CONTENT_TYPE_JPEG, originalBytes.length);
 
 		// when
@@ -85,7 +86,7 @@ class ImageIoImageSanitizerAdapterTest {
 	@DisplayName("최대 출력 너비를 초과하면 비율을 유지해 리사이징한다")
 	void resizesWhenImageWidthExceedsOutputLimit() throws Exception {
 		// given
-		byte[] originalBytes = ImageBytesFixture.decodablePngBytes(200, 100);
+		byte[] originalBytes = ImageFixture.decodablePngBytes(200, 100);
 		PreValidatedImage image = preValidatedImage(CONTENT_TYPE_PNG, originalBytes.length);
 
 		// when
@@ -103,7 +104,7 @@ class ImageIoImageSanitizerAdapterTest {
 	@DisplayName("최대 출력 높이를 초과하면 비율을 유지해 리사이징한다")
 	void resizesWhenImageHeightExceedsOutputLimit() throws Exception {
 		// given
-		byte[] originalBytes = ImageBytesFixture.decodablePngBytes(100, 200);
+		byte[] originalBytes = ImageFixture.decodablePngBytes(100, 200);
 		PreValidatedImage image = preValidatedImage(CONTENT_TYPE_PNG, originalBytes.length);
 
 		// when
@@ -121,7 +122,7 @@ class ImageIoImageSanitizerAdapterTest {
 	@DisplayName("최대 출력 크기 이하면 리사이징하지 않는다")
 	void doesNotResizeWhenImageIsWithinOutputLimit() throws Exception {
 		// given
-		byte[] originalBytes = ImageBytesFixture.decodablePngBytes(80, 60);
+		byte[] originalBytes = ImageFixture.decodablePngBytes(80, 60);
 		PreValidatedImage image = preValidatedImage(CONTENT_TYPE_PNG, originalBytes.length);
 
 		// when
@@ -141,12 +142,33 @@ class ImageIoImageSanitizerAdapterTest {
 		// given
 		ImageIoImageSanitizerAdapter smallPixelLimitSanitizer
 				= new ImageIoImageSanitizerAdapter(MAX_OUTPUT_WIDTH, MAX_OUTPUT_HEIGHT, SMALL_MAX_DECODE_PIXELS);
-		byte[] originalBytes = ImageBytesFixture.decodablePngBytes(121, 100);
+		byte[] originalBytes = ImageFixture.decodablePngBytes(121, 100);
 		PreValidatedImage image = preValidatedImage(CONTENT_TYPE_PNG, originalBytes.length);
 
 		// when & then
 		assertThatThrownBy(() -> smallPixelLimitSanitizer.sanitize(image, originalBytes))
 				.isInstanceOf(ImageSanitizationException.class);
+	}
+
+	@Test
+	@DisplayName("WebP 이미지를 디코딩 후 다시 WebP로 인코딩한다")
+	void sanitizesWebpImage() throws Exception {
+		// given
+		byte[] originalBytes = ImageFixture.decodableWebpBytes();
+		PreValidatedImage image = preValidatedImage(CONTENT_TYPE_WEBP, originalBytes.length);
+
+		// when
+		SanitizedImage result = sanitizerAdapter.sanitize(image, originalBytes);
+
+		// then
+		assertThat(result.contentType()).isEqualTo(CONTENT_TYPE_WEBP);
+		assertThat(result.bytes()).isNotEmpty();
+		assertThat(result.fileSize()).isEqualTo(result.bytes().length);
+
+		BufferedImage decodedResult = ImageIO.read(new ByteArrayInputStream(result.bytes()));
+		assertThat(decodedResult).isNotNull();
+		assertThat(decodedResult.getWidth()).isEqualTo(1);
+		assertThat(decodedResult.getHeight()).isEqualTo(1);
 	}
 
 	private static PreValidatedImage preValidatedImage(String contentType, long fileSize) {

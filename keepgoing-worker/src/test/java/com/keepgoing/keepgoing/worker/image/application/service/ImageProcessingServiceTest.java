@@ -1,6 +1,6 @@
 package com.keepgoing.keepgoing.worker.image.application.service;
 
-import static com.keepgoing.keepgoing.worker.support.ImageBytesFixture.pngBytes;
+import static com.keepgoing.keepgoing.worker.support.ImageFixture.pngBytes;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
