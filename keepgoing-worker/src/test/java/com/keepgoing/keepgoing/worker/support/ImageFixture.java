@@ -3,14 +3,14 @@ package com.keepgoing.keepgoing.worker.support;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import javax.imageio.ImageIO;
 
 public final class ImageFixture {
 
 	public static final String CONTENT_TYPE_JPEG = "image/jpeg";
-	public static final String CONTENT_TYPE_PNG= "image/png";
-	public static final String CONTENT_TYPE_WEBP= "image/webp";
-
+	public static final String CONTENT_TYPE_PNG = "image/png";
+	public static final String CONTENT_TYPE_WEBP = "image/webp";
 
 	private ImageFixture() {
 	}
@@ -36,6 +36,27 @@ public final class ImageFixture {
 
 	public static byte[] decodableJpegBytes(int width, int height) {
 		return imageBytes("jpeg", BufferedImage.TYPE_INT_RGB, width, height);
+	}
+
+	public static byte[] decodableJpegBytesWithMetadata(String metadata) {
+		byte[] jpegBytes = decodableJpegBytes();
+		byte[] payload = ("Exif\0\0" + metadata).getBytes(StandardCharsets.ISO_8859_1);
+		int segmentLength = payload.length + 2;
+
+		if (jpegBytes.length < 2 || jpegBytes[0] != (byte) 0xFF || jpegBytes[1] != (byte) 0xD8) {
+			throw new IllegalStateException("테스트 JPEG 생성 실패: SOI marker 없음");
+		}
+
+		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+		outputStream.write(jpegBytes, 0, 2);
+		outputStream.write(0xFF);
+		outputStream.write(0xE1);
+		outputStream.write((segmentLength >>> 8) & 0xFF);
+		outputStream.write(segmentLength & 0xFF);
+		outputStream.writeBytes(payload);
+		outputStream.write(jpegBytes, 2, jpegBytes.length - 2);
+
+		return outputStream.toByteArray();
 	}
 
 	public static byte[] decodablePngBytes() {

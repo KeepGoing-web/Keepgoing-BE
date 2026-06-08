@@ -24,6 +24,7 @@ class ImageIoImageSanitizerAdapterTest {
 	public static final int MAX_OUTPUT_HEIGHT = 100;
 	private static final long DEFAULT_MAX_DECODE_PIXELS = 10_000_000L;
 	private static final long SMALL_MAX_DECODE_PIXELS = 10_000L;
+	private static final String METADATA_MARKER = "keepgoing-test-metadata";
 
 	private final ImageIoImageSanitizerAdapter sanitizerAdapter
 			= new ImageIoImageSanitizerAdapter(MAX_OUTPUT_WIDTH, MAX_OUTPUT_HEIGHT, DEFAULT_MAX_DECODE_PIXELS);
@@ -169,6 +170,30 @@ class ImageIoImageSanitizerAdapterTest {
 		assertThat(decodedResult).isNotNull();
 		assertThat(decodedResult.getWidth()).isEqualTo(1);
 		assertThat(decodedResult.getHeight()).isEqualTo(1);
+	}
+
+	@Test
+	@DisplayName("메타데이터가 포함된 JPEG는 픽셀만 복사해 재인코딩한다")
+	void removesMetadataWhenReEncodingJpeg() throws Exception {
+		// given
+		byte[] originalBytes = ImageFixture.decodableJpegBytesWithMetadata(METADATA_MARKER);
+		PreValidatedImage image = preValidatedImage(CONTENT_TYPE_JPEG, originalBytes.length);
+
+		assertThat(binaryString(originalBytes)).contains(METADATA_MARKER);
+
+		// when
+		SanitizedImage result = sanitizerAdapter.sanitize(image, originalBytes);
+
+		// then
+		assertThat(result.contentType()).isEqualTo(CONTENT_TYPE_JPEG);
+		assertThat(binaryString(result.bytes())).doesNotContain(METADATA_MARKER);
+
+		BufferedImage decodedResult = ImageIO.read(new ByteArrayInputStream(result.bytes()));
+		assertThat(decodedResult).isNotNull();
+	}
+
+	private static String binaryString(byte[] bytes) {
+		return new String(bytes, StandardCharsets.ISO_8859_1);
 	}
 
 	private static PreValidatedImage preValidatedImage(String contentType, long fileSize) {
