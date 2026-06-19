@@ -1,5 +1,7 @@
 package com.keepgoing.keepgoing.auth.service;
 
+import com.keepgoing.keepgoing.support.PostgreSqlTestContainerSupport;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.keepgoing.keepgoing.user.domain.OAuthProvider;
@@ -18,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest(webEnvironment = WebEnvironment.NONE)
 @Transactional
-class OAuthLoginServiceTest {
+class OAuthLoginServiceTest extends PostgreSqlTestContainerSupport {
 
     private static final OAuthProvider PROVIDER = OAuthProvider.GOOGLE;
     private static final String EMAIL = "hong@gmail.com";

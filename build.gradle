@@ -20,7 +20,7 @@ subprojects {
         tasks.withType(Test).configureEach {
             useJUnitPlatform()
             testLogging {
-                events "FAILED"
+                events "FAILED", "SKIPPED"
                 exceptionFormat "FULL"
                 showExceptions true
                 showCauses true

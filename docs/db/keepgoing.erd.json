@@ -4,9 +4,9 @@
   "settings": {
     "width": 20000,
     "height": 20000,
-    "scrollTop": -8391.2415,
-    "scrollLeft": -8706.585,
-    "zoomLevel": 0.8,
+    "scrollTop": -9215.8828,
+    "scrollLeft": -9516.9212,
+    "zoomLevel": 0.34,
     "show": 495,
     "database": 4,
     "databaseName": "blog_system",
@@ -16,7 +16,7 @@
     "columnNameCase": 2,
     "bracketType": 1,
     "relationshipDataTypeSync": true,
-    "relationshipOptimization": false,
+    "relationshipOptimization": true,
     "columnOrder": [
       1,
       2,
@@ -33,20 +33,16 @@
     "tableIds": [
       "users_table",
       "blogs_table",
-      "blog_revisions_table",
-      "rag_queries_table",
-      "resume_jobs_table",
       "user_oauth_accounts_table",
       "user_password_credentials_table",
       "folders_table",
       "activity_events_table",
-      "note_images_table"
+      "note_images_table",
+      "ai_note_indexes_table",
+      "ai_note_chunks_table"
     ],
     "relationshipIds": [
       "rel_users_blogs",
-      "rel_blogs_revisions",
-      "rel_users_rag_queries",
-      "rel_users_resume_jobs",
       "rel_uoa_user",
       "rel_upc_user",
       "rel_users_folders",
@@ -55,7 +51,11 @@
       "rel_users_activity_events",
       "rel_notes_activity_events",
       "rel_notes_note_images",
-      "rel_users_note_images"
+      "rel_users_note_images",
+      "rel_notes_ai_note_indexes",
+      "rel_users_ai_note_indexes",
+      "rel_notes_ai_note_chunks",
+      "rel_users_ai_note_chunks"
     ],
     "indexIds": [],
     "memoIds": []
@@ -87,15 +87,15 @@
           "users_updated_at"
         ],
         "ui": {
-          "x": 9739.0665,
-          "y": 9062.2261,
+          "x": 10065.78812256765,
+          "y": 9282.063718888441,
           "zIndex": 1,
           "widthName": 60,
           "widthComment": 170,
           "color": "#4A90E2"
         },
         "meta": {
-          "updateAt": 1777043437217,
+          "updateAt": 1780398474513,
           "createAt": 1699999999999
         }
       },
@@ -128,15 +128,15 @@
           "blogs_deleted_at"
         ],
         "ui": {
-          "x": 9243.065,
-          "y": 8159.7145,
+          "x": 9576.377711679337,
+          "y": 8016.839979492659,
           "zIndex": 3,
           "widthName": 60,
-          "widthComment": 184,
+          "widthComment": 178,
           "color": "#27AE60"
         },
         "meta": {
-          "updateAt": 1777279615443,
+          "updateAt": 1780398474513,
           "createAt": 1699999999999
         }
       },
@@ -160,15 +160,15 @@
           "uV0x_vb1mF-4bLjCtLiwQ"
         ],
         "ui": {
-          "x": 8398.5871,
-          "y": 8227.3235,
+          "x": 10750.8748,
+          "y": 8972.0274,
           "zIndex": 4,
           "widthName": 84,
           "widthComment": 139,
           "color": "#9B59B6"
         },
         "meta": {
-          "updateAt": 1777043372726,
+          "updateAt": 1780398376328,
           "createAt": 1699999999999
         }
       },
@@ -193,15 +193,15 @@
           "rag_queries_created_at"
         ],
         "ui": {
-          "x": 10693.4736,
-          "y": 9198.5128,
+          "x": 9104.7421,
+          "y": 9323.1045,
           "zIndex": 5,
           "widthName": 69,
           "widthComment": 153,
           "color": "#F39C12"
         },
         "meta": {
-          "updateAt": 1777043353098,
+          "updateAt": 1780398361246,
           "createAt": 1699999999999
         }
       },
@@ -226,15 +226,15 @@
           "resume_jobs_generated_at"
         ],
         "ui": {
-          "x": 10694.4905,
-          "y": 9431.5943,
+          "x": 9043.3868,
+          "y": 10280.3133,
           "zIndex": 6,
           "widthName": 75,
           "widthComment": 149,
           "color": "#3498DB"
         },
         "meta": {
-          "updateAt": 1777043351197,
+          "updateAt": 1780398349396,
           "createAt": 1699999999999
         }
       },
@@ -263,15 +263,15 @@
           "uoa_updated_at"
         ],
         "ui": {
-          "x": 9212.49352041948,
-          "y": 9494.32822127397,
+          "x": 9512.065,
+          "y": 9801.8364,
           "zIndex": 10,
           "widthName": 124,
           "widthComment": 109,
           "color": ""
         },
         "meta": {
-          "updateAt": 1774010812916,
+          "updateAt": 1780398499570,
           "createAt": 0
         }
       },
@@ -292,15 +292,15 @@
           "upc_password_changed_at"
         ],
         "ui": {
-          "x": 9806.2686,
-          "y": 9500.1276,
+          "x": 10556.6875,
+          "y": 9854.4185,
           "zIndex": 10,
           "widthName": 157,
           "widthComment": 117,
           "color": ""
         },
         "meta": {
-          "updateAt": 1774010835731,
+          "updateAt": 1780398497287,
           "createAt": 0
         }
       },
@@ -327,15 +327,15 @@
           "folders_deleted_at"
         ],
         "ui": {
-          "x": 11009.3003,
-          "y": 8404.987,
+          "x": 10057.927,
+          "y": 8661.4148,
           "zIndex": 5,
           "widthName": 60,
           "widthComment": 140,
           "color": "#F5A623"
         },
         "meta": {
-          "updateAt": 1777043459609,
+          "updateAt": 1780398489839,
           "createAt": 1774010688368
         }
       },
@@ -360,15 +360,15 @@
           "activity_events_created_at"
         ],
         "ui": {
-          "x": 9886,
-          "y": 8678,
+          "x": 9157.0826,
+          "y": 8636.6825,
           "zIndex": 7,
           "widthName": 86,
           "widthComment": 209,
           "color": "#E67E22"
         },
         "meta": {
-          "updateAt": 1777043445802,
+          "updateAt": 1780398505056,
           "createAt": 1776406593048
         }
       },
@@ -405,16 +405,90 @@
           "qiKqlXiWT7GRaCI1ilmR3"
         ],
         "ui": {
-          "x": 8533.75,
-          "y": 8682,
+          "x": 10669.4971,
+          "y": 8267.9037,
           "zIndex": 8,
           "widthName": 74,
           "widthComment": 137,
           "color": "#16A085"
         },
         "meta": {
-          "updateAt": 1778371980538,
+          "updateAt": 1780398486289,
           "createAt": 1777043117819
+        }
+      },
+      "ai_note_indexes_table": {
+        "id": "ai_note_indexes_table",
+        "name": "ai_note_indexes",
+        "comment": "AI 노트 인덱싱 상태",
+        "columnIds": [
+          "ai_note_indexes_note_id",
+          "ai_note_indexes_author_id",
+          "ai_note_indexes_status",
+          "ai_note_indexes_attempt_count",
+          "ai_note_indexes_last_requested_at",
+          "ai_note_indexes_last_processed_at",
+          "ai_note_indexes_indexed_at",
+          "ai_note_indexes_last_error"
+        ],
+        "seqColumnIds": [
+          "ai_note_indexes_note_id",
+          "ai_note_indexes_author_id",
+          "ai_note_indexes_status",
+          "ai_note_indexes_attempt_count",
+          "ai_note_indexes_last_requested_at",
+          "ai_note_indexes_last_processed_at",
+          "ai_note_indexes_indexed_at",
+          "ai_note_indexes_last_error"
+        ],
+        "ui": {
+          "x": 8179.7671,
+          "y": 8651.5695,
+          "zIndex": 9,
+          "widthName": 94,
+          "widthComment": 96,
+          "color": "#8E44AD"
+        },
+        "meta": {
+          "updateAt": 1780398513389,
+          "createAt": 1780393535000
+        }
+      },
+      "ai_note_chunks_table": {
+        "id": "ai_note_chunks_table",
+        "name": "ai_note_chunks",
+        "comment": "AI 검색용 노트 청크",
+        "columnIds": [
+          "ai_note_chunks_id",
+          "ai_note_chunks_note_id",
+          "ai_note_chunks_author_id",
+          "ai_note_chunks_chunk_order",
+          "ai_note_chunks_title",
+          "ai_note_chunks_content_chunk",
+          "ai_note_chunks_source_updated_at",
+          "ai_note_chunks_indexed_at"
+        ],
+        "seqColumnIds": [
+          "ai_note_chunks_id",
+          "ai_note_chunks_note_id",
+          "ai_note_chunks_author_id",
+          "ai_note_chunks_chunk_order",
+          "ai_note_chunks_title",
+          "ai_note_chunks_content_chunk",
+          "ai_note_chunks_source_updated_at",
+          "ai_note_chunks_indexed_at"
+        ],
+        "ui": {
+          "x": 11083.6245,
+          "y": 9067.9845,
+          "zIndex": 10,
+          "widthName": 91,
+          "widthComment": 96,
+          "color": "#9B59B6"
+        },
+        "meta": {
+          "updateAt": 1780398493655,
+          "createAt": 1780393535000
         }
       }
     },
@@ -788,7 +862,7 @@
         "default": "",
         "options": 10,
         "ui": {
-          "keys": 2,
+          "keys": 0,
           "widthName": 60,
           "widthComment": 65,
           "widthDataType": 60,
@@ -888,7 +962,7 @@
         "default": "",
         "options": 10,
         "ui": {
-          "keys": 2,
+          "keys": 0,
           "widthName": 60,
           "widthComment": 76,
           "widthDataType": 60,
@@ -1008,7 +1082,7 @@
         "default": "",
         "options": 10,
         "ui": {
-          "keys": 2,
+          "keys": 0,
           "widthName": 60,
           "widthComment": 76,
           "widthDataType": 60,
@@ -1878,7 +1952,326 @@
           "updateAt": 1778732484696,
           "createAt": 1778371980537
         }
-
+      },
+      "ai_note_indexes_note_id": {
+        "id": "ai_note_indexes_note_id",
+        "tableId": "ai_note_indexes_table",
+        "name": "note_id",
+        "comment": "인덱싱 대상 노트 ID (PK/FK)",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 11,
+        "ui": {
+          "keys": 3,
+          "widthName": 60,
+          "widthComment": 143,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1780393535000,
+          "createAt": 1780393535000
+        }
+      },
+      "ai_note_indexes_author_id": {
+        "id": "ai_note_indexes_author_id",
+        "tableId": "ai_note_indexes_table",
+        "name": "author_id",
+        "comment": "작성자 ID (FK)",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 10,
+        "ui": {
+          "keys": 2,
+          "widthName": 60,
+          "widthComment": 76,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1780393535000,
+          "createAt": 1780393535000
+        }
+      },
+      "ai_note_indexes_status": {
+        "id": "ai_note_indexes_status",
+        "tableId": "ai_note_indexes_table",
+        "name": "status",
+        "comment": "인덱싱 상태",
+        "dataType": "ENUM('PENDING','COMPLETED','FAILED','REMOVED')",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 305,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1780393535000,
+          "createAt": 1780393535000
+        }
+      },
+      "ai_note_indexes_attempt_count": {
+        "id": "ai_note_indexes_attempt_count",
+        "tableId": "ai_note_indexes_table",
+        "name": "attempt_count",
+        "comment": "처리 시도 횟수",
+        "dataType": "INT",
+        "default": "0",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 85,
+          "widthComment": 71,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1780393535000,
+          "createAt": 1780393535000
+        }
+      },
+      "ai_note_indexes_last_requested_at": {
+        "id": "ai_note_indexes_last_requested_at",
+        "tableId": "ai_note_indexes_table",
+        "name": "last_requested_at",
+        "comment": "마지막 인덱싱 요청 시각",
+        "dataType": "DATETIME",
+        "default": "CURRENT_TIMESTAMP",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 104,
+          "widthComment": 116,
+          "widthDataType": 61,
+          "widthDefault": 133
+        },
+        "meta": {
+          "updateAt": 1780393535000,
+          "createAt": 1780393535000
+        }
+      },
+      "ai_note_indexes_last_processed_at": {
+        "id": "ai_note_indexes_last_processed_at",
+        "tableId": "ai_note_indexes_table",
+        "name": "last_processed_at",
+        "comment": "마지막 처리 시각",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 106,
+          "widthComment": 81,
+          "widthDataType": 61,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1780393535000,
+          "createAt": 1780393535000
+        }
+      },
+      "ai_note_indexes_indexed_at": {
+        "id": "ai_note_indexes_indexed_at",
+        "tableId": "ai_note_indexes_table",
+        "name": "indexed_at",
+        "comment": "인덱싱 완료 시각",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 64,
+          "widthComment": 81,
+          "widthDataType": 61,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1780393535000,
+          "createAt": 1780393535000
+        }
+      },
+      "ai_note_indexes_last_error": {
+        "id": "ai_note_indexes_last_error",
+        "tableId": "ai_note_indexes_table",
+        "name": "last_error",
+        "comment": "실패 메시지",
+        "dataType": "VARCHAR(1000)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 96,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1780393535000,
+          "createAt": 1780393535000
+        }
+      },
+      "ai_note_chunks_id": {
+        "id": "ai_note_chunks_id",
+        "tableId": "ai_note_chunks_table",
+        "name": "id",
+        "comment": "청크 고유 ID",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 11,
+        "ui": {
+          "keys": 1,
+          "widthName": 60,
+          "widthComment": 62,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1780393535000,
+          "createAt": 1780393535000
+        }
+      },
+      "ai_note_chunks_note_id": {
+        "id": "ai_note_chunks_note_id",
+        "tableId": "ai_note_chunks_table",
+        "name": "note_id",
+        "comment": "원본 노트 ID (FK)",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 10,
+        "ui": {
+          "keys": 2,
+          "widthName": 60,
+          "widthComment": 90,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1780393535000,
+          "createAt": 1780393535000
+        }
+      },
+      "ai_note_chunks_author_id": {
+        "id": "ai_note_chunks_author_id",
+        "tableId": "ai_note_chunks_table",
+        "name": "author_id",
+        "comment": "작성자 ID (FK)",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 10,
+        "ui": {
+          "keys": 2,
+          "widthName": 60,
+          "widthComment": 76,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1780393535000,
+          "createAt": 1780393535000
+        }
+      },
+      "ai_note_chunks_chunk_order": {
+        "id": "ai_note_chunks_chunk_order",
+        "tableId": "ai_note_chunks_table",
+        "name": "chunk_order",
+        "comment": "노트 내 청크 순서",
+        "dataType": "INT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 73,
+          "widthComment": 85,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1780393535000,
+          "createAt": 1780393535000
+        }
+      },
+      "ai_note_chunks_title": {
+        "id": "ai_note_chunks_title",
+        "tableId": "ai_note_chunks_table",
+        "name": "title",
+        "comment": "노트 제목",
+        "dataType": "VARCHAR(200)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 90,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1780393535000,
+          "createAt": 1780393535000
+        }
+      },
+      "ai_note_chunks_content_chunk": {
+        "id": "ai_note_chunks_content_chunk",
+        "tableId": "ai_note_chunks_table",
+        "name": "content_chunk",
+        "comment": "검색 및 프롬프트용 본문 청크",
+        "dataType": "TEXT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 86,
+          "widthComment": 140,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1780393535000,
+          "createAt": 1780393535000
+        }
+      },
+      "ai_note_chunks_source_updated_at": {
+        "id": "ai_note_chunks_source_updated_at",
+        "tableId": "ai_note_chunks_table",
+        "name": "source_updated_at",
+        "comment": "원본 노트 수정 시각",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 112,
+          "widthComment": 95,
+          "widthDataType": 61,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1780393535000,
+          "createAt": 1780393535000
+        }
+      },
+      "ai_note_chunks_indexed_at": {
+        "id": "ai_note_chunks_indexed_at",
+        "tableId": "ai_note_chunks_table",
+        "name": "indexed_at",
+        "comment": "청크 인덱싱 시각",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 64,
+          "widthComment": 81,
+          "widthDataType": 61,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1780393535000,
+          "createAt": 1780393535000
+        }
       }
     },
     "relationshipEntities": {
@@ -1892,17 +2285,17 @@
           "columnIds": [
             "users_id"
           ],
-          "x": 9739.0665,
-          "y": 9103.559433333332,
-          "direction": 1
+          "x": 10227.78812256765,
+          "y": 9282.063718888441,
+          "direction": 4
         },
         "end": {
           "tableId": "blogs_table",
           "columnIds": [
             "blogs_author_id"
           ],
-          "x": 9446.565,
-          "y": 8503.7145,
+          "x": 10246.377711679337,
+          "y": 8312.839979492659,
           "direction": 8
         },
         "meta": {
@@ -1920,17 +2313,17 @@
           "columnIds": [
             "blogs_id"
           ],
-          "x": 9243.065,
-          "y": 8245.7145,
-          "direction": 1
+          "x": 11351.1795,
+          "y": 9324.5622,
+          "direction": 4
         },
         "end": {
           "tableId": "blog_revisions_table",
           "columnIds": [
             "blog_revisions_blog_id"
           ],
-          "x": 8917.5871,
-          "y": 8315.3235,
+          "x": 11269.8748,
+          "y": 9060.0274,
           "direction": 2
         },
         "meta": {
@@ -1948,18 +2341,18 @@
           "columnIds": [
             "users_id"
           ],
-          "x": 10387.0665,
-          "y": 9186.226099999998,
-          "direction": 2
+          "x": 9968.037120025383,
+          "y": 9717.488246792744,
+          "direction": 1
         },
         "end": {
           "tableId": "rag_queries_table",
           "columnIds": [
             "rag_queries_user_id"
           ],
-          "x": 10693.4736,
-          "y": 9298.5128,
-          "direction": 1
+          "x": 9621.7421,
+          "y": 9423.1045,
+          "direction": 2
         },
         "meta": {
           "updateAt": 1699999999999,
@@ -1976,18 +2369,18 @@
           "columnIds": [
             "users_id"
           ],
-          "x": 10387.0665,
-          "y": 9268.892766666664,
-          "direction": 2
+          "x": 9968.037120025383,
+          "y": 9903.488246792744,
+          "direction": 1
         },
         "end": {
           "tableId": "resume_jobs_table",
           "columnIds": [
             "resume_jobs_user_id"
           ],
-          "x": 10694.4905,
-          "y": 9531.5943,
-          "direction": 1
+          "x": 9663.3868,
+          "y": 10380.3133,
+          "direction": 2
         },
         "meta": {
           "updateAt": 1699999999999,
@@ -2004,8 +2397,8 @@
           "columnIds": [
             "users_id"
           ],
-          "x": 9739.0665,
-          "y": 9268.892766666664,
+          "x": 10065.78812256765,
+          "y": 9488.730385555105,
           "direction": 1
         },
         "end": {
@@ -2013,8 +2406,8 @@
           "columnIds": [
             "uoa_user_id"
           ],
-          "x": 9500.99352041948,
-          "y": 9494.32822127397,
+          "x": 9800.565,
+          "y": 9801.8364,
           "direction": 4
         },
         "meta": {
@@ -2032,8 +2425,8 @@
           "columnIds": [
             "users_id"
           ],
-          "x": 10063.0665,
-          "y": 9310.2261,
+          "x": 10389.78812256765,
+          "y": 9530.063718888441,
           "direction": 8
         },
         "end": {
@@ -2041,9 +2434,9 @@
           "columnIds": [
             "upc_user_id"
           ],
-          "x": 10138.2686,
-          "y": 9500.1276,
-          "direction": 4
+          "x": 10556.6875,
+          "y": 9930.4185,
+          "direction": 1
         },
         "meta": {
           "updateAt": 0,
@@ -2060,18 +2453,18 @@
           "columnIds": [
             "users_id"
           ],
-          "x": 10387.0665,
-          "y": 9103.559433333332,
-          "direction": 2
+          "x": 10551.78812256765,
+          "y": 9282.063718888441,
+          "direction": 4
         },
         "end": {
           "tableId": "folders_table",
           "columnIds": [
             "folders_owner_id"
           ],
-          "x": 11009.3003,
-          "y": 8572.987,
-          "direction": 1
+          "x": 10349.427,
+          "y": 8885.4148,
+          "direction": 8
         },
         "meta": {
           "updateAt": 1774010688368,
@@ -2088,8 +2481,8 @@
           "columnIds": [
             "folders_id"
           ],
-          "x": 11572.3003,
-          "y": 8404.987,
+          "x": 10620.927,
+          "y": 8661.4148,
           "direction": 4
         },
         "end": {
@@ -2097,8 +2490,8 @@
           "columnIds": [
             "folders_parent_id"
           ],
-          "x": 11592.3003,
-          "y": 8424.987,
+          "x": 10640.927,
+          "y": 8681.4148,
           "direction": 2
         },
         "meta": {
@@ -2116,8 +2509,8 @@
           "columnIds": [
             "folders_id"
           ],
-          "x": 11009.3003,
-          "y": 8460.987,
+          "x": 10057.927,
+          "y": 8773.4148,
           "direction": 1
         },
         "end": {
@@ -2125,9 +2518,9 @@
           "columnIds": [
             "blogs_folder_id"
           ],
-          "x": 10057.065,
-          "y": 8331.7145,
-          "direction": 2
+          "x": 9978.377711679337,
+          "y": 8312.839979492659,
+          "direction": 8
         },
         "meta": {
           "updateAt": 1774010688368,
@@ -2144,18 +2537,18 @@
           "columnIds": [
             "users_id"
           ],
-          "x": 10063.0665,
-          "y": 9062.2261,
-          "direction": 4
+          "x": 10065.78812256765,
+          "y": 9323.397052221773,
+          "direction": 1
         },
         "end": {
           "tableId": "activity_events_table",
           "columnIds": [
             "activity_events_user_id"
           ],
-          "x": 10233.5,
-          "y": 8878,
-          "direction": 8
+          "x": 9852.0826,
+          "y": 8786.6825,
+          "direction": 2
         },
         "meta": {
           "updateAt": 1776406593048,
@@ -2172,8 +2565,8 @@
           "columnIds": [
             "blogs_id"
           ],
-          "x": 9853.565,
-          "y": 8503.7145,
+          "x": 9710.377711679337,
+          "y": 8312.839979492659,
           "direction": 8
         },
         "end": {
@@ -2181,9 +2574,9 @@
           "columnIds": [
             "activity_events_note_id"
           ],
-          "x": 9886,
-          "y": 8778,
-          "direction": 1
+          "x": 9852.0826,
+          "y": 8686.6825,
+          "direction": 2
         },
         "meta": {
           "updateAt": 1776406593048,
@@ -2200,18 +2593,18 @@
           "columnIds": [
             "blogs_id"
           ],
-          "x": 9243.065,
-          "y": 8417.7145,
-          "direction": 1
+          "x": 10380.377711679337,
+          "y": 8090.839979492659,
+          "direction": 2
         },
         "end": {
           "tableId": "note_images_table",
           "columnIds": [
             "note_images_note_id"
           ],
-          "x": 8916.75,
-          "y": 8682,
-          "direction": 4
+          "x": 10669.4971,
+          "y": 8439.9037,
+          "direction": 1
         },
         "meta": {
           "updateAt": 1777043117819,
@@ -2228,22 +2621,134 @@
           "columnIds": [
             "users_id"
           ],
-          "x": 9739.0665,
-          "y": 9186.226099999998,
-          "direction": 1
+          "x": 10713.78812256765,
+          "y": 9344.063718888441,
+          "direction": 2
         },
         "end": {
           "tableId": "note_images_table",
           "columnIds": [
             "note_images_uploader_id"
           ],
-          "x": 9299.75,
-          "y": 8854,
-          "direction": 2
+          "x": 11052.4971,
+          "y": 8611.9037,
+          "direction": 8
         },
         "meta": {
           "updateAt": 1777043117819,
           "createAt": 1777043117819
+        }
+      },
+      "rel_notes_ai_note_indexes": {
+        "id": "rel_notes_ai_note_indexes",
+        "identification": true,
+        "relationshipType": 4,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "blogs_table",
+          "columnIds": [
+            "blogs_id"
+          ],
+          "x": 9576.377711679337,
+          "y": 8164.839979492659,
+          "direction": 1
+        },
+        "end": {
+          "tableId": "ai_note_indexes_table",
+          "columnIds": [
+            "ai_note_indexes_note_id"
+          ],
+          "x": 9021.767100000001,
+          "y": 8713.5695,
+          "direction": 2
+        },
+        "meta": {
+          "updateAt": 1780393535000,
+          "createAt": 1780393535000
+        }
+      },
+      "rel_users_ai_note_indexes": {
+        "id": "rel_users_ai_note_indexes",
+        "identification": true,
+        "relationshipType": 4,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "users_table",
+          "columnIds": [
+            "users_id"
+          ],
+          "x": 10065.78812256765,
+          "y": 9406.06371888844,
+          "direction": 1
+        },
+        "end": {
+          "tableId": "ai_note_indexes_table",
+          "columnIds": [
+            "ai_note_indexes_author_id"
+          ],
+          "x": 9021.767100000001,
+          "y": 8837.5695,
+          "direction": 2
+        },
+        "meta": {
+          "updateAt": 1780393535000,
+          "createAt": 1780393535000
+        }
+      },
+      "rel_notes_ai_note_chunks": {
+        "id": "rel_notes_ai_note_chunks",
+        "identification": true,
+        "relationshipType": 4,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "blogs_table",
+          "columnIds": [
+            "blogs_id"
+          ],
+          "x": 10380.377711679337,
+          "y": 8238.839979492659,
+          "direction": 2
+        },
+        "end": {
+          "tableId": "ai_note_chunks_table",
+          "columnIds": [
+            "ai_note_chunks_note_id"
+          ],
+          "x": 11083.6245,
+          "y": 9129.9845,
+          "direction": 1
+        },
+        "meta": {
+          "updateAt": 1780393535000,
+          "createAt": 1780393535000
+        }
+      },
+      "rel_users_ai_note_chunks": {
+        "id": "rel_users_ai_note_chunks",
+        "identification": true,
+        "relationshipType": 4,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "users_table",
+          "columnIds": [
+            "users_id"
+          ],
+          "x": 10713.78812256765,
+          "y": 9468.063718888441,
+          "direction": 2
+        },
+        "end": {
+          "tableId": "ai_note_chunks_table",
+          "columnIds": [
+            "ai_note_chunks_author_id"
+          ],
+          "x": 11083.6245,
+          "y": 9253.9845,
+          "direction": 1
+        },
+        "meta": {
+          "updateAt": 1780393535000,
+          "createAt": 1780393535000
         }
       }
     },
