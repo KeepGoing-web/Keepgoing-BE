@@ -9,8 +9,8 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 
 import com.keepgoing.keepgoing.common.image.event.ImageProcessingRequestedEvent;
-import com.keepgoing.keepgoing.worker.image.application.port.in.ImageProcessingCommand;
-import com.keepgoing.keepgoing.worker.image.application.port.in.ImageProcessingUseCase;
+import com.keepgoing.keepgoing.worker.application.port.in.ImageProcessingCommand;
+import com.keepgoing.keepgoing.worker.application.port.in.ImageProcessingUseCase;
 import com.keepgoing.keepgoing.worker.infrastructure.redis.WorkerRedisStreamProperties;
 import java.time.Instant;
 import java.util.UUID;

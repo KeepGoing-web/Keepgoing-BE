@@ -6,8 +6,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.then;
 
 import com.keepgoing.keepgoing.common.image.event.ImageProcessingRequestedEvent;
-import com.keepgoing.keepgoing.worker.image.application.port.in.ImageProcessingCommand;
-import com.keepgoing.keepgoing.worker.image.application.port.in.ImageProcessingUseCase;
+import com.keepgoing.keepgoing.worker.application.port.in.ImageProcessingCommand;
+import com.keepgoing.keepgoing.worker.application.port.in.ImageProcessingUseCase;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;

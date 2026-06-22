@@ -4,7 +4,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
 import com.keepgoing.keepgoing.common.image.event.ImageProcessingResultEvent;
-import com.keepgoing.keepgoing.worker.image.application.port.out.ImageProcessingResultPublisherPort;
+import com.keepgoing.keepgoing.worker.application.port.out.ImageProcessingResultPublisherPort;
 import com.keepgoing.keepgoing.worker.infrastructure.redis.WorkerRedisStreamProperties;
 import java.time.Instant;
 import java.util.UUID;

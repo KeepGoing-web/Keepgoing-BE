@@ -1,7 +1,7 @@
 package com.keepgoing.keepgoing.worker.infrastructure.redis.adapter.in;
 
 import com.keepgoing.keepgoing.common.image.event.ImageProcessingRequestedEvent;
-import com.keepgoing.keepgoing.worker.image.application.port.in.ImageProcessingCommand;
+import com.keepgoing.keepgoing.worker.application.port.in.ImageProcessingCommand;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
