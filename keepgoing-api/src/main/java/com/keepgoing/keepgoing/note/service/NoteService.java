@@ -1,6 +1,7 @@
 package com.keepgoing.keepgoing.note.service;
 
 import com.keepgoing.keepgoing.activity.service.ActivityEventRecord;
+import com.keepgoing.keepgoing.ai.service.AiNoteIndexingRequestService;
 import com.keepgoing.keepgoing.folder.domain.Folder;
 import com.keepgoing.keepgoing.folder.service.FolderLocker;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
@@ -36,6 +37,7 @@ public class NoteService {
 	private final UserRepository userRepository;
 	private final FolderLocker folderLocker;
 	private final ActivityEventRecord activityEventRecord;
+	private final AiNoteIndexingRequestService aiNoteIndexingRequestService;
 
 	/**
 	 * 노트 생성
@@ -57,6 +59,7 @@ public class NoteService {
 		);
 		Note saved = noteRepository.save(note);
 		activityEventRecord.recordNoteCreated(author, note);
+		aiNoteIndexingRequestService.requestReindex(saved.getId(), saved.getAuthorId());
 		return NoteDetailResult.from(saved);
 	}
 
@@ -98,6 +101,7 @@ public class NoteService {
 				command.aiCollectable());
 
 		activityEventRecord.recordNoteUpdated(note.getAuthor(), note);
+		aiNoteIndexingRequestService.requestReindex(note.getId(), note.getAuthorId());
 		return NoteDetailResult.from(note);
 	}
 
@@ -110,6 +114,7 @@ public class NoteService {
 				.orElseThrow(() -> new BusinessException(ErrorCode.NOTE_NOT_FOUND));
 
 		note.softDeleteBy(userId);
+		aiNoteIndexingRequestService.requestReindex(note.getId(), note.getAuthorId());
 		noteImageRepository.softDeleteByNoteId(noteId);
 	}
 
@@ -174,6 +179,7 @@ public class NoteService {
 				.orElseThrow(() -> new BusinessException(ErrorCode.NOTE_NOT_FOUND));
 
 		note.renameTitle(command.userId(), command.title());
+		aiNoteIndexingRequestService.requestReindex(note.getId(), note.getAuthorId());
 		return NoteDetailResult.from(note);
 	}
 

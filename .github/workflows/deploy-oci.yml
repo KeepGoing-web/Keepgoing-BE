@@ -1,0 +1,142 @@
+name: Deploy API to OCI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "develop" ]
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: deploy-oci-api
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build image and deploy API
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: gradle
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: Test and build API module
+        run: ./gradlew clean :keepgoing-api:test :keepgoing-api:bootJar --no-daemon
+
+      - name: Resolve image metadata
+        run: |
+          set -euo pipefail
+          image_name="ghcr.io/${GITHUB_REPOSITORY_OWNER}/keepgoing-be-api"
+          image_name="$(printf '%s' "$image_name" | tr '[:upper:]' '[:lower:]')"
+          image_tag="${GITHUB_SHA::12}"
+
+          echo "IMAGE_NAME=$image_name" >> "$GITHUB_ENV"
+          echo "IMAGE_TAG=$image_tag" >> "$GITHUB_ENV"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push linux/arm64 image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/arm64
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+            ${{ env.IMAGE_NAME }}:latest
+
+      - name: Prepare SSH
+        env:
+          OCI_HOST: ${{ secrets.OCI_HOST }}
+          OCI_SSH_PRIVATE_KEY_B64: ${{ secrets.OCI_SSH_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          printf '%s' "$OCI_SSH_PRIVATE_KEY_B64" | base64 -d > ~/.ssh/oci_key
+          chmod 600 ~/.ssh/oci_key
+
+          ssh-keyscan -H "$OCI_HOST" >> ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Deploy on OCI
+        env:
+          OCI_HOST: ${{ secrets.OCI_HOST }}
+          OCI_USER: ${{ secrets.OCI_USER }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/oci_key "$OCI_USER@$OCI_HOST" \
+            "IMAGE_NAME='$IMAGE_NAME' IMAGE_TAG='$IMAGE_TAG' bash -s" <<'REMOTE'
+          set -euo pipefail
+
+          cd /srv/keepgoing
+
+          for file in .env.prod .env.app .env.db docker-compose.prod.yml; do
+            if [ ! -f "$file" ]; then
+              echo "required deployment file not found: /srv/keepgoing/$file" >&2
+              echo "Run the initial server bootstrap manually before enabling CD." >&2
+              exit 1
+            fi
+          done
+
+          set_env() {
+            key="$1"
+            value="$2"
+            file=".env.prod"
+
+            if grep -q "^${key}=" "$file"; then
+              sed -i "s|^${key}=.*|${key}=${value}|" "$file"
+            else
+              printf '\n%s=%s\n' "$key" "$value" >> "$file"
+            fi
+          }
+
+          get_env() {
+            key="$1"
+            grep -E "^${key}=" .env.prod | tail -n 1 | cut -d= -f2- || true
+          }
+
+          set_env APP_IMAGE "$IMAGE_NAME"
+          set_env APP_IMAGE_TAG "$IMAGE_TAG"
+
+          compose_files=(-f docker-compose.prod.yml)
+          tls_enabled="$(get_env DEPLOY_TLS_ENABLED)"
+          if [ "$tls_enabled" = "true" ]; then
+            if [ ! -f docker-compose.prod.tls.yml ]; then
+              echo "DEPLOY_TLS_ENABLED=true but docker-compose.prod.tls.yml is missing" >&2
+              exit 1
+            fi
+            compose_files+=(-f docker-compose.prod.tls.yml)
+          fi
+
+          docker compose --env-file .env.prod "${compose_files[@]}" pull app
+          docker compose --env-file .env.prod "${compose_files[@]}" up -d
+          docker compose --env-file .env.prod "${compose_files[@]}" ps
+
+          curl -fsS http://127.0.0.1/healthz
+          docker compose --env-file .env.prod "${compose_files[@]}" exec -T app \
+            curl -fsS http://127.0.0.1:8080/actuator/health
+          REMOTE

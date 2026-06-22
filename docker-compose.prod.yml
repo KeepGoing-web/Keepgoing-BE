@@ -26,10 +26,7 @@ services:
       - keepgoing-net
 
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: keepgoing-app:local
+    image: ${APP_IMAGE:-ghcr.io/keepgoing-web/keepgoing-be-api}:${APP_IMAGE_TAG:-latest}
     container_name: keepgoing-app
     restart: unless-stopped
     mem_limit: 1536m
@@ -41,7 +38,6 @@ services:
         condition: service_healthy
     environment:
       TZ: ${TZ:-Asia/Seoul}
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
     expose:
       - "8080"
     healthcheck:

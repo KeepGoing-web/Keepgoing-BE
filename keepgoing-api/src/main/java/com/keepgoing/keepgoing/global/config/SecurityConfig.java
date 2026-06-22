@@ -29,6 +29,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 public class SecurityConfig {
 
 	private static final String AUTH_API_PREFIX = "/api/auth";
+	private static final String ACTUATOR_HEALTH_PATH = "/actuator/health";
 	private static final String ACTUATOR_HEALTH_PATTERN = "/actuator/health/**";
 	private static final String USERS_ME_PATH = "/api/users/me";
 	private static final String USERS_ME_CHANGE_PASSWORD_PATH = "/api/users/me/change-password";
@@ -75,6 +76,7 @@ public class SecurityConfig {
 											"/v3/api-docs/**",
 											"/swagger-ui/**",
 											"/swagger-ui.html",
+											ACTUATOR_HEALTH_PATH,
 											ACTUATOR_HEALTH_PATTERN
 									).permitAll()
 									// auth 도메인

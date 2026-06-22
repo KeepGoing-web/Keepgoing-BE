@@ -13,6 +13,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.keepgoing.keepgoing.ai.controller.dto.AiPanelMessageRequest;
 import com.keepgoing.keepgoing.ai.service.AiPanelService;
+import com.keepgoing.keepgoing.ai.service.dto.AiCitationSourceType;
+import com.keepgoing.keepgoing.ai.service.dto.AiPanelCitationResult;
 import com.keepgoing.keepgoing.ai.service.dto.AiPanelMessageCommand;
 import com.keepgoing.keepgoing.ai.service.dto.AiPanelMessageResult;
 import com.keepgoing.keepgoing.global.api.exception.GlobalExceptionHandler;
@@ -72,7 +74,17 @@ class AiPanelControllerTest {
 		void success() throws Exception {
 			Long userId = 1L;
 			AiPanelMessageRequest request = new AiPanelMessageRequest(10L, "요약해줘");
-			AiPanelMessageResult result = new AiPanelMessageResult("정리된 응답", 10L, true);
+			AiPanelMessageResult result = new AiPanelMessageResult(
+					"정리된 응답",
+					10L,
+					true,
+					List.of(new AiPanelCitationResult(
+							10L,
+							"회의록",
+							"회의 내용",
+							AiCitationSourceType.CONTEXT_NOTE
+					))
+			);
 
 			SecurityContextHolder.getContext()
 					.setAuthentication(new UsernamePasswordAuthenticationToken(userId, null, List.of()));
@@ -87,7 +99,11 @@ class AiPanelControllerTest {
 					.andExpect(jsonPath("$.success").value(true))
 					.andExpect(jsonPath("$.data.assistantMessage").value("정리된 응답"))
 					.andExpect(jsonPath("$.data.contextNoteId").value(10L))
-					.andExpect(jsonPath("$.data.contextAttached").value(true));
+					.andExpect(jsonPath("$.data.contextAttached").value(true))
+					.andExpect(jsonPath("$.data.citations[0].noteId").value(10L))
+					.andExpect(jsonPath("$.data.citations[0].title").value("회의록"))
+					.andExpect(jsonPath("$.data.citations[0].excerpt").value("회의 내용"))
+					.andExpect(jsonPath("$.data.citations[0].sourceType").value("CONTEXT_NOTE"));
 
 			ArgumentCaptor<AiPanelMessageCommand> captor = ArgumentCaptor.forClass(AiPanelMessageCommand.class);
 			verify(aiPanelService).sendMessage(eq(userId), captor.capture());
@@ -100,7 +116,7 @@ class AiPanelControllerTest {
 		void successWithoutContextNoteId() throws Exception {
 			Long userId = 1L;
 			AiPanelMessageRequest request = new AiPanelMessageRequest(null, "그냥 답해줘");
-			AiPanelMessageResult result = new AiPanelMessageResult("일반 응답", null, false);
+			AiPanelMessageResult result = new AiPanelMessageResult("일반 응답", null, false, List.of());
 
 			SecurityContextHolder.getContext()
 					.setAuthentication(new UsernamePasswordAuthenticationToken(userId, null, List.of()));
@@ -115,7 +131,8 @@ class AiPanelControllerTest {
 					.andExpect(jsonPath("$.success").value(true))
 					.andExpect(jsonPath("$.data.assistantMessage").value("일반 응답"))
 					.andExpect(jsonPath("$.data.contextNoteId").doesNotHaveJsonPath())
-					.andExpect(jsonPath("$.data.contextAttached").value(false));
+					.andExpect(jsonPath("$.data.contextAttached").value(false))
+					.andExpect(jsonPath("$.data.citations").isEmpty());
 
 			ArgumentCaptor<AiPanelMessageCommand> captor = ArgumentCaptor.forClass(AiPanelMessageCommand.class);
 			verify(aiPanelService).sendMessage(eq(userId), captor.capture());

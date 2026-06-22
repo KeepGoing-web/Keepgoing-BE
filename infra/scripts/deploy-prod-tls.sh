@@ -25,7 +25,13 @@ docker compose \
   --env-file "$ENV_FILE" \
   -f "$BASE_COMPOSE_FILE" \
   -f "$TLS_COMPOSE_FILE" \
-  up -d --build
+  pull app
+
+docker compose \
+  --env-file "$ENV_FILE" \
+  -f "$BASE_COMPOSE_FILE" \
+  -f "$TLS_COMPOSE_FILE" \
+  up -d
 
 docker compose \
   --env-file "$ENV_FILE" \

@@ -1,36 +1,36 @@
 package com.keepgoing.keepgoing.folder.service;
 
-import com.keepgoing.keepgoing.activity.repository.ActivityEventRepository;
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.keepgoing.keepgoing.folder.domain.Folder;
 import com.keepgoing.keepgoing.folder.repository.FolderRepository;
 import com.keepgoing.keepgoing.folder.service.dto.FolderCreateCommand;
 import com.keepgoing.keepgoing.folder.service.dto.FolderMoveCommand;
 import com.keepgoing.keepgoing.folder.service.dto.FolderSummaryResult;
 import com.keepgoing.keepgoing.note.domain.NoteVisibility;
-import com.keepgoing.keepgoing.note.repository.NoteRepository;
 import com.keepgoing.keepgoing.note.service.NoteService;
 import com.keepgoing.keepgoing.note.service.dto.NoteCreateCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteDetailResult;
 import com.keepgoing.keepgoing.note.service.dto.NoteMoveCommand;
+import com.keepgoing.keepgoing.support.DatabaseCleaner;
+import com.keepgoing.keepgoing.support.PostgreSqlTestContainerSupport;
 import com.keepgoing.keepgoing.user.domain.User;
 import com.keepgoing.keepgoing.user.repository.UserRepository;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 
 @SpringBootTest(webEnvironment = WebEnvironment.NONE)
-public class FolderMutationConcurrencyTest {
+public class FolderMutationConcurrencyTest extends PostgreSqlTestContainerSupport {
 
 	@Autowired
 	FolderService folderService;
@@ -42,13 +42,10 @@ public class FolderMutationConcurrencyTest {
 	FolderRepository folderRepository;
 
 	@Autowired
-	NoteRepository noteRepository;
-
-	@Autowired
-	ActivityEventRepository activityEventRepository;
-
-	@Autowired
 	UserRepository userRepository;
+
+	@Autowired
+	DatabaseCleaner databaseCleaner;
 
 	private User user;
 	private Long userId;
@@ -58,10 +55,7 @@ public class FolderMutationConcurrencyTest {
 
 	@BeforeEach
 	void setUp() {
-		activityEventRepository.deleteAll();
-		noteRepository.deleteAll();
-		folderRepository.deleteAll();
-		userRepository.deleteAll();
+		databaseCleaner.clean();
 
 		user = userRepository.save(User.create("test@test.com", "tester"));
 		userId = user.getId();

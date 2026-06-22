@@ -1,5 +1,7 @@
 package com.keepgoing.keepgoing.global.api.exception;
 
+import com.keepgoing.keepgoing.support.PostgreSqlTestContainerSupport;
+
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -23,7 +25,7 @@ import org.springframework.test.web.servlet.MockMvc;
 //@Import(GlobalExceptionHandler.class)
 @SpringBootTest
 @AutoConfigureMockMvc(addFilters = false)
-class GlobalExceptionHandlerTest {
+class GlobalExceptionHandlerTest extends PostgreSqlTestContainerSupport {
 
     @Autowired
     MockMvc mockMvc;

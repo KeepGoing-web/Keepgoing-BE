@@ -1,5 +1,6 @@
 package com.keepgoing.keepgoing.note.repository;
 
+import com.keepgoing.keepgoing.ai.repository.AiNoteIndexingSourceView;
 import com.keepgoing.keepgoing.note.domain.Note;
 import com.keepgoing.keepgoing.note.domain.NoteVisibility;
 import java.util.List;
@@ -65,14 +66,28 @@ public interface NoteRepository extends JpaRepository<Note, Long> {
 	                         Pageable pageable);
 
 	@Query("""
-        SELECT n
-        FROM Note n
-        WHERE n.author.id = :authorId
-          AND (LOWER(n.title) LIKE CONCAT('%', LOWER(:keyword), '%')
-               OR LOWER(n.content) LIKE CONCAT('%', LOWER(:keyword), '%'))
-          ORDER BY n.createdAt DESC, n.id DESC
-        """)
+			SELECT n
+			FROM Note n
+			WHERE n.author.id = :authorId
+			  AND (LOWER(n.title) LIKE CONCAT('%', LOWER(:keyword), '%')
+			       OR LOWER(n.content) LIKE CONCAT('%', LOWER(:keyword), '%'))
+			  ORDER BY n.createdAt DESC, n.id DESC
+			""")
 	Slice<Note> searchMyNotesSlice(@Param("authorId") Long authorId,
 	                               @Param("keyword") String keyword,
 	                               Pageable pageable);
+
+	@Query(value = """
+			SELECT 
+				n.id AS noteId,
+				n.author_id AS authorId,
+				n.title AS title,
+				n.content AS content,
+				n.ai_collectable AS aiCollectable,
+				n.deleted_at AS deletedAt,
+				n.updated_at AS updatedAt
+			FROM notes n
+			WHERE n.id = :noteId
+			""", nativeQuery = true)
+	Optional<AiNoteIndexingSourceView> findAiIndexingSourceById(@Param("noteId") Long noteId);
 }

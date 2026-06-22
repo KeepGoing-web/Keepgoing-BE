@@ -1,5 +1,7 @@
 package com.keepgoing.keepgoing.user;
 
+import com.keepgoing.keepgoing.support.PostgreSqlTestContainerSupport;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -33,7 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest
 @AutoConfigureMockMvc(addFilters = false)
 @Transactional
-class UserIntegrationTest {
+class UserIntegrationTest extends PostgreSqlTestContainerSupport {
 
 	@Autowired
 	MockMvc mockMvc;

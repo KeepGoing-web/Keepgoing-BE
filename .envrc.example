@@ -25,3 +25,7 @@ export OAUTH_GOOGLE_CLIENT_SECRET="CHANGE_ME"
 export OPENAI_API_KEY="CHANGE_ME"
 export ZHIPUAI_API_KEY="CHANGE_ME"
 export ZHIPUAI_BASE_URL="https://api.z.ai/api/coding/paas"
+
+# API-only local run: worker/Redis Streams 파이프라인은 아직 기본 실행 대상이 아니므로 listener를 끕니다.
+# 이미지 업로드 파이프라인을 테스트할 때만 redis/worker와 함께 true로 전환하세요.
+export IMAGE_PROCESSING_STREAMS_ENABLED=false
