@@ -1,12 +1,15 @@
 package com.keepgoing.keepgoing.worker.infrastructure.config.storage;
 
 import java.net.URI;
+import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
+import software.amazon.awssdk.core.retry.RetryMode;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 
@@ -26,6 +29,11 @@ public class S3Config {
 						AwsBasicCredentials.create(properties.accessKey(), properties.secretKey())
 				))
 				.forcePathStyle(true)
+				.overrideConfiguration(ClientOverrideConfiguration.builder()
+						.apiCallTimeout(Duration.ofSeconds(60))
+						.apiCallAttemptTimeout(Duration.ofSeconds(30))
+						.retryPolicy(RetryMode.STANDARD)
+						.build())
 				.build();
 	}
 }
