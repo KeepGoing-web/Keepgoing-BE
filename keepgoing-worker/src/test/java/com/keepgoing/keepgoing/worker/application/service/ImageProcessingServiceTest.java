@@ -243,7 +243,8 @@ class ImageProcessingServiceTest {
 				"notes/10/generated-image-key",
 				contentType,
 				1024L,
-				REQUESTED_AT
+				REQUESTED_AT,
+				0
 		);
 	}
 }

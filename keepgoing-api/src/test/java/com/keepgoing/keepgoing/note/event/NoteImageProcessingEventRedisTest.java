@@ -1,7 +1,5 @@
 package com.keepgoing.keepgoing.note.event;
 
-import com.keepgoing.keepgoing.support.PostgreSqlTestContainerSupport;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.BDDMockito.then;
@@ -10,6 +8,7 @@ import com.keepgoing.keepgoing.common.image.event.ImageProcessingRequestedEvent;
 import com.keepgoing.keepgoing.common.image.event.ImageProcessingResultEvent;
 import com.keepgoing.keepgoing.global.redis.RedisStreamProperties;
 import com.keepgoing.keepgoing.note.service.NoteImageService;
+import com.keepgoing.keepgoing.support.PostgreSqlTestContainerSupport;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
@@ -75,7 +74,8 @@ class NoteImageProcessingEventRedisTest extends PostgreSqlTestContainerSupport {
 				"notes/10/generated-image-key",
 				"image/png",
 				1024L,
-				Instant.parse("2026-05-15T00:00:00Z")
+				Instant.parse("2026-05-15T00:00:00Z"),
+				0
 		);
 
 		// when

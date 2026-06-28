@@ -9,7 +9,8 @@ public record ImageProcessingRequestedEvent(
 		String storageKey,
 		String contentType,
 		long fileSize,
-		Instant requestedAt
+		Instant requestedAt,
+		int retryCount
 ) {
 	public Map<String, String> toMap() {
 		return Map.of(
@@ -17,7 +18,8 @@ public record ImageProcessingRequestedEvent(
 				"storageKey", storageKey,
 				"contentType", contentType,
 				"fileSize", Long.toString(fileSize),
-				"requestedAt", requestedAt.toString()
+				"requestedAt", requestedAt.toString(),
+				"retryCount", Integer.toString(retryCount)
 		);
 	}
 
@@ -27,7 +29,8 @@ public record ImageProcessingRequestedEvent(
 				value.get("storageKey"),
 				value.get("contentType"),
 				Long.parseLong(value.get("fileSize")),
-				Instant.parse(value.get("requestedAt"))
+				Instant.parse(value.get("requestedAt")),
+				Integer.parseInt(value.get("retryCount"))
 		);
 	}
 }

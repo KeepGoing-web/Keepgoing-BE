@@ -8,6 +8,7 @@ public record ImageProcessingCommand(
 		String storageKey,
 		String contentType,
 		long fileSize,
-		Instant requestedAt
+		Instant requestedAt,
+		int retryCount
 ) {
 }

@@ -79,7 +79,8 @@ public class NoteImageService {
 					storageKey,
 					contentType,
 					fileSize,
-					Instant.now(clock)
+					Instant.now(clock),
+					0
 			));
 		} catch (RuntimeException e) {
 			throw new BusinessException(

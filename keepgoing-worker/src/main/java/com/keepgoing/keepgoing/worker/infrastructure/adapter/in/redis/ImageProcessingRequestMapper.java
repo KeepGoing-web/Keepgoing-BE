@@ -14,7 +14,8 @@ final class ImageProcessingRequestMapper {
 				event.storageKey(),
 				event.contentType(),
 				event.fileSize(),
-				event.requestedAt()
+				event.requestedAt(),
+				event.retryCount()
 		);
 	}
 }

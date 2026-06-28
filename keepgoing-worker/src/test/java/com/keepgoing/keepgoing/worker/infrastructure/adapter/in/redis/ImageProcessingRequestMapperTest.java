@@ -19,7 +19,8 @@ class ImageProcessingRequestMapperTest {
 				"notes/10/generated-image-key",
 				"image/png",
 				1024L,
-				Instant.parse("2026-05-15T00:00:00Z")
+				Instant.parse("2026-05-15T00:00:00Z"),
+				0
 		);
 
 		// when
