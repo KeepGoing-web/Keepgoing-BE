@@ -54,7 +54,7 @@ docs/perf/postgres/results/
 bin/
 .classpath
 .factorypath
-out/
+/out/
 AGENTS.md
 GEMINI.md
 conductor/

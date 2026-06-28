@@ -15,3 +15,12 @@ image-processing:
     request-group: ${IMAGE_PROCESSING_REQUEST_GROUP:keepgoing-worker}
     request-consumer: ${IMAGE_PROCESSING_REQUEST_CONSUMER:worker-1}
     enabled: ${IMAGE_PROCESSING_STREAMS_ENABLED:true}
+
+storage:
+  endpoint: ${STORAGE_ENDPOINT}
+  access-key: ${STORAGE_ACCESS_KEY}
+  secret-key: ${STORAGE_SECRET_KEY}
+  region: ${STORAGE_REGION}
+  bucket-names:
+    quarantine: ${STORAGE_BUCKET_QUARANTINE}
+    secure: ${STORAGE_BUCKET_SECURE}

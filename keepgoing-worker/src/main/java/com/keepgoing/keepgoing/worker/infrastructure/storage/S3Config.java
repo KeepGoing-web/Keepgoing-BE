@@ -1,4 +1,4 @@
-package com.keepgoing.keepgoing.global.storage;
+package com.keepgoing.keepgoing.worker.infrastructure.storage;
 
 import java.net.URI;
 import lombok.RequiredArgsConstructor;

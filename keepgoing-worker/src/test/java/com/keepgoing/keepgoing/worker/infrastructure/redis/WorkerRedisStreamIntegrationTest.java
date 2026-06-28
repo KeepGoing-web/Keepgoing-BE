@@ -1,11 +1,13 @@
-package com.keepgoing.keepgoing.worker.image.event;
+package com.keepgoing.keepgoing.worker.infrastructure.redis;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.then;
 
-import com.keepgoing.keepgoing.common.image.domain.ImageProcessingStatus;
 import com.keepgoing.keepgoing.common.image.event.ImageProcessingRequestedEvent;
-import com.keepgoing.keepgoing.worker.global.redis.WorkerRedisStreamProperties;
+import com.keepgoing.keepgoing.worker.image.application.port.in.ImageProcessingCommand;
+import com.keepgoing.keepgoing.worker.image.application.port.in.ImageProcessingUseCase;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
@@ -14,10 +16,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.domain.Range;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -27,7 +29,7 @@ import org.testcontainers.utility.DockerImageName;
 		"image-processing.streams.enabled=true"
 })
 @Testcontainers
-class ImageProcessingEventRedisTest {
+class WorkerRedisStreamIntegrationTest {
 
 	@Container
 	@SuppressWarnings("resource")
@@ -47,6 +49,9 @@ class ImageProcessingEventRedisTest {
 	@Autowired
 	WorkerRedisStreamProperties properties;
 
+	@MockitoBean
+	ImageProcessingUseCase imageProcessingUseCase;
+
 	@AfterEach
 	void tearDown() {
 		redisTemplate.delete(properties.request());
@@ -54,7 +59,7 @@ class ImageProcessingEventRedisTest {
 	}
 
 	@Test
-	@DisplayName("request stream 메시지를 소비해 SCANNING, SAFE 결과를 발행하고 ack한다.")
+	@DisplayName("request stream 메시지를 소비해 use case에 전달하고 ack한다.")
 	void consumesRequestEventPublishesResultsAndAcknowledges() {
 		// given
 		UUID publicId = UUID.randomUUID();
@@ -72,28 +77,14 @@ class ImageProcessingEventRedisTest {
 
 		// then
 		await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
-			var results = redisTemplate.opsForStream()
-					.range(properties.result(), Range.unbounded());
-
-			assertThat(results).hasSize(2);
-			assertThat(results)
-					.extracting(record -> record.getValue().get("status"))
-					.containsExactly(
-							ImageProcessingStatus.SCANNING.name(),
-							ImageProcessingStatus.SAFE.name()
-					);
-			assertThat(results)
-					.allSatisfy(record -> {
-						assertThat(record.getValue())
-								.containsEntry("publicId", publicId.toString())
-								.containsEntry("reason", "");
-						assertThat(record.getValue().get("processedAt")).isNotNull();
-					});
+			then(imageProcessingUseCase).should()
+					.process(any(ImageProcessingCommand.class));
 		});
 
 		await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
 			var pending = redisTemplate.opsForStream()
 					.pending(properties.request(), properties.requestGroup());
+
 			assertThat(pending).isNotNull();
 			assertThat(pending.getTotalPendingMessages()).isZero();
 		});

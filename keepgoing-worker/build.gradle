@@ -17,6 +17,12 @@ dependencies {
     testImplementation 'org.testcontainers:junit-jupiter:1.21.4'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
+    // Apache Tika (파일 분석 라이브러리)
+    implementation 'org.apache.tika:tika-core:3.3.1'
+
+    // AWS S3 SDK v2
+    implementation 'software.amazon.awssdk:s3:2.25.10'
+
     // Lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'

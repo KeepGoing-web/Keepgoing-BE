@@ -1,11 +1,12 @@
-package com.keepgoing.keepgoing.worker.image.event;
+package com.keepgoing.keepgoing.worker.infrastructure.redis.adapter.out;
 
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
 import com.keepgoing.keepgoing.common.image.domain.ImageProcessingStatus;
 import com.keepgoing.keepgoing.common.image.event.ImageProcessingResultEvent;
-import com.keepgoing.keepgoing.worker.global.redis.WorkerRedisStreamProperties;
+import com.keepgoing.keepgoing.worker.image.application.port.out.ImageProcessingResultPublisherPort;
+import com.keepgoing.keepgoing.worker.infrastructure.redis.WorkerRedisStreamProperties;
 import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,7 +19,7 @@ import org.springframework.data.redis.core.StreamOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 @ExtendWith(MockitoExtension.class)
-class ImageProcessingResultPublisherTest {
+class RedisImageProcessingResultPublisherTest {
 
 	private static final String REQUEST_STREAM = "note-image-processing-requests";
 	private static final String RESULT_STREAM = "note-image-processing-results";
@@ -33,7 +34,7 @@ class ImageProcessingResultPublisherTest {
 	StreamOperations<String, Object, Object> streamOperations;
 
 	WorkerRedisStreamProperties properties;
-	ImageProcessingResultPublisher publisher;
+	ImageProcessingResultPublisherPort publisher;
 
 	@BeforeEach
 	void setUp() {
@@ -44,7 +45,7 @@ class ImageProcessingResultPublisherTest {
 				REQUEST_GROUP,
 				REQUEST_CONSUMER
 		);
-		publisher = new ImageProcessingResultPublisher(redisTemplate, properties);
+		publisher = new RedisImageProcessingResultPublisher(redisTemplate, properties);
 	}
 
 	@Test

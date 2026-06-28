@@ -1,7 +1,6 @@
-package com.keepgoing.keepgoing.worker.global.config;
+package com.keepgoing.keepgoing.worker.infrastructure.redis;
 
-import com.keepgoing.keepgoing.worker.global.redis.WorkerRedisStreamProperties;
-import com.keepgoing.keepgoing.worker.image.event.ImageProcessingRequestListener;
+import com.keepgoing.keepgoing.worker.infrastructure.redis.adapter.in.RedisImageProcessingRequestListener;
 import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,7 +36,7 @@ public class WorkerRedisStreamConfig {
 	)
 	StreamMessageListenerContainer<String, MapRecord<String, String, String>> requestStreamContainer(
 			RedisConnectionFactory connectionFactory,
-			ImageProcessingRequestListener listener
+			RedisImageProcessingRequestListener listener
 	) {
 		createRequestConsumerGroupIfAbsent();
 
