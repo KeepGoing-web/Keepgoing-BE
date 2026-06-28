@@ -19,12 +19,14 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class NoteImageService {
 
 	private final Clock clock;
@@ -58,6 +60,11 @@ public class NoteImageService {
 	public void applyProcessingResult(ImageProcessingResultEvent event) {
 		NoteImage noteImage = noteImageRepository.findByPublicId(event.publicId())
 				.orElseThrow(() -> new BusinessException(ErrorCode.NOTE_IMAGE_NOT_FOUND));
+
+		if (noteImage.getStatus().isTerminal()) {
+			log.info("Skipped processing result for image {}: already {}", event.publicId(), noteImage.getStatus());
+			return;
+		}
 
 		switch (event.status()) {
 			case SAFE -> noteImage.markSafe(event.secureStorageKey(), event.contentType(), event.fileSize());
