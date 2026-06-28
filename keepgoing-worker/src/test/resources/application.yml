@@ -15,6 +15,9 @@ image-processing:
     request-group: keepgoing-worker-test
     request-consumer: worker-test-1
     enabled: false
+    dlq: image-processing-dlq-test
+    max-retries: 3
+    pending-batch-size: 10
 
 storage:
   endpoint: http://localhost:9000

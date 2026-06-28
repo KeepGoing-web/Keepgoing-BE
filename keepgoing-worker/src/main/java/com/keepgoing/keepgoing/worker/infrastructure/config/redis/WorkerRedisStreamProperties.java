@@ -8,6 +8,11 @@ public record WorkerRedisStreamProperties(
 		String request,
 		String result,
 		String requestGroup,
-		String requestConsumer
+		String requestConsumer,
+		String dlq,
+		int maxRetries,
+		int pendingIdleTimeout,
+		int pendingBatchSize,
+		int pendingInterval
 ) {
 }

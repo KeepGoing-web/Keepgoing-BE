@@ -8,6 +8,7 @@ import static org.mockito.BDDMockito.then;
 import com.keepgoing.keepgoing.common.image.event.ImageProcessingRequestedEvent;
 import com.keepgoing.keepgoing.worker.application.port.in.ImageProcessingCommand;
 import com.keepgoing.keepgoing.worker.application.port.in.ImageProcessingUseCase;
+import com.keepgoing.keepgoing.worker.infrastructure.adapter.in.schedule.PendingMessageRecoveryScheduler;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
@@ -51,6 +52,9 @@ class WorkerRedisStreamIntegrationTest {
 
 	@MockitoBean
 	ImageProcessingUseCase imageProcessingUseCase;
+
+	@MockitoBean
+	PendingMessageRecoveryScheduler recoveryScheduler;
 
 	@AfterEach
 	void tearDown() {

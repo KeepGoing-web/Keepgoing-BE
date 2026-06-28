@@ -6,6 +6,7 @@ import static org.mockito.BDDMockito.then;
 import com.keepgoing.keepgoing.common.image.event.ImageProcessingResultEvent;
 import com.keepgoing.keepgoing.worker.application.port.out.ImageProcessingResultPublisherPort;
 import com.keepgoing.keepgoing.worker.infrastructure.config.redis.WorkerRedisStreamProperties;
+import com.keepgoing.keepgoing.worker.support.WorkerRedisStreamPropertiesFixture;
 import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,6 +26,7 @@ class RedisImageProcessingResultPublisherTest {
 	private static final String REQUEST_GROUP = "keepgoing-worker";
 	private static final String REQUEST_CONSUMER = "worker-1";
 	private static final Instant PROCESSED_AT = Instant.parse("2026-05-15T00:01:00Z");
+	public static final String IMAGE_PROCESSING_DLQ = "image-processing-dlq";
 
 	@Mock
 	StringRedisTemplate redisTemplate;
@@ -37,13 +39,7 @@ class RedisImageProcessingResultPublisherTest {
 
 	@BeforeEach
 	void setUp() {
-		properties = new WorkerRedisStreamProperties(
-				true,
-				REQUEST_STREAM,
-				RESULT_STREAM,
-				REQUEST_GROUP,
-				REQUEST_CONSUMER
-		);
+		properties = WorkerRedisStreamPropertiesFixture.createDefault();
 		publisher = new RedisImageProcessingResultPublisher(redisTemplate, properties);
 	}
 
@@ -64,6 +60,6 @@ class RedisImageProcessingResultPublisherTest {
 		publisher.publish(event);
 
 		// then
-		then(streamOperations).should().add(RESULT_STREAM, event.toMap());
+		then(streamOperations).should().add(properties.result(), event.toMap());
 	}
 }

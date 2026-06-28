@@ -12,6 +12,7 @@ import com.keepgoing.keepgoing.common.image.event.ImageProcessingRequestedEvent;
 import com.keepgoing.keepgoing.worker.application.port.in.ImageProcessingCommand;
 import com.keepgoing.keepgoing.worker.application.port.in.ImageProcessingUseCase;
 import com.keepgoing.keepgoing.worker.infrastructure.config.redis.WorkerRedisStreamProperties;
+import com.keepgoing.keepgoing.worker.support.WorkerRedisStreamPropertiesFixture;
 import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,6 +37,7 @@ class RedisImageProcessingRequestListenerTest {
 	private static final RecordId RECORD_ID = RecordId.of("1715750400000-0");
 	private static final Instant REQUESTED_AT = Instant.parse("2026-05-15T00:00:00Z");
 	private static final Instant PROCESSED_AT = Instant.parse("2026-05-15T00:01:00Z");
+	public static final String IMAGE_PROCESSING_DLQ = "image-processing-dlq";
 
 	@Mock
 	StringRedisTemplate redisTemplate;
@@ -51,13 +53,7 @@ class RedisImageProcessingRequestListenerTest {
 
 	@BeforeEach
 	void setUp() {
-		properties = new WorkerRedisStreamProperties(
-				true,
-				REQUEST_STREAM,
-				RESULT_STREAM,
-				REQUEST_GROUP,
-				REQUEST_CONSUMER
-		);
+		properties = WorkerRedisStreamPropertiesFixture.createDefault();
 		listener = new RedisImageProcessingRequestListener(
 				redisTemplate,
 				properties,
@@ -80,7 +76,7 @@ class RedisImageProcessingRequestListenerTest {
 		InOrder inOrder = inOrder(useCase, redisTemplate, streamOperations);
 		inOrder.verify(useCase).process(any(ImageProcessingCommand.class));
 		inOrder.verify(redisTemplate).opsForStream();
-		inOrder.verify(streamOperations).acknowledge(REQUEST_STREAM, REQUEST_GROUP, RECORD_ID);
+		inOrder.verify(streamOperations).acknowledge(properties.request(), properties.requestGroup(), RECORD_ID);
 	}
 
 	@Test
