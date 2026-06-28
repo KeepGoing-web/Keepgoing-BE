@@ -16,6 +16,7 @@ import com.keepgoing.keepgoing.common.image.event.ImageProcessingResultEvent;
 import com.keepgoing.keepgoing.worker.application.dto.PreValidatedImage;
 import com.keepgoing.keepgoing.worker.application.dto.SanitizedImage;
 import com.keepgoing.keepgoing.worker.application.port.in.ImageProcessingCommand;
+import com.keepgoing.keepgoing.worker.application.port.out.ImageMediaTypeDetectorPort;
 import com.keepgoing.keepgoing.worker.application.port.out.ImageProcessingResultPublisherPort;
 import com.keepgoing.keepgoing.worker.application.port.out.ImageSanitizerPort;
 import com.keepgoing.keepgoing.worker.application.port.out.ImageStorageException;
@@ -39,15 +40,20 @@ class ImageProcessingServiceTest {
 
 	private static final Instant REQUESTED_AT = Instant.parse("2026-05-15T00:00:00Z");
 	private static final Instant PROCESSED_AT = Instant.parse("2026-05-15T00:01:00Z");
+	public static final String IMAGE_PNG = "image/png";
+	public static final String IMAGE_JPEG = "image/jpeg";
 
 	@Mock
 	ImageProcessingResultPublisherPort resultPublisher;
 
 	@Mock
-	ImageStoragePort imageStoragePort;
+	ImageStoragePort imageStorage;
 
 	@Mock
-	ImageSanitizerPort imageSanitizerPort;
+	ImageSanitizerPort imageSanitizer;
+
+	@Mock
+	ImageMediaTypeDetectorPort imageMediaTypeDetector;
 
 	ImageProcessingService imageProcessingService;
 
@@ -56,8 +62,9 @@ class ImageProcessingServiceTest {
 		imageProcessingService = new ImageProcessingService(
 				Clock.fixed(PROCESSED_AT, ZoneOffset.UTC),
 				resultPublisher,
-				imageStoragePort,
-				imageSanitizerPort
+				imageStorage,
+				imageSanitizer,
+				imageMediaTypeDetector
 		);
 	}
 
@@ -65,18 +72,20 @@ class ImageProcessingServiceTest {
 	@DisplayName("검증된 이미지는 정제 후 secure bucket에 저장하고 quarantine object를 삭제한다")
 	void sanitizesAndStoresSecureObjectWhenImageMediaTypeValidationSucceeds() {
 		// given
-		ImageProcessingCommand command = command("image/png");
+		ImageProcessingCommand command = command(IMAGE_PNG);
 		byte[] imageBytes = pngBytes();
 		byte[] sanitizedBytes = new byte[]{1, 2, 3};
 		SanitizedImage sanitizedImage = new SanitizedImage(
 				sanitizedBytes,
-				"image/png",
+				IMAGE_PNG,
 				sanitizedBytes.length
 		);
 
-		given(imageStoragePort.readQuarantineObject(command.storageKey()))
+		given(imageStorage.readQuarantineObject(command.storageKey()))
 				.willReturn(imageBytes);
-		given(imageSanitizerPort.sanitize(any(PreValidatedImage.class), eq(imageBytes)))
+		given(imageMediaTypeDetector.detect(imageBytes))
+				.willReturn(IMAGE_PNG);
+		given(imageSanitizer.sanitize(any(PreValidatedImage.class), eq(imageBytes)))
 				.willReturn(sanitizedImage);
 
 		// when
@@ -88,16 +97,17 @@ class ImageProcessingServiceTest {
 		ArgumentCaptor<PreValidatedImage> preValidatedImageCaptor
 				= ArgumentCaptor.forClass(PreValidatedImage.class);
 
-		InOrder inOrder = inOrder(resultPublisher, imageStoragePort, imageSanitizerPort);
-		inOrder.verify(imageStoragePort).readQuarantineObject(command.storageKey());
+		InOrder inOrder = inOrder(resultPublisher, imageStorage, imageSanitizer, imageMediaTypeDetector);
+		inOrder.verify(imageStorage).readQuarantineObject(command.storageKey());
 		inOrder.verify(resultPublisher).publish(eventCaptor.capture());
-		inOrder.verify(imageSanitizerPort).sanitize(preValidatedImageCaptor.capture(), eq(imageBytes));
-		inOrder.verify(imageStoragePort).putSecureObject(
+		inOrder.verify(imageMediaTypeDetector).detect(imageBytes);
+		inOrder.verify(imageSanitizer).sanitize(preValidatedImageCaptor.capture(), eq(imageBytes));
+		inOrder.verify(imageStorage).putSecureObject(
 				command.storageKey(),
 				sanitizedBytes,
 				sanitizedImage.contentType()
 		);
-		inOrder.verify(imageStoragePort).deleteQuarantineObject(command.storageKey());
+		inOrder.verify(imageStorage).deleteQuarantineObject(command.storageKey());
 		inOrder.verify(resultPublisher).publish(eventCaptor.capture());
 
 		assertThat(eventCaptor.getAllValues())
@@ -111,7 +121,7 @@ class ImageProcessingServiceTest {
 				command.publicId(),
 				command.storageKey(),
 				command.contentType(),
-				"image/png",
+				IMAGE_PNG,
 				command.fileSize(),
 				command.requestedAt()
 		));
@@ -126,11 +136,13 @@ class ImageProcessingServiceTest {
 	@DisplayName("요청 MIME과 실제 감지 MIME이 다르면 object를 삭제하고 REJECTED 결과를 발행한다")
 	void deletesObjectAndPublishesRejectedWhenMediaTypeValidationFails() {
 		// given
-		ImageProcessingCommand command = command("image/jpeg");
+		ImageProcessingCommand command = command(IMAGE_JPEG);
 		byte[] imageByes = pngBytes();
 
-		given(imageStoragePort.readQuarantineObject(command.storageKey()))
+		given(imageStorage.readQuarantineObject(command.storageKey()))
 				.willReturn(imageByes);
+		given(imageMediaTypeDetector.detect(imageByes))
+				.willReturn(IMAGE_PNG);
 
 		// when
 		imageProcessingService.process(command);
@@ -139,10 +151,11 @@ class ImageProcessingServiceTest {
 		ArgumentCaptor<ImageProcessingResultEvent> eventCaptor
 				= ArgumentCaptor.forClass(ImageProcessingResultEvent.class);
 
-		InOrder inOrder = inOrder(resultPublisher, imageStoragePort);
-		inOrder.verify(imageStoragePort).readQuarantineObject(command.storageKey());
+		InOrder inOrder = inOrder(resultPublisher, imageStorage, imageMediaTypeDetector);
+		inOrder.verify(imageStorage).readQuarantineObject(command.storageKey());
 		inOrder.verify(resultPublisher).publish(eventCaptor.capture());
-		inOrder.verify(imageStoragePort).deleteQuarantineObject(command.storageKey());
+		inOrder.verify(imageMediaTypeDetector).detect(imageByes);
+		inOrder.verify(imageStorage).deleteQuarantineObject(command.storageKey());
 		inOrder.verify(resultPublisher).publish(eventCaptor.capture());
 
 		assertThat(eventCaptor.getAllValues())
@@ -163,8 +176,8 @@ class ImageProcessingServiceTest {
 				.isEqualTo(ImageValidationFailureReason.CONTENT_TYPE_MISMATCH.name());
 		assertThat(rejectedEvent.processedAt()).isEqualTo(PROCESSED_AT);
 
-		then(imageSanitizerPort).shouldHaveNoInteractions();
-		then(imageStoragePort).should(never())
+		then(imageSanitizer).shouldHaveNoInteractions();
+		then(imageStorage).should(never())
 				.putSecureObject(anyString(), any(), anyString());
 	}
 
@@ -172,25 +185,25 @@ class ImageProcessingServiceTest {
 	@DisplayName("quarantine object 읽기에 실패하면 예외를 전파하고 cleanup과 REJECTED 발행을 하지 않는다")
 	void propagatesExceptionWhenReadingQuarantineObjectFails() {
 		// given
-		ImageProcessingCommand command = command("image/png");
+		ImageProcessingCommand command = command(IMAGE_PNG);
 		ImageStorageException exception = new ImageStorageException("quarantine object 읽기 실패",
 				new RuntimeException());
 
-		given(imageStoragePort.readQuarantineObject(command.storageKey()))
+		given(imageStorage.readQuarantineObject(command.storageKey()))
 				.willThrow(exception);
 
 		// when & then
 		assertThatThrownBy(() -> imageProcessingService.process(command))
 				.isSameAs(exception);
 
-		then(imageStoragePort).should()
+		then(imageStorage).should()
 				.readQuarantineObject(command.storageKey());
-		then(imageStoragePort).should(never())
+		then(imageStorage).should(never())
 				.deleteQuarantineObject(command.storageKey());
 
 		then(resultPublisher).shouldHaveNoInteractions();
-		then(imageSanitizerPort).shouldHaveNoInteractions();
-		then(imageStoragePort).should(never())
+		then(imageSanitizer).shouldHaveNoInteractions();
+		then(imageStorage).should(never())
 				.putSecureObject(anyString(), any(), anyString());
 	}
 
@@ -198,13 +211,15 @@ class ImageProcessingServiceTest {
 	@DisplayName("이미지 정제에 실패하면 object를 삭제하고 REJECTED 결과를 발행한다")
 	void deletesObjectAndPublishedRejectedWhenImageSanitizationFails() {
 		// given
-		ImageProcessingCommand command = command("image/png");
+		ImageProcessingCommand command = command(IMAGE_PNG);
 		byte[] imageBytes = pngBytes();
 
-		given(imageStoragePort.readQuarantineObject(command.storageKey()))
+		given(imageStorage.readQuarantineObject(command.storageKey()))
 				.willReturn(imageBytes);
-		given(imageSanitizerPort.sanitize(any(PreValidatedImage.class), eq(imageBytes)))
-				.willThrow(new RuntimeException("sanitize faild"));
+		given(imageMediaTypeDetector.detect(imageBytes))
+				.willReturn(IMAGE_PNG);
+		given(imageSanitizer.sanitize(any(PreValidatedImage.class), eq(imageBytes)))
+				.willThrow(new RuntimeException("sanitize failed"));
 
 		// when
 		imageProcessingService.process(command);
@@ -213,11 +228,12 @@ class ImageProcessingServiceTest {
 		ArgumentCaptor<ImageProcessingResultEvent> eventCaptor =
 				ArgumentCaptor.forClass(ImageProcessingResultEvent.class);
 
-		InOrder inOrder = inOrder(resultPublisher, imageStoragePort, imageSanitizerPort);
-		inOrder.verify(imageStoragePort).readQuarantineObject(command.storageKey());
+		InOrder inOrder = inOrder(resultPublisher, imageStorage, imageSanitizer, imageMediaTypeDetector);
+		inOrder.verify(imageStorage).readQuarantineObject(command.storageKey());
 		inOrder.verify(resultPublisher).publish(eventCaptor.capture());
-		inOrder.verify(imageSanitizerPort).sanitize(any(PreValidatedImage.class), eq(imageBytes));
-		inOrder.verify(imageStoragePort).deleteQuarantineObject(command.storageKey());
+		inOrder.verify(imageMediaTypeDetector).detect(imageBytes);
+		inOrder.verify(imageSanitizer).sanitize(any(PreValidatedImage.class), eq(imageBytes));
+		inOrder.verify(imageStorage).deleteQuarantineObject(command.storageKey());
 		inOrder.verify(resultPublisher).publish(eventCaptor.capture());
 
 		assertThat(eventCaptor.getAllValues())
@@ -231,11 +247,10 @@ class ImageProcessingServiceTest {
 		assertThat(rejectedEvent.reason())
 				.isEqualTo(ImageValidationFailureReason.SANITIZATION_FAILED.name());
 
-		then(imageStoragePort).should(never())
+		then(imageStorage).should(never())
 				.putSecureObject(anyString(), any(), anyString());
 
 	}
-
 
 	private static ImageProcessingCommand command(String contentType) {
 		return new ImageProcessingCommand(

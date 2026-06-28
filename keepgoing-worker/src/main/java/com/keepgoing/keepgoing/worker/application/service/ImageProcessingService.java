@@ -5,6 +5,7 @@ import com.keepgoing.keepgoing.worker.application.dto.PreValidatedImage;
 import com.keepgoing.keepgoing.worker.application.dto.SanitizedImage;
 import com.keepgoing.keepgoing.worker.application.port.in.ImageProcessingCommand;
 import com.keepgoing.keepgoing.worker.application.port.in.ImageProcessingUseCase;
+import com.keepgoing.keepgoing.worker.application.port.out.ImageMediaTypeDetectorPort;
 import com.keepgoing.keepgoing.worker.application.port.out.ImageProcessingResultPublisherPort;
 import com.keepgoing.keepgoing.worker.application.port.out.ImageSanitizerPort;
 import com.keepgoing.keepgoing.worker.application.port.out.ImageStoragePort;
@@ -27,6 +28,7 @@ public class ImageProcessingService implements ImageProcessingUseCase {
 	private final ImageProcessingResultPublisherPort resultPublisher;
 	private final ImageStoragePort imageStoragePort;
 	private final ImageSanitizerPort imageSanitizerPort;
+	private final ImageMediaTypeDetectorPort imageMediaTypeDetector;
 
 	@Override
 	public void process(ImageProcessingCommand command) {
@@ -38,8 +40,9 @@ public class ImageProcessingService implements ImageProcessingUseCase {
 
 		publishScanningEvent(command);
 
+		String detectedContentType = imageMediaTypeDetector.detect(imageBytes);
 		ImageValidationResult validationResult
-				= ImageMediaTypeValidator.validate(imageBytes, requestedContentType);
+				= ImageMediaTypeValidator.validate(requestedContentType, detectedContentType);
 
 		if (!validationResult.valid()) {
 			imageStoragePort.deleteQuarantineObject(storageKey);
