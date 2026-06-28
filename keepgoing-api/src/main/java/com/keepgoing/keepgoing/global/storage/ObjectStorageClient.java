@@ -1,5 +1,7 @@
 package com.keepgoing.keepgoing.global.storage;
 
+import java.time.Duration;
+
 public interface ObjectStorageClient {
 
 	/**
@@ -18,4 +20,13 @@ public interface ObjectStorageClient {
 
 	void delete(String storageKey);
 
+	/**
+	 * 지정된 버킷의 객체에 대한 Presigned GET URL을 생성한다.
+	 *
+	 * @param bucketName 버킷 이름
+	 * @param key        객체 키 (storageKey)
+	 * @param duration   URL 만료 시간
+	 * @return Presigned GET URL
+	 */
+	String generatePresignedUrl(String bucketName, String key, Duration duration);
 }

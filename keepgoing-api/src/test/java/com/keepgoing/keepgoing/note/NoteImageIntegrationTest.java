@@ -7,7 +7,9 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -28,6 +30,7 @@ import com.keepgoing.keepgoing.user.domain.User;
 import com.keepgoing.keepgoing.user.domain.UserRole;
 import com.keepgoing.keepgoing.user.repository.UserRepository;
 import jakarta.persistence.EntityManager;
+import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -51,7 +54,7 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest
 @AutoConfigureMockMvc(addFilters = false)
 @Transactional
-class NoteImageUploadIntegrationTest extends PostgreSqlTestContainerSupport {
+class NoteImageIntegrationTest extends PostgreSqlTestContainerSupport {
 
 	private static final String IMAGE_NAME = "image.png";
 	private static final String CONTENT_TYPE = MediaType.IMAGE_PNG_VALUE;
@@ -317,12 +320,129 @@ class NoteImageUploadIntegrationTest extends PostgreSqlTestContainerSupport {
 		}
 	}
 
+	@Nested
+	@DisplayName("GET /api/notes/{noteId}/images/{publicId}")
+	class GetImage {
+
+		@Test
+		@DisplayName("작성자가 PRIVATE SAFE 이미지를 조회하면 secure bucket Presigned URL로 redirect한다")
+		void redirectsAuthorToPrivateSafeImagePresignedUrl() throws Exception {
+			// given
+			User author = saveUser("author-image-read@test.com", "작성자");
+			Note note = saveNote(author, "작성자 private 이미지", NoteVisibility.PRIVATE);
+			String secureStorageKey = "secure/notes/" + note.getId() + "/safe-image-key";
+			NoteImage image = saveSafeNoteImage(note, author, secureStorageKey);
+			String presignedUrl = "https://storage.example.com/test-secure-bucket/" + secureStorageKey;
+			mockLoginUser(author.getId());
+
+			ArgumentCaptor<Duration> durationCaptor = ArgumentCaptor.forClass(Duration.class);
+			given(objectStorageClient.generatePresignedUrl(
+					eq("test-secure-bucket"),
+					eq(secureStorageKey),
+					any(Duration.class)
+			)).willReturn(presignedUrl);
+
+			// when & then
+			mockMvc.perform(get("/api/notes/{noteId}/images/{publicId}", note.getId(), image.getPublicId()))
+					.andExpect(status().isFound())
+					.andExpect(header().string("Location", presignedUrl));
+
+			then(objectStorageClient).should().generatePresignedUrl(
+					eq("test-secure-bucket"),
+					eq(secureStorageKey),
+					durationCaptor.capture()
+			);
+			assertThat(durationCaptor.getValue()).isEqualTo(Duration.ofMinutes(15));
+		}
+
+		@Test
+		@DisplayName("익명 사용자가 PUBLIC SAFE 이미지를 조회하면 secure bucket Presigned URL로 redirect한다")
+		void redirectsAnonymousToPublicSafeImagePresignedUrl() throws Exception {
+			// given
+			User author = saveUser("public-author@test.com", "공개 작성자");
+			Note note = saveNote(author, "public 이미지", NoteVisibility.PUBLIC);
+			String secureStorageKey = "secure/notes/" + note.getId() + "/public-safe-image-key";
+			NoteImage image = saveSafeNoteImage(note, author, secureStorageKey);
+			String presignedUrl = "https://storage.example.com/test-secure-bucket/" + secureStorageKey;
+
+			ArgumentCaptor<Duration> durationCaptor = ArgumentCaptor.forClass(Duration.class);
+			given(objectStorageClient.generatePresignedUrl(
+					eq("test-secure-bucket"),
+					eq(secureStorageKey),
+					any(Duration.class)
+			)).willReturn(presignedUrl);
+
+			// when & then
+			mockMvc.perform(get("/api/notes/{noteId}/images/{publicId}", note.getId(), image.getPublicId()))
+					.andExpect(status().isFound())
+					.andExpect(header().string("Location", presignedUrl));
+
+			then(objectStorageClient).should().generatePresignedUrl(
+					eq("test-secure-bucket"),
+					eq(secureStorageKey),
+					durationCaptor.capture()
+			);
+			assertThat(durationCaptor.getValue()).isEqualTo(Duration.ofHours(1));
+		}
+
+		@Test
+		@DisplayName("비작성자가 PRIVATE SAFE 이미지를 조회하면 404를 반환하고 storage URL을 생성하지 않는다")
+		void returnsNotFoundWhenNonAuthorReadsPrivateSafeImage() throws Exception {
+			// given
+			User author = saveUser("private-author@test.com", "작성자");
+			User requester = saveUser("private-requester@test.com", "요청자");
+			Note note = saveNote(author, "타인 private 이미지", NoteVisibility.PRIVATE);
+			String secureStorageKey = "secure/notes/" + note.getId() + "/private-safe-image-key";
+			NoteImage image = saveSafeNoteImage(note, author, secureStorageKey);
+			mockLoginUser(requester.getId());
+
+			// when & then
+			mockMvc.perform(get("/api/notes/{noteId}/images/{publicId}", note.getId(), image.getPublicId()))
+					.andExpect(status().isNotFound())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value("NOTE_IMAGE_NOT_FOUND"));
+
+			then(objectStorageClient).should(never()).generatePresignedUrl(any(), any(), any());
+		}
+
+		@Test
+		@DisplayName("작성자라도 SAFE가 아닌 이미지를 조회하면 404를 반환하고 storage URL을 생성하지 않는다")
+		void returnsNotFoundWhenAuthorReadsNonSafeImage() throws Exception {
+			// given
+			User author = saveUser("nonsafe-author@test.com", "작성자");
+			Note note = saveNote(author, "처리 중 이미지", NoteVisibility.PRIVATE);
+			mockLoginUser(author.getId());
+
+			for (ImageProcessingStatus status : List.of(
+					ImageProcessingStatus.PENDING,
+					ImageProcessingStatus.SCANNING,
+					ImageProcessingStatus.REJECTED
+			)) {
+				String storageKey = "notes/" + note.getId() + "/" + status.name().toLowerCase();
+				NoteImage image = saveNoteImage(note, author, storageKey);
+				markStatus(image, status);
+				entityManager.flush();
+				entityManager.clear();
+
+				mockMvc.perform(get("/api/notes/{noteId}/images/{publicId}", note.getId(), image.getPublicId()))
+						.andExpect(status().isNotFound())
+						.andExpect(jsonPath("$.error.code").value("NOTE_IMAGE_NOT_FOUND"));
+			}
+
+			then(objectStorageClient).should(never()).generatePresignedUrl(any(), any(), any());
+		}
+	}
+
 	private User saveUser(String email, String name) {
 		return userRepository.saveAndFlush(User.create(email, name));
 	}
 
 	private Note saveNote(User author, String title) {
-		Note note = Note.create(author, null, title, "본문", NoteVisibility.PRIVATE, false);
+		return saveNote(author, title, NoteVisibility.PRIVATE);
+	}
+
+	private Note saveNote(User author, String title, NoteVisibility visibility) {
+		Note note = Note.create(author, null, title, "본문", visibility, false);
 		return noteRepository.saveAndFlush(note);
 	}
 
@@ -336,6 +456,23 @@ class NoteImageUploadIntegrationTest extends PostgreSqlTestContainerSupport {
 				(long) IMAGE_CONTENT.length
 		);
 		return noteImageRepository.saveAndFlush(noteImage);
+	}
+
+
+	private NoteImage saveSafeNoteImage(Note note, User uploader, String secureStorageKey) {
+		NoteImage noteImage = saveNoteImage(note, uploader, "notes/" + note.getId() + "/quarantine-image-key");
+		noteImage.markSafe(secureStorageKey, CONTENT_TYPE, (long) IMAGE_CONTENT.length);
+		return noteImageRepository.saveAndFlush(noteImage);
+	}
+
+	private void markStatus(NoteImage image, ImageProcessingStatus status) {
+		switch (status) {
+			case PENDING -> {
+			}
+			case SCANNING -> image.markScanning();
+			case REJECTED -> image.markRejected();
+			case SAFE -> image.markSafe(image.getStorageKey(), CONTENT_TYPE, (long) IMAGE_CONTENT.length);
+		}
 	}
 
 	private MockMultipartFile imageFile() {
