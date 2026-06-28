@@ -60,7 +60,7 @@ public class NoteImageService {
 				.orElseThrow(() -> new BusinessException(ErrorCode.NOTE_IMAGE_NOT_FOUND));
 
 		switch (event.status()) {
-			case SAFE -> noteImage.markSafe();
+			case SAFE -> noteImage.markSafe(event.secureStorageKey(), event.contentType(), event.fileSize());
 			case SCANNING -> noteImage.markScanning();
 			case REJECTED -> noteImage.markRejected();
 			case PENDING -> throw new BusinessException(ErrorCode.INVALID_INPUT);

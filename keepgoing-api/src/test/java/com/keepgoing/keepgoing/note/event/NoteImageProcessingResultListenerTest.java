@@ -1,5 +1,7 @@
 package com.keepgoing.keepgoing.note.event;
 
+import static com.keepgoing.keepgoing.support.ImageProcessingResultEventFixture.rejectedEvent;
+import static com.keepgoing.keepgoing.support.ImageProcessingResultEventFixture.safeEvent;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -9,7 +11,6 @@ import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 
-import com.keepgoing.keepgoing.common.image.domain.ImageProcessingStatus;
 import com.keepgoing.keepgoing.common.image.event.ImageProcessingResultEvent;
 import com.keepgoing.keepgoing.global.redis.RedisStreamProperties;
 import com.keepgoing.keepgoing.note.service.NoteImageService;
@@ -66,7 +67,7 @@ class NoteImageProcessingResultListenerTest {
 	@DisplayName("이미지 처리 결과를 반영한 뒤 result stream 메시지를 ack한다")
 	void acknowledgesMessageAfterApplyingProcessingResult() {
 		// given
-		ImageProcessingResultEvent event = processingResultEvent(ImageProcessingStatus.SAFE);
+		ImageProcessingResultEvent event = safeEvent(UUID.randomUUID());
 		MapRecord<String, String, String> message = message(event);
 		given(redisTemplate.opsForStream()).willReturn(streamOperations);
 
@@ -81,17 +82,14 @@ class NoteImageProcessingResultListenerTest {
 		inOrder.verify(streamOperations).acknowledge(RESULT_STREAM, RESULT_GROUP, RECORD_ID);
 
 		ImageProcessingResultEvent appliedEvent = eventCaptor.getValue();
-		assertThat(appliedEvent.publicId()).isEqualTo(event.publicId());
-		assertThat(appliedEvent.status()).isEqualTo(event.status());
-		assertThat(appliedEvent.reason()).isEqualTo(event.reason());
-		assertThat(appliedEvent.processedAt()).isEqualTo(event.processedAt());
+		assertThat(appliedEvent).isEqualTo(event);
 	}
 
 	@Test
 	@DisplayName("이미지 처리 결과 반영이 실패하면 result stream 메시지를 ack하지 않는다")
 	void doesNotAcknowledgeMessageWhenApplyingProcessingResultFails() {
 		// given
-		ImageProcessingResultEvent event = processingResultEvent(ImageProcessingStatus.REJECTED);
+		ImageProcessingResultEvent event = rejectedEvent(UUID.randomUUID(), "invalid image");
 		MapRecord<String, String, String> message = message(event);
 		RuntimeException exception = new RuntimeException("apply failed");
 		willThrow(exception).given(noteImageService)
@@ -104,15 +102,6 @@ class NoteImageProcessingResultListenerTest {
 		then(noteImageService).should().applyProcessingResult(any(ImageProcessingResultEvent.class));
 		then(redisTemplate).should(never()).opsForStream();
 		then(streamOperations).shouldHaveNoInteractions();
-	}
-
-	private static ImageProcessingResultEvent processingResultEvent(ImageProcessingStatus status) {
-		return new ImageProcessingResultEvent(
-				UUID.randomUUID(),
-				status,
-				status == ImageProcessingStatus.REJECTED ? "invalid image" : "",
-				PROCESSED_AT
-		);
 	}
 
 	private static MapRecord<String, String, String> message(ImageProcessingResultEvent event) {

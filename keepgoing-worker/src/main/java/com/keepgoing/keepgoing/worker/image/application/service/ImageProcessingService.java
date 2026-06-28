@@ -1,59 +1,103 @@
 package com.keepgoing.keepgoing.worker.image.application.service;
 
-import com.keepgoing.keepgoing.common.image.domain.ImageProcessingStatus;
 import com.keepgoing.keepgoing.common.image.event.ImageProcessingResultEvent;
+import com.keepgoing.keepgoing.worker.image.application.dto.PreValidatedImage;
+import com.keepgoing.keepgoing.worker.image.application.dto.SanitizedImage;
 import com.keepgoing.keepgoing.worker.image.application.port.in.ImageProcessingCommand;
 import com.keepgoing.keepgoing.worker.image.application.port.in.ImageProcessingUseCase;
 import com.keepgoing.keepgoing.worker.image.application.port.out.ImageProcessingResultPublisherPort;
+import com.keepgoing.keepgoing.worker.image.application.port.out.ImageSanitizerPort;
 import com.keepgoing.keepgoing.worker.image.application.port.out.ImageStoragePort;
 import com.keepgoing.keepgoing.worker.image.domain.ImageMediaTypeValidator;
+import com.keepgoing.keepgoing.worker.image.domain.ImageValidationFailureReason;
 import com.keepgoing.keepgoing.worker.image.domain.ImageValidationResult;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ImageProcessingService implements ImageProcessingUseCase {
 
 	private final Clock clock;
 	private final ImageProcessingResultPublisherPort resultPublisher;
 	private final ImageStoragePort imageStoragePort;
+	private final ImageSanitizerPort imageSanitizerPort;
 
 	@Override
 	public void process(ImageProcessingCommand command) {
-		byte[] imageBytes = imageStoragePort.readQuarantineObject(command.storageKey());
+		UUID publicId = command.publicId();
+		String storageKey = command.storageKey();
+		String requestedContentType = command.contentType();
 
-		publishResultEvent(command, ImageProcessingStatus.SCANNING, "");
+		byte[] imageBytes = imageStoragePort.readQuarantineObject(storageKey);
+
+		publishScanningEvent(command);
 
 		ImageValidationResult validationResult
-				= ImageMediaTypeValidator.validate(imageBytes, command.contentType());
+				= ImageMediaTypeValidator.validate(imageBytes, requestedContentType);
 
 		if (!validationResult.valid()) {
-			imageStoragePort.deleteQuarantineObject(command.storageKey());
-			publishResultEvent(command, ImageProcessingStatus.REJECTED, validationResult.reason().name());
+			imageStoragePort.deleteQuarantineObject(storageKey);
+			publishRejectedEvent(command, validationResult.reason().name());
 			return;
 		}
 
 		var preValidatedImage = new PreValidatedImage(
-				command.publicId(),
-				command.storageKey(),
-				command.contentType(),
+				publicId,
+				storageKey,
+				requestedContentType,
 				validationResult.detectedContentType(),
 				command.fileSize(),
 				command.requestedAt()
 		);
 
-		// TODO: #113 재인코딩/메타데이터 제거/secure
+		SanitizedImage sanitizedImage;
+		try {
+			sanitizedImage = imageSanitizerPort.sanitize(preValidatedImage, imageBytes);
+		} catch (RuntimeException e) {
+			log.warn("이미지 정제 실패: publicId={}, storageKey={}", publicId, storageKey, e);
+			imageStoragePort.deleteQuarantineObject(storageKey);
+			publishRejectedEvent(command, ImageValidationFailureReason.SANITIZATION_FAILED.name());
+			return;
+		}
+
+		imageStoragePort.putSecureObject(
+				preValidatedImage.storageKey(),
+				sanitizedImage.bytes(),
+				sanitizedImage.contentType()
+		);
+
+		imageStoragePort.deleteQuarantineObject(storageKey);
+		publishSafeEvent(preValidatedImage, sanitizedImage);
 	}
 
-	private void publishResultEvent(ImageProcessingCommand command, ImageProcessingStatus status, String reason) {
-		resultPublisher.publish(new ImageProcessingResultEvent(
+	private void publishScanningEvent(ImageProcessingCommand command) {
+		resultPublisher.publish(ImageProcessingResultEvent.scanning(
 				command.publicId(),
-				status,
+				Instant.now(clock)
+		));
+	}
+
+	private void publishRejectedEvent(ImageProcessingCommand command, String reason) {
+		resultPublisher.publish(ImageProcessingResultEvent.rejected(
+				command.publicId(),
 				reason,
 				Instant.now(clock)
+		));
+	}
+
+	private void publishSafeEvent(PreValidatedImage image, SanitizedImage sanitizedImage) {
+		resultPublisher.publish(ImageProcessingResultEvent.safe(
+				image.publicId(),
+				Instant.now(clock),
+				image.storageKey(),
+				sanitizedImage.contentType(),
+				sanitizedImage.fileSize()
 		));
 	}
 }

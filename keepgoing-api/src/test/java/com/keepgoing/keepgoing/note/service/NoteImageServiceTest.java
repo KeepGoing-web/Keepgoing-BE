@@ -1,5 +1,9 @@
 package com.keepgoing.keepgoing.note.service;
 
+import static com.keepgoing.keepgoing.support.ImageProcessingResultEventFixture.pendingEvent;
+import static com.keepgoing.keepgoing.support.ImageProcessingResultEventFixture.rejectedEvent;
+import static com.keepgoing.keepgoing.support.ImageProcessingResultEventFixture.safeEvent;
+import static com.keepgoing.keepgoing.support.ImageProcessingResultEventFixture.scanningEvent;
 import static com.keepgoing.keepgoing.support.UserFixture.user;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
@@ -97,7 +101,7 @@ class NoteImageServiceTest {
 			// given
 			Note note = persistedNote(user(UPLOADER_ID));
 			User uploader = user(UPLOADER_ID);
-			NoteImageUploadCommand command = uploadCommand(NOTE_ID);
+			NoteImageUploadCommand command = uploadCommand(NOTE_ID, CONTENT_TYPE);
 
 			givenUploadAndSaveSucceed(command, note, uploader);
 
@@ -117,6 +121,7 @@ class NoteImageServiceTest {
 
 			NoteImage savedImage = noteImageCaptor.getValue();
 			assertThat(savedImage.getStorageKey()).isEqualTo(STORAGE_KEY);
+			assertThat(savedImage.getContentType()).isEqualTo(command.contentType());
 			assertThat(savedImage.getStatus()).isEqualTo(ImageProcessingStatus.PENDING);
 
 			assertThat(result.publicId()).isEqualTo(savedImage.getPublicId());
@@ -130,7 +135,7 @@ class NoteImageServiceTest {
 			// given
 			Note note = persistedNote(user(UPLOADER_ID));
 			User uploader = user(UPLOADER_ID);
-			NoteImageUploadCommand command = uploadCommand(NOTE_ID);
+			NoteImageUploadCommand command = uploadCommand(NOTE_ID, CONTENT_TYPE);
 			givenUploadAndSaveSucceed(command, note, uploader);
 
 			// when
@@ -144,7 +149,7 @@ class NoteImageServiceTest {
 			ImageProcessingRequestedEvent publishedEvent = eventCaptor.getValue();
 			assertThat(publishedEvent.publicId()).isEqualTo(result.publicId());
 			assertThat(publishedEvent.storageKey()).isEqualTo(STORAGE_KEY);
-			assertThat(publishedEvent.contentType()).isEqualTo(CONTENT_TYPE);
+			assertThat(publishedEvent.contentType()).isEqualTo(command.contentType());
 			assertThat(publishedEvent.fileSize()).isEqualTo(FILE_SIZE);
 			assertThat(publishedEvent.requestedAt()).isEqualTo(REQUESTED_AT);
 		}
@@ -153,7 +158,7 @@ class NoteImageServiceTest {
 		@DisplayName("존재하지 않는 노트에 업로드하면 NOTE_NOT_FOUND 예외를 던지고 업로드를 시도하지 않는다")
 		void throwsWhenNoteNotFound() {
 			// given
-			NoteImageUploadCommand command = uploadCommand(NOTE_ID);
+			NoteImageUploadCommand command = uploadCommand(NOTE_ID, CONTENT_TYPE);
 			given(noteRepository.findById(NOTE_ID)).willReturn(Optional.empty());
 
 			// when & then
@@ -170,7 +175,7 @@ class NoteImageServiceTest {
 		@DisplayName("타인 노트에 업로드하면 NOTE_ACCESS_DENIED 예외를 던지고 업로드를 시도하지 않는다")
 		void throwsWhenRequesterIsNotOwner() {
 			// given
-			NoteImageUploadCommand command = uploadCommand(NOTE_ID);
+			NoteImageUploadCommand command = uploadCommand(NOTE_ID, CONTENT_TYPE);
 			Note otherUsersNote = persistedNote(user(2L));
 			given(noteRepository.findById(NOTE_ID)).willReturn(Optional.of(otherUsersNote));
 
@@ -189,7 +194,7 @@ class NoteImageServiceTest {
 		void throwsWhenStorageUploadFails() {
 			// given
 			Note note = persistedNote(user(UPLOADER_ID));
-			NoteImageUploadCommand command = uploadCommand(NOTE_ID);
+			NoteImageUploadCommand command = uploadCommand(NOTE_ID, CONTENT_TYPE);
 			ObjectStorageException storageException = new ObjectStorageException("upload failed",
 					new RuntimeException("io"));
 
@@ -215,7 +220,7 @@ class NoteImageServiceTest {
 			// given
 			Note note = persistedNote(user(UPLOADER_ID));
 			User uploader = user(UPLOADER_ID);
-			NoteImageUploadCommand command = uploadCommand(NOTE_ID);
+			NoteImageUploadCommand command = uploadCommand(NOTE_ID, CONTENT_TYPE);
 			RuntimeException dbException = new RuntimeException("db save failed");
 
 			given(noteRepository.findById(NOTE_ID)).willReturn(Optional.of(note));
@@ -246,7 +251,7 @@ class NoteImageServiceTest {
 			// given
 			Note note = persistedNote(user(UPLOADER_ID));
 			User uploader = user(UPLOADER_ID);
-			NoteImageUploadCommand command = uploadCommand(NOTE_ID);
+			NoteImageUploadCommand command = uploadCommand(NOTE_ID, CONTENT_TYPE);
 			RuntimeException publishException = new RuntimeException("publish failed");
 
 			givenUploadAndSaveSucceed(command, note, uploader);
@@ -268,7 +273,7 @@ class NoteImageServiceTest {
 			// given
 			Note note = persistedNote(user(UPLOADER_ID));
 			User uploader = user(UPLOADER_ID);
-			NoteImageUploadCommand command = uploadCommand(NOTE_ID);
+			NoteImageUploadCommand command = uploadCommand(NOTE_ID, CONTENT_TYPE);
 			RuntimeException dbException = new RuntimeException("db save failed");
 			ObjectStorageException deleteException = new ObjectStorageException("delete failed",
 					new RuntimeException("network"));
@@ -321,8 +326,8 @@ class NoteImageServiceTest {
 		}
 
 		@Test
-		@DisplayName("SAFE 결과를 반영하면 이미지 상태를 SAFE로 변경한다")
-		void marksImageAsSafe() {
+		@DisplayName("SAFE 결과를 반영하면 이미지 저장 정보를 갱신하고 상태를 SAFE로 변경한다")
+		void updatesImageMetadataAndMarksImageAsSafe() {
 			// given
 			NoteImage noteImage = noteImage();
 			ImageProcessingResultEvent event = processingResultEvent(
@@ -337,6 +342,9 @@ class NoteImageServiceTest {
 
 			// then
 			assertThat(noteImage.getStatus()).isEqualTo(ImageProcessingStatus.SAFE);
+			assertThat(noteImage.getStorageKey()).isEqualTo(event.secureStorageKey());
+			assertThat(noteImage.getContentType()).isEqualTo(event.contentType());
+			assertThat(noteImage.getFileSize()).isEqualTo(event.fileSize());
 			verify(noteImageRepository).findByPublicId(noteImage.getPublicId());
 		}
 
@@ -398,13 +406,13 @@ class NoteImageServiceTest {
 		}
 	}
 
-	private static NoteImageUploadCommand uploadCommand(Long noteId) {
+	private static NoteImageUploadCommand uploadCommand(Long noteId, String contentType) {
 		InputStreamSupplier supplier = () -> new ByteArrayInputStream("img".getBytes(StandardCharsets.UTF_8));
 		return new NoteImageUploadCommand(
 				noteId,
 				supplier,
 				ORIGINAL_FILE_NAME,
-				CONTENT_TYPE,
+				contentType,
 				FILE_SIZE
 		);
 	}
@@ -431,7 +439,12 @@ class NoteImageServiceTest {
 			UUID publicId,
 			ImageProcessingStatus status
 	) {
-		return new ImageProcessingResultEvent(publicId, status, "", REQUESTED_AT);
+		return switch (status) {
+			case SCANNING -> scanningEvent(publicId);
+			case SAFE -> safeEvent(publicId);
+			case REJECTED -> rejectedEvent(publicId, "");
+			case PENDING -> pendingEvent(publicId);
+		};
 	}
 
 	private void givenUploadAndSaveSucceed(NoteImageUploadCommand command, Note note, User uploader) {

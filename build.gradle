@@ -1,9 +1,12 @@
+import io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
+
 plugins {
     id 'org.springframework.boot' version '3.5.7' apply false
     id 'io.spring.dependency-management' version '1.1.7' apply false
 }
 
-subprojects {
+subprojects { subproject ->
     group = 'com.keepgoing'
     version = '0.0.1-SNAPSHOT'
 
@@ -11,13 +14,31 @@ subprojects {
         mavenCentral()
     }
 
-    pluginManager.withPlugin('java') {
-        java {
-            toolchain {
-                languageVersion = JavaLanguageVersion.of(21)
+    subproject.pluginManager.withPlugin('java') {
+        subproject.pluginManager.apply('io.spring.dependency-management')
+
+        subproject.extensions.configure(DependencyManagementExtension) { dependencyManagement ->
+            dependencyManagement.imports {
+                mavenBom SpringBootPlugin.BOM_COORDINATES
             }
         }
-        tasks.withType(Test).configureEach {
+
+        subproject.dependencies.add('compileOnly', "org.projectlombok:lombok")
+        subproject.dependencies.add('annotationProcessor', "org.projectlombok:lombok")
+        subproject.dependencies.add('testCompileOnly', "org.projectlombok:lombok")
+        subproject.dependencies.add('testAnnotationProcessor', "org.projectlombok:lombok")
+
+        subproject.dependencies.add('testImplementation', 'org.junit.jupiter:junit-jupiter')
+        subproject.dependencies.add('testImplementation', 'org.assertj:assertj-core')
+        subproject.dependencies.add('testRuntimeOnly', 'org.junit.platform:junit-platform-launcher')
+
+        subproject.extensions.configure(JavaPluginExtension) {
+            it.toolchain {
+                languageVersion.set(JavaLanguageVersion.of(21))
+            }
+        }
+
+        subproject.tasks.withType(Test).configureEach {
             useJUnitPlatform()
             testLogging {
                 events "FAILED", "SKIPPED"

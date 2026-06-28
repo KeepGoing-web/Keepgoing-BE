@@ -21,10 +21,4 @@ public @interface ValidImageFile {
 	Class<? extends Payload>[] payload() default {};
 
 	long maxSize() default 5 * 1024 * 1024L;
-
-	String[] allowedContentTypes() default {
-			"image/jpeg",
-			"image/png",
-			"image/webp"
-	};
 }

@@ -1,4 +1,4 @@
-package com.keepgoing.keepgoing.worker.image.application.service;
+package com.keepgoing.keepgoing.worker.image.application.dto;
 
 import java.time.Instant;
 import java.util.UUID;

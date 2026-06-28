@@ -3,7 +3,6 @@ package com.keepgoing.keepgoing.worker.infrastructure.redis.adapter.out;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
-import com.keepgoing.keepgoing.common.image.domain.ImageProcessingStatus;
 import com.keepgoing.keepgoing.common.image.event.ImageProcessingResultEvent;
 import com.keepgoing.keepgoing.worker.image.application.port.out.ImageProcessingResultPublisherPort;
 import com.keepgoing.keepgoing.worker.infrastructure.redis.WorkerRedisStreamProperties;
@@ -52,11 +51,12 @@ class RedisImageProcessingResultPublisherTest {
 	@DisplayName("이미지 처리 결과 이벤트를 result stream에 발행한다")
 	void publishesResultEventToResultStream() {
 		// given
-		ImageProcessingResultEvent event = new ImageProcessingResultEvent(
+		ImageProcessingResultEvent event = ImageProcessingResultEvent.safe(
 				UUID.randomUUID(),
-				ImageProcessingStatus.SAFE,
-				"",
-				PROCESSED_AT
+				PROCESSED_AT,
+				"notes/10/generated-image-key",
+				"image/png",
+				1024L
 		);
 		given(redisTemplate.opsForStream()).willReturn(streamOperations);
 

@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.BDDMockito.then;
 
-import com.keepgoing.keepgoing.common.image.domain.ImageProcessingStatus;
 import com.keepgoing.keepgoing.common.image.event.ImageProcessingRequestedEvent;
 import com.keepgoing.keepgoing.common.image.event.ImageProcessingResultEvent;
 import com.keepgoing.keepgoing.global.redis.RedisStreamProperties;
@@ -96,11 +95,12 @@ class NoteImageProcessingEventRedisTest extends PostgreSqlTestContainerSupport {
 	@DisplayName("result stream 메시지를 소비해 서비스에 전달하고 ack한다.")
 	void consumesProcessingResultEventAndAcknowledges() {
 		// given
-		var event = new ImageProcessingResultEvent(
+		var event = ImageProcessingResultEvent.safe(
 				UUID.randomUUID(),
-				ImageProcessingStatus.SAFE,
-				"",
-				Instant.parse("2026-05-15T00:00:00Z")
+				Instant.parse("2026-05-15T00:00:00Z"),
+				"notes/10/generated-image-key",
+				"image/png",
+				1024L
 		);
 
 		// when
@@ -115,10 +115,7 @@ class NoteImageProcessingEventRedisTest extends PostgreSqlTestContainerSupport {
 			then(noteImageService).should().applyProcessingResult(captor.capture());
 
 			ImageProcessingResultEvent appliedEvent = captor.getValue();
-			assertThat(appliedEvent.publicId()).isEqualTo(event.publicId());
-			assertThat(appliedEvent.status()).isEqualTo(event.status());
-			assertThat(appliedEvent.reason()).isEqualTo(event.reason());
-			assertThat(appliedEvent.processedAt()).isEqualTo(event.processedAt());
+			assertThat(appliedEvent).isEqualTo(event);
 		});
 
 		await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
