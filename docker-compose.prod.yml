@@ -25,6 +25,27 @@ services:
     networks:
       - keepgoing-net
 
+  redis:
+    image: redis:7-alpine
+    container_name: keepgoing-redis
+    restart: unless-stopped
+    mem_limit: 256m
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    volumes:
+      - ${REDIS_DATA_DIR:-./var/redis-data}:/data
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - keepgoing-net
+
   app:
     image: ${APP_IMAGE:-ghcr.io/keepgoing-web/keepgoing-be-api}:${APP_IMAGE_TAG:-latest}
     container_name: keepgoing-app
@@ -36,8 +57,12 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       TZ: ${TZ:-Asia/Seoul}
+      REDIS_HOST: redis
+      IMAGE_PROCESSING_STREAMS_ENABLED: "true"
     expose:
       - "8080"
     healthcheck:
@@ -68,6 +93,30 @@ services:
       - "${NGINX_HTTP_PORT:-80}:80"
     volumes:
       - ./infra/nginx/keepgoing.conf:/etc/nginx/templates-http/default.conf.template:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - keepgoing-net
+
+  worker:
+    image: ${WORKER_IMAGE:-ghcr.io/keepgoing-web/keepgoing-be-worker}:${WORKER_IMAGE_TAG:-latest}
+    container_name: keepgoing-worker
+    restart: unless-stopped
+    mem_limit: 512m
+    env_file:
+      - ./.env.db
+      - ./.env.app
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      TZ: ${TZ:-Asia/Seoul}
+      REDIS_HOST: redis
+      IMAGE_PROCESSING_STREAMS_ENABLED: "true"
+    stop_grace_period: 60s
     logging:
       driver: json-file
       options:
