@@ -48,6 +48,7 @@ docs/perf/postgres/results/
 .omx/
 .omc/
 .omg/
+.omo/
 .agents/
 .claude/
 

@@ -23,5 +23,9 @@ public enum ImageProcessingStatus {
 	 * 거부(Rejected) 상태. 악성 코드 발견, 파손된 이미지 구조,
 	 * 혹은 보안 정책 위반으로 검증에 실패한 상태. 파일은 즉시 삭제됨.
 	 */
-	REJECTED
+	REJECTED;
+
+	public boolean isTerminal() {
+		return this == SAFE || this == REJECTED;
+	}
 }

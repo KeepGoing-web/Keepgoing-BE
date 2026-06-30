@@ -404,6 +404,78 @@ class NoteImageServiceTest {
 			assertThat(noteImage.getStatus()).isEqualTo(ImageProcessingStatus.PENDING);
 			verify(noteImageRepository).findByPublicId(noteImage.getPublicId());
 		}
+
+		@Test
+		@DisplayName("SAFE 상태 이미지에 SAFE 중복 결과가 도착하면 무시하고 변경하지 않는다")
+		void ignoresDuplicateSafeResult() {
+			// given
+			NoteImage noteImage = noteImageWithStatus(ImageProcessingStatus.SAFE);
+			ImageProcessingResultEvent event = processingResultEvent(
+					noteImage.getPublicId(), ImageProcessingStatus.SAFE);
+			given(noteImageRepository.findByPublicId(noteImage.getPublicId()))
+					.willReturn(Optional.of(noteImage));
+
+			// when
+			noteImageService.applyProcessingResult(event);
+
+			// then
+			assertThat(noteImage.getStatus()).isEqualTo(ImageProcessingStatus.SAFE);
+			verify(noteImageRepository).findByPublicId(noteImage.getPublicId());
+		}
+
+		@Test
+		@DisplayName("SAFE 상태 이미지에 REJECTED 결과가 도착하면 무시하고 SAFE를 유지한다")
+		void ignoresRejectedWhenAlreadySafe() {
+			// given
+			NoteImage noteImage = noteImageWithStatus(ImageProcessingStatus.SAFE);
+			ImageProcessingResultEvent event = processingResultEvent(
+					noteImage.getPublicId(), ImageProcessingStatus.REJECTED);
+			given(noteImageRepository.findByPublicId(noteImage.getPublicId()))
+					.willReturn(Optional.of(noteImage));
+
+			// when
+			noteImageService.applyProcessingResult(event);
+
+			// then
+			assertThat(noteImage.getStatus()).isEqualTo(ImageProcessingStatus.SAFE);
+			verify(noteImageRepository).findByPublicId(noteImage.getPublicId());
+		}
+
+		@Test
+		@DisplayName("REJECTED 상태 이미지에 SAFE 결과가 도착하면 무시하고 REJECTED를 유지한다")
+		void ignoresSafeWhenAlreadyRejected() {
+			// given
+			NoteImage noteImage = noteImageWithStatus(ImageProcessingStatus.REJECTED);
+			ImageProcessingResultEvent event = processingResultEvent(
+					noteImage.getPublicId(), ImageProcessingStatus.SAFE);
+			given(noteImageRepository.findByPublicId(noteImage.getPublicId()))
+					.willReturn(Optional.of(noteImage));
+
+			// when
+			noteImageService.applyProcessingResult(event);
+
+			// then
+			assertThat(noteImage.getStatus()).isEqualTo(ImageProcessingStatus.REJECTED);
+			verify(noteImageRepository).findByPublicId(noteImage.getPublicId());
+		}
+
+		@Test
+		@DisplayName("REJECTED 상태 이미지에 SCANNING 결과가 도착하면 무시하고 REJECTED를 유지한다")
+		void ignoresScanningWhenAlreadyRejected() {
+			// given
+			NoteImage noteImage = noteImageWithStatus(ImageProcessingStatus.REJECTED);
+			ImageProcessingResultEvent event = processingResultEvent(
+					noteImage.getPublicId(), ImageProcessingStatus.SCANNING);
+			given(noteImageRepository.findByPublicId(noteImage.getPublicId()))
+					.willReturn(Optional.of(noteImage));
+
+			// when
+			noteImageService.applyProcessingResult(event);
+
+			// then
+			assertThat(noteImage.getStatus()).isEqualTo(ImageProcessingStatus.REJECTED);
+			verify(noteImageRepository).findByPublicId(noteImage.getPublicId());
+		}
 	}
 
 	private static NoteImageUploadCommand uploadCommand(Long noteId, String contentType) {
@@ -458,5 +530,11 @@ class NoteImageServiceTest {
 		given(userRepository.getReferenceById(UPLOADER_ID)).willReturn(uploader);
 		given(noteImageRepository.save(any(NoteImage.class))).willAnswer(invocation -> invocation.getArgument(0));
 		given(clock.instant()).willReturn(REQUESTED_AT);
+	}
+
+	private static NoteImage noteImageWithStatus(ImageProcessingStatus status) {
+		NoteImage image = noteImage();
+		ReflectionTestUtils.setField(image, "status", status);
+		return image;
 	}
 }
