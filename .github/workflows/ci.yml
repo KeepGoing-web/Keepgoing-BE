@@ -1,10 +1,14 @@
 name: CI - Spring Boot Gradle Test
 
 on:
-  push:
-    branches: [ "develop", "feat/**" ]
   pull_request:
     branches: [ "develop" ]
+  push:
+    branches: [ "develop" ]
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
