@@ -4,14 +4,21 @@ import com.keepgoing.keepgoing.global.api.response.ApiResponse;
 import com.keepgoing.keepgoing.note.controller.dto.request.NoteImageUploadRequest;
 import com.keepgoing.keepgoing.note.controller.dto.response.NoteImageUploadResponse;
 import com.keepgoing.keepgoing.note.service.NoteImageService;
+import com.keepgoing.keepgoing.note.service.dto.NoteImageDeleteCommand;
+import com.keepgoing.keepgoing.note.service.dto.NoteImagePresignQuery;
 import com.keepgoing.keepgoing.note.service.dto.NoteImageUploadCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteImageUploadResult;
 import jakarta.validation.Valid;
+import java.net.URI;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -40,5 +47,33 @@ public class NoteImageController {
 
 		return ResponseEntity.status(HttpStatus.CREATED)
 				.body(ApiResponse.success(NoteImageUploadResponse.from(result)));
+	}
+
+	@GetMapping("/{noteId}/images/{publicId}")
+	public ResponseEntity<Void> redirectToImage(
+			@PathVariable Long noteId,
+			@PathVariable UUID publicId,
+			@AuthenticationPrincipal Long userId
+	) {
+		NoteImagePresignQuery query = new NoteImagePresignQuery(userId, noteId, publicId);
+
+		String presignedUrl = noteImageService.getPresignedUrl(query);
+
+		return ResponseEntity.status(HttpStatus.FOUND)
+				.location(URI.create(presignedUrl))
+				.cacheControl(CacheControl.noCache())
+				.build();
+	}
+
+	@DeleteMapping("/{noteId}/images/{publicId}")
+	public ResponseEntity<Void> deleteImage(
+			@PathVariable Long noteId,
+			@PathVariable UUID publicId,
+			@AuthenticationPrincipal Long userId
+	) {
+		NoteImageDeleteCommand command = new NoteImageDeleteCommand(userId, noteId, publicId);
+		noteImageService.deleteImage(command);
+
+		return ResponseEntity.noContent().build();
 	}
 }

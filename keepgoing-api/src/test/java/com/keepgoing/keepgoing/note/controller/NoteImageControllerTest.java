@@ -7,7 +7,10 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willThrow;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -19,6 +22,8 @@ import com.keepgoing.keepgoing.global.config.JacksonConfig;
 import com.keepgoing.keepgoing.global.security.cookie.CookieConfig;
 import com.keepgoing.keepgoing.global.security.jwt.JwtProvider;
 import com.keepgoing.keepgoing.note.service.NoteImageService;
+import com.keepgoing.keepgoing.note.service.dto.NoteImageDeleteCommand;
+import com.keepgoing.keepgoing.note.service.dto.NoteImagePresignQuery;
 import com.keepgoing.keepgoing.note.service.dto.NoteImageUploadCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteImageUploadResult;
 import java.util.List;
@@ -271,6 +276,133 @@ class NoteImageControllerTest {
 					.andExpect(jsonPath("$.error.code").value(ErrorCode.NOTE_ACCESS_DENIED.name()));
 
 			then(noteImageService).should().uploadImage(eq(userId), any(NoteImageUploadCommand.class));
+		}
+	}
+
+	@Nested
+	@DisplayName("GET /api/notes/{noteId}/images/{publicId}")
+	class RedirectToImageTest {
+
+		@Test
+		@DisplayName("PUBLIC SAFE 이미지 조회 시 302 Found로 Presigned URL로 redirect한다")
+		void redirectsToPresignedUrl() throws Exception {
+			// given
+			UUID publicId = UUID.randomUUID();
+			String presignedUrl = "https://minio/secure/key?X-Amz-Signature=abc";
+			given(noteImageService.getPresignedUrl(any(NoteImagePresignQuery.class)))
+					.willReturn(presignedUrl);
+
+			// when & then
+			mockMvc.perform(get("/api/notes/{noteId}/images/{publicId}", 1L, publicId))
+					.andExpect(status().isFound())
+					.andExpect(header().string("Location", presignedUrl))
+					.andExpect(header().string(
+							"Cache-Control",
+							org.hamcrest.Matchers.containsString("no-cache"))
+					);
+		}
+
+		@Test
+		@DisplayName("존재하지 않는 이미지 조회 시 404를 반환한다")
+		void returns404WhenImageNotFound() throws Exception {
+			// given
+			UUID publicId = UUID.randomUUID();
+			given(noteImageService.getPresignedUrl(any(NoteImagePresignQuery.class)))
+					.willThrow(new BusinessException(ErrorCode.NOTE_IMAGE_NOT_FOUND));
+
+			// when & then
+			mockMvc.perform(get("/api/notes/{noteId}/images/{publicId}", 1L, publicId))
+					.andExpect(status().isNotFound());
+		}
+
+		@Test
+		@DisplayName("익명 사용자가 PUBLIC SAFE 이미지를 조회하면 302로 redirect한다")
+		void redirectsAnonymousUserForPublicImage() throws Exception {
+			UUID publicId = UUID.randomUUID();
+			given(noteImageService.getPresignedUrl(any(NoteImagePresignQuery.class)))
+					.willReturn("https://minio/secure/key?X-Amz-Signature=abc");
+
+			mockMvc.perform(get("/api/notes/{noteId}/images/{publicId}", 1L, publicId))
+					.andExpect(status().isFound())
+					.andExpect(header().exists("Location"));
+		}
+
+		// #6: 잘못된 noteId → 404
+		@Test
+		@DisplayName("유효한 publicId + 잘못된 noteId로 조회하면 404를 반환한다")
+		void returns404WhenNoteIdMismatch() throws Exception {
+			UUID publicId = UUID.randomUUID();
+			given(noteImageService.getPresignedUrl(any(NoteImagePresignQuery.class)))
+					.willThrow(new BusinessException(ErrorCode.NOTE_IMAGE_NOT_FOUND));
+
+			mockMvc.perform(get("/api/notes/{noteId}/images/{publicId}", 999L, publicId))
+					.andExpect(status().isNotFound());
+		}
+	}
+
+	@Nested
+	@DisplayName("DELETE /api/notes/{noteId}/images/{publicId}")
+	class DeleteImageTest {
+
+		@Test
+		@DisplayName("인증 사용자가 이미지 삭제를 요청하면 204를 반환하고 삭제 커맨드를 전달한다")
+		void deletesImageSuccessfully() throws Exception {
+			// given
+			Long userId = 1L;
+			Long noteId = 10L;
+			UUID publicId = UUID.randomUUID();
+			mockLoginUser(userId);
+
+			// when & then
+			mockMvc.perform(delete("/api/notes/{noteId}/images/{publicId}", noteId, publicId))
+					.andExpect(status().isNoContent());
+
+			ArgumentCaptor<NoteImageDeleteCommand> captor =
+					ArgumentCaptor.forClass(NoteImageDeleteCommand.class);
+			then(noteImageService).should().deleteImage(captor.capture());
+
+			NoteImageDeleteCommand command = captor.getValue();
+			assertThat(command.userId()).isEqualTo(userId);
+			assertThat(command.noteId()).isEqualTo(noteId);
+			assertThat(command.publicId()).isEqualTo(publicId);
+		}
+
+		@Test
+		@DisplayName("존재하지 않는 이미지 삭제 요청이면 404를 반환한다")
+		void returns404WhenImageNotFound() throws Exception {
+			// given
+			Long userId = 1L;
+			Long noteId = 10L;
+			UUID publicId = UUID.randomUUID();
+			mockLoginUser(userId);
+			willThrow(new BusinessException(ErrorCode.NOTE_IMAGE_NOT_FOUND))
+					.given(noteImageService)
+					.deleteImage(any(NoteImageDeleteCommand.class));
+
+			// when & then
+			mockMvc.perform(delete("/api/notes/{noteId}/images/{publicId}", noteId, publicId))
+					.andExpect(status().isNotFound())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value(ErrorCode.NOTE_IMAGE_NOT_FOUND.name()));
+		}
+
+		@Test
+		@DisplayName("업로더가 아닌 사용자가 이미지 삭제를 요청하면 403을 반환한다")
+		void returns403WhenRequesterIsNotUploader() throws Exception {
+			// given
+			Long userId = 2L;
+			Long noteId = 10L;
+			UUID publicId = UUID.randomUUID();
+			mockLoginUser(userId);
+			willThrow(new BusinessException(ErrorCode.NOTE_IMAGE_ACCESS_DENIED))
+					.given(noteImageService)
+					.deleteImage(any(NoteImageDeleteCommand.class));
+
+			// when & then
+			mockMvc.perform(delete("/api/notes/{noteId}/images/{publicId}", noteId, publicId))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value(ErrorCode.NOTE_IMAGE_ACCESS_DENIED.name()));
 		}
 	}
 

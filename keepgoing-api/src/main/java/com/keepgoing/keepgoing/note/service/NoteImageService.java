@@ -1,22 +1,29 @@
 package com.keepgoing.keepgoing.note.service;
 
+import com.keepgoing.keepgoing.common.image.domain.ImageProcessingStatus;
 import com.keepgoing.keepgoing.common.image.event.ImageProcessingRequestedEvent;
 import com.keepgoing.keepgoing.common.image.event.ImageProcessingResultEvent;
 import com.keepgoing.keepgoing.global.common.error.BusinessException;
 import com.keepgoing.keepgoing.global.common.error.ErrorCode;
 import com.keepgoing.keepgoing.global.storage.ObjectStorageClient;
 import com.keepgoing.keepgoing.global.storage.ObjectStorageException;
+import com.keepgoing.keepgoing.global.storage.StorageProperties;
 import com.keepgoing.keepgoing.note.domain.Note;
 import com.keepgoing.keepgoing.note.domain.NoteImage;
+import com.keepgoing.keepgoing.note.domain.NoteVisibility;
 import com.keepgoing.keepgoing.note.event.NoteImageProcessingRequestPublisher;
 import com.keepgoing.keepgoing.note.repository.NoteImageRepository;
 import com.keepgoing.keepgoing.note.repository.NoteRepository;
+import com.keepgoing.keepgoing.note.service.dto.NoteImageDeleteCommand;
+import com.keepgoing.keepgoing.note.service.dto.NoteImagePresignQuery;
 import com.keepgoing.keepgoing.note.service.dto.NoteImageUploadCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteImageUploadResult;
 import com.keepgoing.keepgoing.user.domain.User;
 import com.keepgoing.keepgoing.user.repository.UserRepository;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +43,7 @@ public class NoteImageService {
 	private final ObjectStorageClient objectStorageClient;
 	private final TransactionTemplate transactionTemplate;
 	private final NoteImageProcessingRequestPublisher requestPublisher;
+	private final StorageProperties storageProperties;
 
 	public NoteImageUploadResult uploadImage(Long uploaderId, NoteImageUploadCommand command) {
 		Long noteId = command.noteId();
@@ -58,9 +66,19 @@ public class NoteImageService {
 
 	@Transactional
 	public void applyProcessingResult(ImageProcessingResultEvent event) {
-		NoteImage noteImage = noteImageRepository.findByPublicId(event.publicId())
-				.orElseThrow(() -> new BusinessException(ErrorCode.NOTE_IMAGE_NOT_FOUND));
+		Optional<NoteImage> optional = noteImageRepository.findByPublicId(event.publicId());
+		if (optional.isEmpty()) {
+			if (event.status() == ImageProcessingStatus.SAFE && event.secureStorageKey() != null) {
+				objectStorageClient.delete(
+						storageProperties.bucketNames().secure(),
+						event.secureStorageKey()
+				);
+			}
+			log.info("이미지가 삭제되었으므로 스킵: {}", event.publicId());
+			return;
+		}
 
+		NoteImage noteImage = optional.orElseThrow(() -> new BusinessException(ErrorCode.NOTE_IMAGE_NOT_FOUND));
 		if (noteImage.getStatus().isTerminal()) {
 			log.info("Skipped processing result for image {}: already {}", event.publicId(), noteImage.getStatus());
 			return;
@@ -72,6 +90,56 @@ public class NoteImageService {
 			case REJECTED -> noteImage.markRejected();
 			case PENDING -> throw new BusinessException(ErrorCode.INVALID_INPUT);
 		}
+	}
+
+	@Transactional(readOnly = true)
+	public String getPresignedUrl(NoteImagePresignQuery query) {
+		Long userId = query.userId();
+		NoteImage noteImage = noteImageRepository.findByPublicIdAndNote_Id(query.publicId(), query.noteId())
+				.orElseThrow(() -> new BusinessException(ErrorCode.NOTE_IMAGE_NOT_FOUND));
+		Note note = noteImage.getNote();
+
+		if (!note.isAuthor(userId) && note.getVisibility() != NoteVisibility.PUBLIC) {
+			throw new BusinessException(ErrorCode.NOTE_IMAGE_NOT_FOUND);
+		}
+
+		if (noteImage.getStatus() != ImageProcessingStatus.SAFE) {
+			throw new BusinessException(ErrorCode.NOTE_IMAGE_NOT_FOUND);
+		}
+
+		Duration duration = note.isAuthor(userId)
+				? Duration.ofMinutes(15)
+				: Duration.ofHours(1);
+
+		return objectStorageClient.generatePresignedUrl(
+				storageProperties.bucketNames().secure(),
+				noteImage.getStorageKey(),
+				duration
+		);
+	}
+
+	/*
+		Hard delete 진행.
+		이는 사용자가 명시적으로 삭제하기 때문에 Hard delete가 적절하다고 판단.
+	 */
+	@Transactional
+	public void deleteImage(NoteImageDeleteCommand command) {
+		NoteImage noteImage = noteImageRepository.findByPublicIdAndNote_Id(command.publicId(), command.noteId())
+				.orElseThrow(() -> new BusinessException(ErrorCode.NOTE_IMAGE_NOT_FOUND));
+
+		noteImage.validateUploader(command.userId());
+
+		switch (noteImage.getStatus()) {
+			case PENDING, SCANNING -> objectStorageClient.delete(
+					storageProperties.bucketNames().quarantine(),
+					noteImage.getStorageKey()
+			);
+			case SAFE -> objectStorageClient.delete(
+					storageProperties.bucketNames().secure(),
+					noteImage.getStorageKey()
+			);
+		}
+		noteImageRepository.delete(noteImage);
 	}
 
 	private void publishProcessingRequest(

@@ -8,6 +8,8 @@ import static org.mockito.Mockito.verify;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.net.URI;
+import java.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -15,12 +17,17 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
 @ExtendWith(MockitoExtension.class)
 class MinioObjectStorageClientTest {
@@ -31,6 +38,9 @@ class MinioObjectStorageClientTest {
 
 	@Mock
 	private S3Client s3Client;
+
+	@Mock
+	private S3Presigner s3Presigner;
 
 	private StorageProperties properties;
 	private MinioObjectStorageClient minioClient;
@@ -44,7 +54,7 @@ class MinioObjectStorageClientTest {
 				"us-east-1",
 				new StorageProperties.BucketNames(QUARANTINE_BUCKET, "secure-bucket")
 		);
-		minioClient = new MinioObjectStorageClient(s3Client, properties);
+		minioClient = new MinioObjectStorageClient(s3Client, s3Presigner, properties);
 	}
 
 	@Test
@@ -144,6 +154,33 @@ class MinioObjectStorageClientTest {
 	}
 
 	@Test
+	@DisplayName("Presigned GET URL 생성 시 secure bucket과 path-style key를 포함한다")
+	void generatePresignedUrlUsesPathStyleSecureBucketUrl() {
+		// given
+		String key = "notes/1/safe-image-key";
+		try (S3Presigner realPresigner = S3Presigner.builder()
+				.region(Region.of("us-east-1"))
+				.endpointOverride(URI.create("http://localhost:9000"))
+				.credentialsProvider(StaticCredentialsProvider.create(
+						AwsBasicCredentials.create("access", "secret")
+				))
+				.serviceConfiguration(S3Configuration.builder()
+						.pathStyleAccessEnabled(true)
+						.build())
+				.build()) {
+			MinioObjectStorageClient client = new MinioObjectStorageClient(s3Client, realPresigner, properties);
+
+			// when
+			String presignedUrl = client.generatePresignedUrl("secure-bucket", key, Duration.ofMinutes(5));
+
+			// then
+			assertThat(presignedUrl).startsWith("http://localhost:9000/secure-bucket/notes/1/safe-image-key?");
+			assertThat(presignedUrl).contains("X-Amz-Expires=300");
+			assertThat(presignedUrl).contains("X-Amz-Signature=");
+		}
+	}
+
+	@Test
 	@DisplayName("파일 삭제 시 S3Client의 deleteObject를 호출한다")
 	void deleteSuccessfully() {
 		// given
@@ -158,6 +195,25 @@ class MinioObjectStorageClientTest {
 
 		DeleteObjectRequest request = requestCaptor.getValue();
 		assertThat(request.bucket()).isEqualTo(QUARANTINE_BUCKET);
+		assertThat(request.key()).isEqualTo(storageKey);
+	}
+
+	@Test
+	@DisplayName("버킷을 지정해 파일을 삭제하면 지정한 버킷과 키로 S3Client의 deleteObject를 호출한다")
+	void deleteSuccessfullyFromSpecifiedBucket() {
+		// given
+		String bucketName = "secure-bucket";
+		String storageKey = "notes/1/safe-image-key";
+
+		// when
+		minioClient.delete(bucketName, storageKey);
+
+		// then
+		ArgumentCaptor<DeleteObjectRequest> requestCaptor = ArgumentCaptor.forClass(DeleteObjectRequest.class);
+		verify(s3Client).deleteObject(requestCaptor.capture());
+
+		DeleteObjectRequest request = requestCaptor.getValue();
+		assertThat(request.bucket()).isEqualTo(bucketName);
 		assertThat(request.key()).isEqualTo(storageKey);
 	}
 
@@ -186,6 +242,21 @@ class MinioObjectStorageClientTest {
 
 		// when & then
 		assertThatThrownBy(() -> minioClient.delete(storageKey))
+				.isInstanceOf(ObjectStorageException.class)
+				.hasMessageContaining("MinIO 파일 삭제 실패")
+				.hasCauseInstanceOf(S3Exception.class);
+	}
+
+	@Test
+	@DisplayName("버킷 지정 삭제 중 S3Exception 발생 시 ObjectStorageException으로 래핑하여 던진다")
+	void deleteFromSpecifiedBucketThrowsExceptionOnS3Failure() {
+		// given
+		String storageKey = "notes/1/safe-image-key";
+		given(s3Client.deleteObject(any(DeleteObjectRequest.class)))
+				.willThrow(S3Exception.builder().message("delete s3 error").build());
+
+		// when & then
+		assertThatThrownBy(() -> minioClient.delete("secure-bucket", storageKey))
 				.isInstanceOf(ObjectStorageException.class)
 				.hasMessageContaining("MinIO 파일 삭제 실패")
 				.hasCauseInstanceOf(S3Exception.class);

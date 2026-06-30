@@ -9,6 +9,7 @@ import com.keepgoing.keepgoing.worker.application.port.out.ImageMediaTypeDetecto
 import com.keepgoing.keepgoing.worker.application.port.out.ImageProcessingResultPublisherPort;
 import com.keepgoing.keepgoing.worker.application.port.out.ImageSanitizerPort;
 import com.keepgoing.keepgoing.worker.application.port.out.ImageStoragePort;
+import com.keepgoing.keepgoing.worker.application.port.out.QuarantineObjectNotFoundException;
 import com.keepgoing.keepgoing.worker.domain.ImageMediaTypeValidator;
 import com.keepgoing.keepgoing.worker.domain.ImageValidationFailureReason;
 import com.keepgoing.keepgoing.worker.domain.ImageValidationResult;
@@ -36,7 +37,13 @@ public class ImageProcessingService implements ImageProcessingUseCase {
 		String storageKey = command.storageKey();
 		String requestedContentType = command.contentType();
 
-		byte[] imageBytes = imageStoragePort.readQuarantineObject(storageKey);
+		byte[] imageBytes;
+		try {
+			imageBytes = imageStoragePort.readQuarantineObject(storageKey);
+		} catch (QuarantineObjectNotFoundException e) {
+			log.warn("이미 삭제된 파일, 처리 생략: publicId={}, storageKey={}", publicId, storageKey);
+			return;
+		}
 
 		publishScanningEvent(command);
 
