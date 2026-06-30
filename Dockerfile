@@ -11,10 +11,13 @@ COPY keepgoing-common ./keepgoing-common
 
 RUN chmod +x gradlew
 
-RUN ./gradlew :keepgoing-api:bootJar --no-daemon \
-    && cp /workspace/keepgoing-api/build/libs/*.jar /workspace/app.jar
+RUN ./gradlew :keepgoing-api:bootJar :keepgoing-worker:bootJar --no-daemon \
+    && cp /workspace/keepgoing-api/build/libs/*.jar /workspace/api.jar \
+    && cp /workspace/keepgoing-worker/build/libs/*.jar /workspace/worker.jar
 
-FROM eclipse-temurin:21-jre-jammy AS runtime
+
+# ---- API runtime ----
+FROM eclipse-temurin:21-jre-jammy AS api-runtime
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \
@@ -24,13 +27,32 @@ RUN apt-get update \
 
 WORKDIR /app
 
-COPY --from=builder /workspace/app.jar /app/app.jar
+COPY --from=builder /workspace/api.jar /app/app.jar
 
 ENV TZ=Asia/Seoul \
     SPRING_PROFILES_ACTIVE=prod \
     JAVA_OPTS="-Xms256m -Xmx1024m -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
 
 EXPOSE 8080
+
+USER appuser
+
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/app.jar"]
+
+
+# ---- Worker runtime ----
+FROM eclipse-temurin:21-jre-jammy AS worker-runtime
+
+RUN groupadd --system appuser \
+    && useradd --system --gid appuser --create-home --home-dir /app appuser
+
+WORKDIR /app
+
+COPY --from=builder /workspace/worker.jar /app/app.jar
+
+ENV TZ=Asia/Seoul \
+    SPRING_PROFILES_ACTIVE=prod \
+    JAVA_OPTS="-Xms128m -Xmx384m -XX:+UseG1GC"
 
 USER appuser
 

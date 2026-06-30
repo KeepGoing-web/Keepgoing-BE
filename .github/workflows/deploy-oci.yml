@@ -1,4 +1,4 @@
-name: Deploy API to OCI
+name: Deploy to OCI
 
 on:
   workflow_dispatch:
@@ -10,12 +10,12 @@ permissions:
   packages: write
 
 concurrency:
-  group: deploy-oci-api
+  group: deploy-oci
   cancel-in-progress: false
 
 jobs:
   deploy:
-    name: Build image and deploy API
+    name: Build images and deploy API + Worker
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -33,18 +33,26 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
 
-      - name: Test and build API module
-        run: ./gradlew clean :keepgoing-api:test :keepgoing-api:bootJar --no-daemon
+      - name: Test and build all modules
+        run: ./gradlew clean :keepgoing-api:test :keepgoing-worker:test :keepgoing-api:bootJar :keepgoing-worker:bootJar --no-daemon
 
-      - name: Resolve image metadata
+      - name: Resolve API image metadata
         run: |
           set -euo pipefail
           image_name="ghcr.io/${GITHUB_REPOSITORY_OWNER}/keepgoing-be-api"
           image_name="$(printf '%s' "$image_name" | tr '[:upper:]' '[:lower:]')"
           image_tag="${GITHUB_SHA::12}"
 
-          echo "IMAGE_NAME=$image_name" >> "$GITHUB_ENV"
+          echo "API_IMAGE=$image_name" >> "$GITHUB_ENV"
           echo "IMAGE_TAG=$image_tag" >> "$GITHUB_ENV"
+
+      - name: Resolve Worker image metadata
+        run: |
+          set -euo pipefail
+          worker_image="ghcr.io/${GITHUB_REPOSITORY_OWNER}/keepgoing-be-worker"
+          worker_image="$(printf '%s' "$worker_image" | tr '[:upper:]' '[:lower:]')"
+
+          echo "WORKER_IMAGE=$worker_image" >> "$GITHUB_ENV"
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -56,16 +64,29 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and push linux/arm64 image
+      - name: Build and push API linux/arm64 image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
+          target: api-runtime
           platforms: linux/arm64
           push: true
           tags: |
-            ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.API_IMAGE }}:${{ env.IMAGE_TAG }}
+            ${{ env.API_IMAGE }}:latest
+
+      - name: Build and push Worker linux/arm64 image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          target: worker-runtime
+          platforms: linux/arm64
+          push: true
+          tags: |
+            ${{ env.WORKER_IMAGE }}:${{ env.IMAGE_TAG }}
+            ${{ env.WORKER_IMAGE }}:latest
 
       - name: Prepare SSH
         env:
@@ -82,6 +103,21 @@ jobs:
           ssh-keyscan -H "$OCI_HOST" >> ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
 
+      - name: Sync config files to server
+        env:
+          OCI_HOST: ${{ secrets.OCI_HOST }}
+          OCI_USER: ${{ secrets.OCI_USER }}
+        run: |
+          set -euo pipefail
+          scp -i ~/.ssh/oci_key \
+            docker-compose.prod.yml \
+            "$OCI_USER@$OCI_HOST:/srv/keepgoing/docker-compose.prod.yml"
+          ssh -i ~/.ssh/oci_key "$OCI_USER@$OCI_HOST" \
+            "mkdir -p /srv/keepgoing/infra/scripts"
+          scp -i ~/.ssh/oci_key \
+            infra/scripts/deploy-prod.sh infra/scripts/deploy-prod-tls.sh \
+            "$OCI_USER@$OCI_HOST:/srv/keepgoing/infra/scripts/"
+
       - name: Deploy on OCI
         env:
           OCI_HOST: ${{ secrets.OCI_HOST }}
@@ -89,7 +125,7 @@ jobs:
         run: |
           set -euo pipefail
           ssh -i ~/.ssh/oci_key "$OCI_USER@$OCI_HOST" \
-            "IMAGE_NAME='$IMAGE_NAME' IMAGE_TAG='$IMAGE_TAG' bash -s" <<'REMOTE'
+            "API_IMAGE='$API_IMAGE' WORKER_IMAGE='$WORKER_IMAGE' IMAGE_TAG='$IMAGE_TAG' bash -s" <<'REMOTE'
           set -euo pipefail
 
           cd /srv/keepgoing
@@ -119,8 +155,10 @@ jobs:
             grep -E "^${key}=" .env.prod | tail -n 1 | cut -d= -f2- || true
           }
 
-          set_env APP_IMAGE "$IMAGE_NAME"
+          set_env APP_IMAGE "$API_IMAGE"
           set_env APP_IMAGE_TAG "$IMAGE_TAG"
+          set_env WORKER_IMAGE "$WORKER_IMAGE"
+          set_env WORKER_IMAGE_TAG "$IMAGE_TAG"
 
           compose_files=(-f docker-compose.prod.yml)
           tls_enabled="$(get_env DEPLOY_TLS_ENABLED)"
@@ -132,7 +170,7 @@ jobs:
             compose_files+=(-f docker-compose.prod.tls.yml)
           fi
 
-          docker compose --env-file .env.prod "${compose_files[@]}" pull app
+          docker compose --env-file .env.prod "${compose_files[@]}" pull app worker
           docker compose --env-file .env.prod "${compose_files[@]}" up -d
           docker compose --env-file .env.prod "${compose_files[@]}" ps
 

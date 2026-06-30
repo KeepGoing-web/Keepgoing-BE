@@ -3,6 +3,8 @@ spring:
     name: keepgoing-worker
   main:
     web-application-type: none
+  lifecycle:
+    timeout-per-shutdown-phase: 50s
   data:
     redis:
       host: ${REDIS_HOST:localhost}
