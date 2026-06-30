@@ -20,6 +20,8 @@ public interface ObjectStorageClient {
 
 	void delete(String storageKey);
 
+	void delete(String bucketName, String storageKey);
+
 	/**
 	 * 지정된 버킷의 객체에 대한 Presigned GET URL을 생성한다.
 	 *

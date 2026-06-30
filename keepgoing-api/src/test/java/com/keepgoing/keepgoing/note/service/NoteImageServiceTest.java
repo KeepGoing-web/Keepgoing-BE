@@ -33,6 +33,7 @@ import com.keepgoing.keepgoing.note.domain.NoteVisibility;
 import com.keepgoing.keepgoing.note.event.NoteImageProcessingRequestPublisher;
 import com.keepgoing.keepgoing.note.repository.NoteImageRepository;
 import com.keepgoing.keepgoing.note.repository.NoteRepository;
+import com.keepgoing.keepgoing.note.service.dto.NoteImageDeleteCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteImagePresignQuery;
 import com.keepgoing.keepgoing.note.service.dto.NoteImageUploadCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteImageUploadResult;
@@ -378,19 +379,37 @@ class NoteImageServiceTest {
 		}
 
 		@Test
-		@DisplayName("존재하지 않는 이미지 처리 결과면 NOTE_IMAGE_NOT_FOUND 예외를 던진다")
-		void throwsWhenImageNotFound() {
+		@DisplayName("삭제된 이미지의 SAFE 결과가 늦게 도착하면 secure 객체를 정리하고 결과 반영을 건너뛴다")
+		void cleansUpSecureObjectWhenSafeResultArrivesAfterImageDeletion() {
 			// given
 			UUID publicId = UUID.randomUUID();
 			ImageProcessingResultEvent event = processingResultEvent(publicId, ImageProcessingStatus.SAFE);
 			given(noteImageRepository.findByPublicId(publicId)).willReturn(Optional.empty());
+			given(storageProperties.bucketNames()).willReturn(bucketNames);
+			given(bucketNames.secure()).willReturn("secure-bucket");
 
-			// when & then
-			assertThatThrownBy(() -> noteImageService.applyProcessingResult(event))
-					.isInstanceOf(BusinessException.class)
-					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_IMAGE_NOT_FOUND);
+			// when
+			noteImageService.applyProcessingResult(event);
 
+			// then
 			verify(noteImageRepository).findByPublicId(publicId);
+			verify(objectStorageClient).delete("secure-bucket", event.secureStorageKey());
+		}
+
+		@Test
+		@DisplayName("삭제된 이미지의 SAFE 외 결과가 늦게 도착하면 스토리지 정리 없이 결과 반영을 건너뛴다")
+		void skipsNonSafeResultWhenImageWasDeleted() {
+			// given
+			UUID publicId = UUID.randomUUID();
+			ImageProcessingResultEvent event = processingResultEvent(publicId, ImageProcessingStatus.SCANNING);
+			given(noteImageRepository.findByPublicId(publicId)).willReturn(Optional.empty());
+
+			// when
+			noteImageService.applyProcessingResult(event);
+
+			// then
+			verify(noteImageRepository).findByPublicId(publicId);
+			verifyNoInteractions(objectStorageClient, storageProperties);
 		}
 
 		@Test
@@ -484,6 +503,129 @@ class NoteImageServiceTest {
 			// then
 			assertThat(noteImage.getStatus()).isEqualTo(ImageProcessingStatus.REJECTED);
 			verify(noteImageRepository).findByPublicId(noteImage.getPublicId());
+		}
+	}
+
+	@Nested
+	@DisplayName("deleteImage")
+	class DeleteImageTest {
+
+		@Test
+		@DisplayName("PENDING 이미지를 삭제하면 quarantine 객체를 삭제하고 이미지 레코드를 hard delete한다")
+		void deletesPendingImageFromQuarantineBucket() {
+			// given
+			NoteImage noteImage = noteImageWithStatus(ImageProcessingStatus.PENDING);
+			NoteImageDeleteCommand command =
+					new NoteImageDeleteCommand(UPLOADER_ID, NOTE_ID, noteImage.getPublicId());
+			given(noteImageRepository.findByPublicIdAndNote_Id(noteImage.getPublicId(), NOTE_ID))
+					.willReturn(Optional.of(noteImage));
+			given(storageProperties.bucketNames()).willReturn(bucketNames);
+			given(bucketNames.quarantine()).willReturn("quarantine-bucket");
+
+			// when
+			noteImageService.deleteImage(command);
+
+			// then
+			InOrder inOrder = inOrder(noteImageRepository, objectStorageClient);
+			inOrder.verify(noteImageRepository).findByPublicIdAndNote_Id(noteImage.getPublicId(), NOTE_ID);
+			inOrder.verify(objectStorageClient).delete("quarantine-bucket", STORAGE_KEY);
+			inOrder.verify(noteImageRepository).delete(noteImage);
+			verify(bucketNames, never()).secure();
+		}
+
+		@Test
+		@DisplayName("SCANNING 이미지를 삭제하면 quarantine 객체를 삭제하고 이미지 레코드를 hard delete한다")
+		void deletesScanningImageFromQuarantineBucket() {
+			// given
+			NoteImage noteImage = noteImageWithStatus(ImageProcessingStatus.SCANNING);
+			NoteImageDeleteCommand command =
+					new NoteImageDeleteCommand(UPLOADER_ID, NOTE_ID, noteImage.getPublicId());
+			given(noteImageRepository.findByPublicIdAndNote_Id(noteImage.getPublicId(), NOTE_ID))
+					.willReturn(Optional.of(noteImage));
+			given(storageProperties.bucketNames()).willReturn(bucketNames);
+			given(bucketNames.quarantine()).willReturn("quarantine-bucket");
+
+			// when
+			noteImageService.deleteImage(command);
+
+			// then
+			verify(objectStorageClient).delete("quarantine-bucket", STORAGE_KEY);
+			verify(noteImageRepository).delete(noteImage);
+			verify(bucketNames, never()).secure();
+		}
+
+		@Test
+		@DisplayName("SAFE 이미지를 삭제하면 secure 객체를 삭제하고 이미지 레코드를 hard delete한다")
+		void deletesSafeImageFromSecureBucket() {
+			// given
+			NoteImage noteImage = noteImageWithStatus(ImageProcessingStatus.SAFE);
+			NoteImageDeleteCommand command =
+					new NoteImageDeleteCommand(UPLOADER_ID, NOTE_ID, noteImage.getPublicId());
+			given(noteImageRepository.findByPublicIdAndNote_Id(noteImage.getPublicId(), NOTE_ID))
+					.willReturn(Optional.of(noteImage));
+			given(storageProperties.bucketNames()).willReturn(bucketNames);
+			given(bucketNames.secure()).willReturn("secure-bucket");
+
+			// when
+			noteImageService.deleteImage(command);
+
+			// then
+			verify(objectStorageClient).delete("secure-bucket", STORAGE_KEY);
+			verify(noteImageRepository).delete(noteImage);
+			verify(bucketNames, never()).quarantine();
+		}
+
+		@Test
+		@DisplayName("REJECTED 이미지를 삭제하면 스토리지 삭제 없이 이미지 레코드만 hard delete한다")
+		void deletesRejectedImageWithoutStorageCleanup() {
+			// given
+			NoteImage noteImage = noteImageWithStatus(ImageProcessingStatus.REJECTED);
+			NoteImageDeleteCommand command =
+					new NoteImageDeleteCommand(UPLOADER_ID, NOTE_ID, noteImage.getPublicId());
+			given(noteImageRepository.findByPublicIdAndNote_Id(noteImage.getPublicId(), NOTE_ID))
+					.willReturn(Optional.of(noteImage));
+
+			// when
+			noteImageService.deleteImage(command);
+
+			// then
+			verify(noteImageRepository).delete(noteImage);
+			verifyNoInteractions(objectStorageClient, storageProperties);
+		}
+
+		@Test
+		@DisplayName("존재하지 않는 이미지를 삭제하면 NOTE_IMAGE_NOT_FOUND 예외를 던진다")
+		void throwsWhenImageNotFound() {
+			// given
+			UUID publicId = UUID.randomUUID();
+			NoteImageDeleteCommand command = new NoteImageDeleteCommand(UPLOADER_ID, NOTE_ID, publicId);
+			given(noteImageRepository.findByPublicIdAndNote_Id(publicId, NOTE_ID))
+					.willReturn(Optional.empty());
+
+			// when & then
+			assertThatThrownBy(() -> noteImageService.deleteImage(command))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_IMAGE_NOT_FOUND);
+
+			verifyNoInteractions(objectStorageClient, storageProperties);
+		}
+
+		@Test
+		@DisplayName("업로더가 아닌 사용자가 이미지를 삭제하면 NOTE_IMAGE_ACCESS_DENIED 예외를 던진다")
+		void throwsWhenRequesterIsNotUploader() {
+			// given
+			NoteImage noteImage = noteImageWithStatus(ImageProcessingStatus.PENDING);
+			NoteImageDeleteCommand command =
+					new NoteImageDeleteCommand(2L, NOTE_ID, noteImage.getPublicId());
+			given(noteImageRepository.findByPublicIdAndNote_Id(noteImage.getPublicId(), NOTE_ID))
+					.willReturn(Optional.of(noteImage));
+
+			// when & then
+			assertThatThrownBy(() -> noteImageService.deleteImage(command))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_IMAGE_ACCESS_DENIED);
+
+			verifyNoInteractions(objectStorageClient, storageProperties);
 		}
 	}
 

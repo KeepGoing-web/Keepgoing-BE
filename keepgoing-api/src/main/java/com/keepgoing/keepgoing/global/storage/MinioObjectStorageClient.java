@@ -61,6 +61,20 @@ public class MinioObjectStorageClient implements ObjectStorageClient {
 	}
 
 	@Override
+	public void delete(String bucketName, String storageKey) {
+		try {
+			DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
+					.bucket(bucketName)
+					.key(storageKey)
+					.build();
+
+			s3Client.deleteObject(deleteObjectRequest);
+		} catch (S3Exception | SdkClientException e) {
+			throw new ObjectStorageException("MinIO 파일 삭제 실패: " + storageKey, e);
+		}
+	}
+
+	@Override
 	public String generatePresignedUrl(String bucketName, String key, Duration duration) {
 		try {
 			GetObjectRequest getObjectRequest = GetObjectRequest.builder()

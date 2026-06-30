@@ -2,6 +2,7 @@ package com.keepgoing.keepgoing.worker.infrastructure.adapter.out.storage;
 
 import com.keepgoing.keepgoing.worker.application.port.out.ImageStorageException;
 import com.keepgoing.keepgoing.worker.application.port.out.ImageStoragePort;
+import com.keepgoing.keepgoing.worker.application.port.out.QuarantineObjectNotFoundException;
 import com.keepgoing.keepgoing.worker.infrastructure.config.storage.StorageProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -13,6 +14,7 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 @Component
@@ -33,6 +35,8 @@ public class MinioImageStorageAdapter implements ImageStoragePort {
 			ResponseBytes<GetObjectResponse> response
 					= s3Client.getObjectAsBytes(request);
 			return response.asByteArray();
+		} catch (NoSuchKeyException e) {
+			throw new QuarantineObjectNotFoundException(storageKey, e);
 		} catch (AwsServiceException | SdkClientException e) {
 			throw new ImageStorageException(
 					"quarantine object 읽기 실패: " + storageKey, e

@@ -4,6 +4,7 @@ import com.keepgoing.keepgoing.global.api.response.ApiResponse;
 import com.keepgoing.keepgoing.note.controller.dto.request.NoteImageUploadRequest;
 import com.keepgoing.keepgoing.note.controller.dto.response.NoteImageUploadResponse;
 import com.keepgoing.keepgoing.note.service.NoteImageService;
+import com.keepgoing.keepgoing.note.service.dto.NoteImageDeleteCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteImagePresignQuery;
 import com.keepgoing.keepgoing.note.service.dto.NoteImageUploadCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteImageUploadResult;
@@ -16,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -61,5 +63,17 @@ public class NoteImageController {
 				.location(URI.create(presignedUrl))
 				.cacheControl(CacheControl.noCache())
 				.build();
+	}
+
+	@DeleteMapping("/{noteId}/images/{publicId}")
+	public ResponseEntity<Void> deleteImage(
+			@PathVariable Long noteId,
+			@PathVariable UUID publicId,
+			@AuthenticationPrincipal Long userId
+	) {
+		NoteImageDeleteCommand command = new NoteImageDeleteCommand(userId, noteId, publicId);
+		noteImageService.deleteImage(command);
+
+		return ResponseEntity.noContent().build();
 	}
 }

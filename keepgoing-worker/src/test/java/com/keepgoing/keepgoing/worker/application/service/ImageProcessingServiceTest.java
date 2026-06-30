@@ -21,6 +21,7 @@ import com.keepgoing.keepgoing.worker.application.port.out.ImageProcessingResult
 import com.keepgoing.keepgoing.worker.application.port.out.ImageSanitizerPort;
 import com.keepgoing.keepgoing.worker.application.port.out.ImageStorageException;
 import com.keepgoing.keepgoing.worker.application.port.out.ImageStoragePort;
+import com.keepgoing.keepgoing.worker.application.port.out.QuarantineObjectNotFoundException;
 import com.keepgoing.keepgoing.worker.domain.ImageValidationFailureReason;
 import java.time.Clock;
 import java.time.Instant;
@@ -205,6 +206,26 @@ class ImageProcessingServiceTest {
 		then(imageSanitizer).shouldHaveNoInteractions();
 		then(imageStorage).should(never())
 				.putSecureObject(anyString(), any(), anyString());
+	}
+
+	@Test
+	@DisplayName("이미 삭제된 quarantine object면 처리 결과를 발행하지 않고 조용히 생략한다")
+	void skipsProcessingWhenQuarantineObjectWasAlreadyDeleted() {
+		// given
+		ImageProcessingCommand command = command(IMAGE_PNG);
+		given(imageStorage.readQuarantineObject(command.storageKey()))
+				.willThrow(new QuarantineObjectNotFoundException(command.storageKey(), new RuntimeException()));
+
+		// when
+		imageProcessingService.process(command);
+
+		// then
+		then(imageStorage).should().readQuarantineObject(command.storageKey());
+		then(resultPublisher).shouldHaveNoInteractions();
+		then(imageMediaTypeDetector).shouldHaveNoInteractions();
+		then(imageSanitizer).shouldHaveNoInteractions();
+		then(imageStorage).should(never()).deleteQuarantineObject(command.storageKey());
+		then(imageStorage).should(never()).putSecureObject(anyString(), any(), anyString());
 	}
 
 	@Test

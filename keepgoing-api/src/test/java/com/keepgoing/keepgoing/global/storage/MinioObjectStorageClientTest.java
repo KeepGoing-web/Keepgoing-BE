@@ -199,6 +199,25 @@ class MinioObjectStorageClientTest {
 	}
 
 	@Test
+	@DisplayName("버킷을 지정해 파일을 삭제하면 지정한 버킷과 키로 S3Client의 deleteObject를 호출한다")
+	void deleteSuccessfullyFromSpecifiedBucket() {
+		// given
+		String bucketName = "secure-bucket";
+		String storageKey = "notes/1/safe-image-key";
+
+		// when
+		minioClient.delete(bucketName, storageKey);
+
+		// then
+		ArgumentCaptor<DeleteObjectRequest> requestCaptor = ArgumentCaptor.forClass(DeleteObjectRequest.class);
+		verify(s3Client).deleteObject(requestCaptor.capture());
+
+		DeleteObjectRequest request = requestCaptor.getValue();
+		assertThat(request.bucket()).isEqualTo(bucketName);
+		assertThat(request.key()).isEqualTo(storageKey);
+	}
+
+	@Test
 	@DisplayName("삭제 중 SdkClientException 발생 시 ObjectStorageException으로 래핑하여 던진다")
 	void deleteThrowsExceptionOnFailure() {
 		// given
@@ -223,6 +242,21 @@ class MinioObjectStorageClientTest {
 
 		// when & then
 		assertThatThrownBy(() -> minioClient.delete(storageKey))
+				.isInstanceOf(ObjectStorageException.class)
+				.hasMessageContaining("MinIO 파일 삭제 실패")
+				.hasCauseInstanceOf(S3Exception.class);
+	}
+
+	@Test
+	@DisplayName("버킷 지정 삭제 중 S3Exception 발생 시 ObjectStorageException으로 래핑하여 던진다")
+	void deleteFromSpecifiedBucketThrowsExceptionOnS3Failure() {
+		// given
+		String storageKey = "notes/1/safe-image-key";
+		given(s3Client.deleteObject(any(DeleteObjectRequest.class)))
+				.willThrow(S3Exception.builder().message("delete s3 error").build());
+
+		// when & then
+		assertThatThrownBy(() -> minioClient.delete("secure-bucket", storageKey))
 				.isInstanceOf(ObjectStorageException.class)
 				.hasMessageContaining("MinIO 파일 삭제 실패")
 				.hasCauseInstanceOf(S3Exception.class);
