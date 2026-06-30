@@ -25,7 +25,7 @@ docker compose \
   --env-file "$ENV_FILE" \
   -f "$BASE_COMPOSE_FILE" \
   -f "$TLS_COMPOSE_FILE" \
-  pull app
+  pull app worker
 
 docker compose \
   --env-file "$ENV_FILE" \
