@@ -2,6 +2,9 @@ FROM eclipse-temurin:21-jdk-jammy AS builder
 
 WORKDIR /workspace
 
+# Pre-built JARs from CI (optional — .docker/ always exists with at least .gitkeep)
+COPY .docker/ /workspace/.docker/
+
 COPY gradlew gradlew.bat settings.gradle build.gradle ./
 COPY gradle ./gradle
 
@@ -11,9 +14,16 @@ COPY keepgoing-common ./keepgoing-common
 
 RUN chmod +x gradlew
 
-RUN ./gradlew :keepgoing-api:bootJar :keepgoing-worker:bootJar --no-daemon \
-    && cp /workspace/keepgoing-api/build/libs/*.jar /workspace/api.jar \
-    && cp /workspace/keepgoing-worker/build/libs/*.jar /workspace/worker.jar
+RUN if [ -f /workspace/.docker/api.jar ] && [ -f /workspace/.docker/worker.jar ]; then \
+      cp /workspace/.docker/api.jar /workspace/api.jar && \
+      cp /workspace/.docker/worker.jar /workspace/worker.jar && \
+      echo "Using pre-built JARs from CI"; \
+    else \
+      ./gradlew :keepgoing-api:bootJar :keepgoing-worker:bootJar --no-daemon && \
+      cp /workspace/keepgoing-api/build/libs/*.jar /workspace/api.jar && \
+      cp /workspace/keepgoing-worker/build/libs/*.jar /workspace/worker.jar && \
+      echo "Built JARs from source"; \
+    fi
 
 
 # ---- API runtime ----

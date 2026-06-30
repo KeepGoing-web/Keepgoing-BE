@@ -70,3 +70,7 @@ mcp-server/
 .github/hooks/
 .github/prompts/
 .github/skills/
+
+# CI pre-built JARs (track only .gitkeep)
+.docker/*
+!.docker/.gitkeep
