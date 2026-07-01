@@ -138,7 +138,7 @@ jobs:
             infra/nginx/keepgoing.tls.conf.template \
             "$OCI_USER@$OCI_HOST:/srv/keepgoing/infra/nginx/keepgoing.tls.conf.template"
           ssh -i ~/.ssh/oci_key "$OCI_USER@$OCI_HOST" \
-            "sudo rm -rf /srv/keepgoing/monitoring && mkdir -p /srv/keepgoing/monitoring"
+            "sudo rm -rf /srv/keepgoing/monitoring && mkdir -p /srv/keepgoing/monitoring /srv/keepgoing/var/prometheus-data /srv/keepgoing/var/alertmanager-data /srv/keepgoing/var/grafana-data /srv/keepgoing/var/redis-data"
           scp -i ~/.ssh/oci_key -r \
             monitoring \
             "$OCI_USER@$OCI_HOST:/srv/keepgoing/"
