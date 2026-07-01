@@ -1,0 +1,81 @@
+groups:
+  - name: keepgoing-service-down
+    interval: 30s
+    rules:
+      - alert: KeepgoingApiDown
+        expr: up{job="keepgoing-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Keepgoing API is down'
+          description: 'API server (keepgoing-api) has been unreachable for 1 minute.'
+
+      - alert: KeepgoingWorkerDown
+        expr: up{job="keepgoing-worker"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Keepgoing Worker is down'
+          description: 'Image processing worker (keepgoing-worker) has been unreachable for 1 minute.'
+
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Redis is down'
+          description: 'Redis ({{ $labels.instance }}) has been unreachable for 1 minute.'
+
+      - alert: PostgreSQLDown
+        expr: up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'PostgreSQL is down'
+          description: 'PostgreSQL ({{ $labels.instance }}) has been unreachable for 1 minute.'
+
+  - name: keepgoing-resource
+    interval: 30s
+    rules:
+      - alert: HighMemoryUsage
+        expr: (jvm_memory_used_bytes{area="heap", job=~"keepgoing-api|keepgoing-worker"} / jvm_memory_max_bytes{area="heap", job=~"keepgoing-api|keepgoing-worker"}) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'High JVM heap memory usage ({{ $value | humanizePercentage }})'
+          description: '{{ $labels.job }} heap memory usage is at {{ $value | humanizePercentage }} for 5 minutes. Application: {{ $labels.application }}'
+
+      - alert: CriticalMemoryUsage
+        expr: (jvm_memory_used_bytes{area="heap", job=~"keepgoing-api|keepgoing-worker"} / jvm_memory_max_bytes{area="heap", job=~"keepgoing-api|keepgoing-worker"}) * 100 > 95
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Critical JVM heap memory usage ({{ $value | humanizePercentage }})'
+          description: '{{ $labels.job }} heap memory usage is at {{ $value | humanizePercentage }} for 2 minutes. Application: {{ $labels.application }}'
+
+      - alert: HighGCPauseTime
+        expr: rate(jvm_gc_pause_seconds_sum{job=~"keepgoing-api|keepgoing-worker"}[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'High GC pause time'
+          description: '{{ $labels.job }} GC cumulative pause time is {{ $value }}s over 5 minutes. Application: {{ $labels.application }}'
+
+  - name: keepgoing-application
+    interval: 30s
+    rules:
+      - alert: HighErrorRate
+        expr: (sum by (job) (rate(http_server_requests_seconds_count{status=~"5..", job="keepgoing-api"}[5m])) / sum by (job) (rate(http_server_requests_seconds_count{job="keepgoing-api"}[5m]))) * 100 > 5 and sum by (job) (rate(http_server_requests_seconds_count{job="keepgoing-api"}[5m])) > 0.1
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'High 5xx error rate ({{ $value | humanizePercentage }})'
+          description: 'API server 5xx error rate is {{ $value | humanizePercentage }} over 3 minutes.'
