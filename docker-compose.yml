@@ -175,7 +175,7 @@ services:
       - '--storage.tsdb.retention.size=5GB'
 
   alertmanager:
-    image: prom/alertmanager:v0.27.0
+    image: prom/alertmanager:v0.28.0
     container_name: keepgoing-alertmanager
     restart: unless-stopped
     mem_limit: 64m
@@ -183,6 +183,7 @@ services:
       - "9093:9093"
     volumes:
       - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./monitoring/alertmanager/discord-webhook-url:/etc/alertmanager/discord-webhook-url:ro
     command:
       - '--config.file=/etc/alertmanager/alertmanager.yml'
       - '--storage.path=/alertmanager'
