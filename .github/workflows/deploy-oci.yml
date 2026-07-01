@@ -132,6 +132,9 @@ jobs:
             docker-compose.prod.tls.yml \
             "$OCI_USER@$OCI_HOST:/srv/keepgoing/docker-compose.prod.tls.yml"
           scp -i ~/.ssh/oci_key \
+            infra/nginx/keepgoing.conf \
+            "$OCI_USER@$OCI_HOST:/srv/keepgoing/infra/nginx/keepgoing.conf"
+          scp -i ~/.ssh/oci_key \
             infra/nginx/keepgoing.tls.conf.template \
             "$OCI_USER@$OCI_HOST:/srv/keepgoing/infra/nginx/keepgoing.tls.conf.template"
 

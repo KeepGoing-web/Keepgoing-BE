@@ -89,6 +89,7 @@ services:
         condition: service_healthy
     environment:
       NGINX_ENVSUBST_TEMPLATE_DIR: /etc/nginx/templates-http
+      NGINX_ENVSUBST_FILTER: "NGINX_ENVSUBST_TEMPLATE_DIR"
     ports:
       - "${NGINX_HTTP_PORT:-80}:80"
     volumes:
