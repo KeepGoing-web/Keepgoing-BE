@@ -137,6 +137,11 @@ jobs:
           scp -i ~/.ssh/oci_key \
             infra/nginx/keepgoing.tls.conf.template \
             "$OCI_USER@$OCI_HOST:/srv/keepgoing/infra/nginx/keepgoing.tls.conf.template"
+          ssh -i ~/.ssh/oci_key "$OCI_USER@$OCI_HOST" \
+            "mkdir -p /srv/keepgoing/monitoring"
+          scp -i ~/.ssh/oci_key -r \
+            monitoring/alertmanager monitoring/prometheus monitoring/grafana monitoring/postgres-exporter \
+            "$OCI_USER@$OCI_HOST:/srv/keepgoing/monitoring/"
 
       - name: Deploy on OCI
         env:
