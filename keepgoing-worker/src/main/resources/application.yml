@@ -1,14 +1,27 @@
+server:
+  port: 8081
+
 spring:
   application:
     name: keepgoing-worker
   main:
-    web-application-type: none
+    web-application-type: servlet
   lifecycle:
     timeout-per-shutdown-phase: 50s
   data:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
 
 image-processing:
   streams:
