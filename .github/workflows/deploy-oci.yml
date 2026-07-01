@@ -124,10 +124,16 @@ jobs:
             docker-compose.prod.yml \
             "$OCI_USER@$OCI_HOST:/srv/keepgoing/docker-compose.prod.yml"
           ssh -i ~/.ssh/oci_key "$OCI_USER@$OCI_HOST" \
-            "mkdir -p /srv/keepgoing/infra/scripts"
+            "mkdir -p /srv/keepgoing/infra/scripts /srv/keepgoing/infra/nginx"
           scp -i ~/.ssh/oci_key \
             infra/scripts/deploy-prod.sh infra/scripts/deploy-prod-tls.sh \
             "$OCI_USER@$OCI_HOST:/srv/keepgoing/infra/scripts/"
+          scp -i ~/.ssh/oci_key \
+            docker-compose.prod.tls.yml \
+            "$OCI_USER@$OCI_HOST:/srv/keepgoing/docker-compose.prod.tls.yml"
+          scp -i ~/.ssh/oci_key \
+            infra/nginx/keepgoing.tls.conf.template \
+            "$OCI_USER@$OCI_HOST:/srv/keepgoing/infra/nginx/keepgoing.tls.conf.template"
 
       - name: Deploy on OCI
         env:
@@ -170,6 +176,7 @@ jobs:
           set_env APP_IMAGE_TAG "$IMAGE_TAG"
           set_env WORKER_IMAGE "$WORKER_IMAGE"
           set_env WORKER_IMAGE_TAG "$IMAGE_TAG"
+          set_env DEPLOY_TLS_ENABLED "true"
 
           compose_files=(-f docker-compose.prod.yml)
           tls_enabled="$(get_env DEPLOY_TLS_ENABLED)"
