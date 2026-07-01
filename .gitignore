@@ -74,3 +74,6 @@ mcp-server/
 # CI pre-built JARs (track only .gitkeep)
 .docker/*
 !.docker/.gitkeep
+
+# Monitoring
+monitoring/alertmanager/discord-webhook-url

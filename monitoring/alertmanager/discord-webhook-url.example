@@ -1,0 +1,10 @@
+# Discord Webhook URL for Alertmanager notifications
+# Copy this file to discord-webhook-url and replace with your actual webhook URL.
+# This file is NOT tracked by git (see .gitignore).
+#
+# Example:
+#   cp monitoring/alertmanager/discord-webhook-url.example monitoring/alertmanager/discord-webhook-url
+#   echo -n 'https://discord.com/api/webhooks/...' > monitoring/alertmanager/discord-webhook-url
+#
+# Production:
+#   echo -n 'https://discord.com/api/webhooks/...' | sudo tee /etc/keepgoing/secrets/discord-webhook-url

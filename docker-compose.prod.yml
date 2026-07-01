@@ -46,6 +46,40 @@ services:
     networks:
       - keepgoing-net
 
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.67.0
+    container_name: keepgoing-redis-exporter
+    restart: unless-stopped
+    mem_limit: 64m
+    environment:
+      REDIS_ADDR: redis://redis:6379
+    command:
+      - '--check-single-streams=note-image-processing-requests,note-image-processing-results'
+    expose:
+      - "9121"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - keepgoing-net
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.20.0
+    container_name: keepgoing-postgres-exporter
+    restart: unless-stopped
+    mem_limit: 64m
+    environment:
+      DATA_SOURCE_URI: "postgres:5432/keepgoing?sslmode=disable"
+      DATA_SOURCE_USER: "postgres_exporter"
+      DATA_SOURCE_PASS: "${POSTGRES_EXPORTER_PASSWORD}"
+    expose:
+      - "9187"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - keepgoing-net
+
   app:
     image: ${APP_IMAGE:-ghcr.io/keepgoing-web/keepgoing-be-api}:${APP_IMAGE_TAG:-latest}
     container_name: keepgoing-app
@@ -102,6 +136,18 @@ services:
     networks:
       - keepgoing-net
 
+  nginx-prometheus-exporter:
+    image: nginx/nginx-prometheus-exporter:1.3.0
+    container_name: keepgoing-nginx-exporter
+    restart: unless-stopped
+    mem_limit: 32m
+    network_mode: "service:nginx"
+    command:
+      - '-nginx.scrape-uri=http://127.0.0.1:80/nginx_status'
+    depends_on:
+      nginx:
+        condition: service_started
+
   worker:
     image: ${WORKER_IMAGE:-ghcr.io/keepgoing-web/keepgoing-be-worker}:${WORKER_IMAGE_TAG:-latest}
     container_name: keepgoing-worker
@@ -117,12 +163,90 @@ services:
       TZ: ${TZ:-Asia/Seoul}
       REDIS_HOST: redis
       IMAGE_PROCESSING_STREAMS_ENABLED: "true"
+    expose:
+      - "8081"
     stop_grace_period: 60s
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8081/actuator/health | grep '\"status\":\"UP\"' > /dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "3"
+    networks:
+      - keepgoing-net
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: keepgoing-node-exporter
+    restart: unless-stopped
+    mem_limit: 64m
+    command:
+      - '--path.rootfs=/host'
+    volumes:
+      - /:/host:ro,rslave
+    pid: host
+    expose:
+      - "9100"
+    networks:
+      - keepgoing-net
+
+  prometheus:
+    image: prom/prometheus:v2.55.0
+    container_name: keepgoing-prometheus
+    restart: unless-stopped
+    mem_limit: 1g
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
+      - ${PROMETHEUS_DATA_DIR:-./var/prometheus-data}:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=7d'
+      - '--storage.tsdb.retention.size=5GB'
+    expose:
+      - "9090"
+    networks:
+      - keepgoing-net
+
+  alertmanager:
+    image: prom/alertmanager:v0.28.0
+    container_name: keepgoing-alertmanager
+    restart: unless-stopped
+    mem_limit: 64m
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      # Create once on the server: echo -n 'WEBHOOK_URL' | sudo tee /etc/keepgoing/secrets/discord-webhook-url
+      - /etc/keepgoing/secrets/discord-webhook-url:/etc/alertmanager/discord-webhook-url:ro
+      - ${ALERTMANAGER_DATA_DIR:-./var/alertmanager-data}:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--log.level=info'
+    expose:
+      - "9093"
+    networks:
+      - keepgoing-net
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: keepgoing-grafana
+    restart: unless-stopped
+    mem_limit: 128m
+    volumes:
+      - ./monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ${GRAFANA_DATA_DIR:-./var/grafana-data}:/var/lib/grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    ports:
+      - "127.0.0.1:3000:3000"
     networks:
       - keepgoing-net
 

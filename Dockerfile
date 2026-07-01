@@ -41,7 +41,7 @@ COPY --from=builder /workspace/api.jar /app/app.jar
 
 ENV TZ=Asia/Seoul \
     SPRING_PROFILES_ACTIVE=prod \
-    JAVA_OPTS="-Xms256m -Xmx1024m -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
+    JAVA_OPTS="-Xms256m -XX:MaxRAMPercentage=70.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
 
 EXPOSE 8080
 
@@ -53,7 +53,10 @@ ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/app.jar"]
 # ---- Worker runtime ----
 FROM eclipse-temurin:21-jre-jammy AS worker-runtime
 
-RUN groupadd --system appuser \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --system appuser \
     && useradd --system --gid appuser --create-home --home-dir /app appuser
 
 WORKDIR /app
@@ -62,7 +65,9 @@ COPY --from=builder /workspace/worker.jar /app/app.jar
 
 ENV TZ=Asia/Seoul \
     SPRING_PROFILES_ACTIVE=prod \
-    JAVA_OPTS="-Xms128m -Xmx384m -XX:+UseG1GC"
+    JAVA_OPTS="-Xms128m -XX:MaxRAMPercentage=65.0 -XX:+UseG1GC"
+
+EXPOSE 8081
 
 USER appuser
 
