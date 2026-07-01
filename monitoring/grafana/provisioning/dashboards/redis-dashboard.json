@@ -144,7 +144,13 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "none" }
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          }
         },
         "overrides": []
       },
@@ -177,7 +183,13 @@
       "fieldConfig": {
         "defaults": {
           "unit": "cps",
-          "color": { "mode": "none" }
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          }
         },
         "overrides": []
       },
@@ -253,7 +265,13 @@
       "fieldConfig": {
         "defaults": {
           "unit": "s",
-          "color": { "mode": "none" }
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          }
         },
         "overrides": []
       },
