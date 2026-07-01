@@ -42,7 +42,7 @@ groups:
     interval: 30s
     rules:
       - alert: HighMemoryUsage
-        expr: (jvm_memory_used_bytes{area="heap", job=~"keepgoing-api|keepgoing-worker"} / jvm_memory_max_bytes{area="heap", job=~"keepgoing-api|keepgoing-worker"}) * 100 > 85
+        expr: (sum by (job, application) (jvm_memory_used_bytes{area="heap", job=~"keepgoing-api|keepgoing-worker"}) / sum by (job, application) (jvm_memory_max_bytes{area="heap", job=~"keepgoing-api|keepgoing-worker"})) * 100 > 85
         for: 5m
         labels:
           severity: warning
@@ -51,7 +51,7 @@ groups:
           description: '{{ $labels.job }} heap memory usage is at {{ $value | humanizePercentage }} for 5 minutes. Application: {{ $labels.application }}'
 
       - alert: CriticalMemoryUsage
-        expr: (jvm_memory_used_bytes{area="heap", job=~"keepgoing-api|keepgoing-worker"} / jvm_memory_max_bytes{area="heap", job=~"keepgoing-api|keepgoing-worker"}) * 100 > 95
+        expr: (sum by (job, application) (jvm_memory_used_bytes{area="heap", job=~"keepgoing-api|keepgoing-worker"}) / sum by (job, application) (jvm_memory_max_bytes{area="heap", job=~"keepgoing-api|keepgoing-worker"})) * 100 > 95
         for: 2m
         labels:
           severity: critical
@@ -84,7 +84,7 @@ groups:
     interval: 30s
     rules:
       - alert: ImageProcessingQueueGrowing
-        expr: redis_stream_length{stream="note-image-processing-requests"} > 50
+        expr: redis_stream_group_lag{stream="note-image-processing-requests", group="keepgoing-worker"} > 50
         for: 5m
         labels:
           severity: warning
@@ -93,7 +93,7 @@ groups:
           description: 'Image processing request queue has {{ $value }} pending requests for 5 minutes. Worker may be falling behind.'
 
       - alert: ImageProcessingQueueStuck
-        expr: redis_stream_length{stream="note-image-processing-requests"} > 200
+        expr: redis_stream_group_lag{stream="note-image-processing-requests", group="keepgoing-worker"} > 200
         for: 10m
         labels:
           severity: critical

@@ -312,7 +312,7 @@
       "id": 7,
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
       "type": "timeseries",
-      "title": "Stream Length Over Time",
+      "title": "Consumer Group Lag",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": {
         "defaults": {
@@ -374,13 +374,13 @@
       },
       "targets": [
         {
-          "expr": "redis_stream_length{stream=\"note-image-processing-requests\"}",
-          "legendFormat": "request stream",
+          "expr": "redis_stream_group_lag{stream=\"note-image-processing-requests\"}",
+          "legendFormat": "request (worker lag)",
           "refId": "A"
         },
         {
-          "expr": "redis_stream_length{stream=\"note-image-processing-results\"}",
-          "legendFormat": "result stream",
+          "expr": "redis_stream_group_lag{stream=\"note-image-processing-results\"}",
+          "legendFormat": "result (api lag)",
           "refId": "B"
         }
       ]
@@ -464,7 +464,7 @@
       "id": 9,
       "gridPos": { "h": 6, "w": 24, "x": 0, "y": 14 },
       "type": "timeseries",
-      "title": "Request Stream - Last Entry Timestamp / Lag",
+      "title": "Consumer Idle Time",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": {
         "defaults": {
@@ -476,15 +476,15 @@
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
-            "fillOpacity": 10,
+            "fillOpacity": 30,
             "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
               "viz": false
             },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
@@ -496,36 +496,25 @@
               "mode": "none"
             },
             "thresholdsStyle": {
-              "mode": "off"
+              "mode": "dashed"
             }
           },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null }
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 60 },
+              { "color": "red", "value": 300 }
             ]
           },
-          "unit": "dateTimeFromNow"
+          "unit": "s"
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "last entry id"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "none"
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "options": {
         "legend": {
-          "calcs": ["lastNotNull"],
+          "calcs": ["max", "mean", "lastNotNull"],
           "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
@@ -537,9 +526,14 @@
       },
       "targets": [
         {
-          "expr": "redis_stream_last_entry_id{stream=\"note-image-processing-requests\"}",
-          "legendFormat": "last entry id",
+          "expr": "redis_stream_group_consumer_idle_seconds{stream=\"note-image-processing-requests\", consumer=\"worker-1\"}",
+          "legendFormat": "worker idle",
           "refId": "A"
+        },
+        {
+          "expr": "redis_stream_group_consumer_idle_seconds{stream=\"note-image-processing-results\", consumer=\"api-1\"}",
+          "legendFormat": "api idle",
+          "refId": "B"
         }
       ]
     }
