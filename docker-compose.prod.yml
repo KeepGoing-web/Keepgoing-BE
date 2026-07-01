@@ -206,7 +206,7 @@ services:
       - ${PROMETHEUS_DATA_DIR:-./var/prometheus-data}:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.path=/prometheus'
+      - '--storage.tsdb.path=/prometheus'
       - '--storage.tsdb.retention.time=7d'
       - '--storage.tsdb.retention.size=5GB'
     expose:
