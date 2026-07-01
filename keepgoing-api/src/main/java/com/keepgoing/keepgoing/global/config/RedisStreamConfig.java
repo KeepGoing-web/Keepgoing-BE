@@ -71,6 +71,13 @@ public class RedisStreamConfig {
 	}
 
 	private boolean isBusyGroup(RedisSystemException e) {
-		return e.getMessage() != null && e.getMessage().contains("BUSYGROUP");
+		Throwable candidate = e;
+		while (candidate != null) {
+			if (candidate.getMessage() != null && candidate.getMessage().contains("BUSYGROUP")) {
+				return true;
+			}
+			candidate = candidate.getCause();
+		}
+		return false;
 	}
 }
