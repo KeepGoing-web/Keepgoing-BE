@@ -79,3 +79,24 @@ groups:
         annotations:
           summary: 'High 5xx error rate ({{ $value | humanizePercentage }})'
           description: 'API server 5xx error rate is {{ $value | humanizePercentage }} over 3 minutes.'
+
+  - name: keepgoing-redis-stream
+    interval: 30s
+    rules:
+      - alert: ImageProcessingQueueGrowing
+        expr: redis_stream_length{stream="note-image-processing-requests"} > 50
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Image processing queue growing ({{ $value }} pending)'
+          description: 'Image processing request queue has {{ $value }} pending requests for 5 minutes. Worker may be falling behind.'
+
+      - alert: ImageProcessingQueueStuck
+        expr: redis_stream_length{stream="note-image-processing-requests"} > 200
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Image processing queue stuck ({{ $value }} pending)'
+          description: 'Image processing request queue has {{ $value }} pending requests for 10 minutes. Worker may be down or stuck.'

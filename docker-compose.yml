@@ -126,6 +126,8 @@ services:
     mem_limit: 32m
     environment:
       REDIS_ADDR: redis://redis:6379
+    command:
+      - '--check-single-streams=note-image-processing-requests,note-image-processing-results'
     ports:
       - "9121:9121"
     depends_on:
