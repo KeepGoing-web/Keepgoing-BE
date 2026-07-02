@@ -25,6 +25,9 @@ if grep -Ev '^\s*#|^\s*$' "$ENV_FILE" "$APP_ENV_FILE" "$DB_ENV_FILE" | grep -Eq 
   exit 1
 fi
 
-docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" pull app worker
-docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d
-docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" ps
+ENV_FILES=("$ENV_FILE")
+[ -f "$DB_ENV_FILE" ] && ENV_FILES+=(--env-file "$DB_ENV_FILE")
+
+docker compose "${ENV_FILES[@]}" -f "$COMPOSE_FILE" pull app worker
+docker compose "${ENV_FILES[@]}" -f "$COMPOSE_FILE" up -d
+docker compose "${ENV_FILES[@]}" -f "$COMPOSE_FILE" ps
