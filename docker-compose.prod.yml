@@ -72,6 +72,8 @@ services:
       DATA_SOURCE_URI: "postgres:5432/keepgoing?sslmode=disable"
       DATA_SOURCE_USER: "postgres_exporter"
       DATA_SOURCE_PASS: "${POSTGRES_EXPORTER_PASSWORD}"
+    command:
+      - '--no-collector.stat_replication'
     expose:
       - "9187"
     depends_on:
