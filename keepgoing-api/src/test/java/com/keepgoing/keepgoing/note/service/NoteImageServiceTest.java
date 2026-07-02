@@ -35,6 +35,8 @@ import com.keepgoing.keepgoing.note.repository.NoteImageRepository;
 import com.keepgoing.keepgoing.note.repository.NoteRepository;
 import com.keepgoing.keepgoing.note.service.dto.NoteImageDeleteCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteImagePresignQuery;
+import com.keepgoing.keepgoing.note.service.dto.NoteImageStatusQuery;
+import com.keepgoing.keepgoing.note.service.dto.NoteImageStatusResult;
 import com.keepgoing.keepgoing.note.service.dto.NoteImageUploadCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteImageUploadResult;
 import com.keepgoing.keepgoing.user.domain.User;
@@ -747,6 +749,65 @@ class NoteImageServiceTest {
 			assertThatThrownBy(() -> noteImageService.getPresignedUrl(query))
 					.isInstanceOf(BusinessException.class)
 					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_IMAGE_NOT_FOUND);
+		}
+	}
+
+	@Nested
+	@DisplayName("getStatus")
+	class GetStatusTest {
+
+		@Test
+		@DisplayName("각 상태별로 올바른 ImageProcessingStatus를 반환한다")
+		void returnsStatusForEachState() {
+			for (ImageProcessingStatus status : ImageProcessingStatus.values()) {
+				// given
+				Note note = persistedNote(user(UPLOADER_ID));
+				NoteImage noteImage = noteImageWithStatus(note, status);
+				NoteImageStatusQuery query = new NoteImageStatusQuery(UPLOADER_ID, NOTE_ID, noteImage.getPublicId());
+
+				given(noteImageRepository.findByPublicIdAndNote_Id(noteImage.getPublicId(), NOTE_ID))
+						.willReturn(Optional.of(noteImage));
+
+				// when
+				NoteImageStatusResult result = noteImageService.getStatus(query);
+
+				// then
+				assertThat(result.publicId()).isEqualTo(noteImage.getPublicId());
+				assertThat(result.status()).isEqualTo(status);
+				verify(noteImageRepository).findByPublicIdAndNote_Id(noteImage.getPublicId(), NOTE_ID);
+			}
+		}
+
+		@Test
+		@DisplayName("존재하지 않는 이미지면 NOTE_IMAGE_NOT_FOUND를 던진다")
+		void throwsNotFoundWhenImageDoesNotExist() {
+			// given
+			NoteImageStatusQuery query = new NoteImageStatusQuery(UPLOADER_ID, NOTE_ID, UUID.randomUUID());
+			given(noteImageRepository.findByPublicIdAndNote_Id(any(), any()))
+					.willReturn(Optional.empty());
+
+			// when & then
+			assertThatThrownBy(() -> noteImageService.getStatus(query))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_IMAGE_NOT_FOUND);
+		}
+
+		@Test
+		@DisplayName("업로더가 아닌 사용자가 조회하면 NOTE_IMAGE_ACCESS_DENIED를 던진다")
+		void throwsAccessDeniedWhenRequesterIsNotUploader() {
+			// given
+			Long otherUserId = 2L;
+			Note note = persistedNote(user(UPLOADER_ID));
+			NoteImage noteImage = noteImageWithStatus(note, ImageProcessingStatus.PENDING);
+			NoteImageStatusQuery query = new NoteImageStatusQuery(otherUserId, NOTE_ID, noteImage.getPublicId());
+
+			given(noteImageRepository.findByPublicIdAndNote_Id(noteImage.getPublicId(), NOTE_ID))
+					.willReturn(Optional.of(noteImage));
+
+			// when & then
+			assertThatThrownBy(() -> noteImageService.getStatus(query))
+					.isInstanceOf(BusinessException.class)
+					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOTE_IMAGE_ACCESS_DENIED);
 		}
 	}
 

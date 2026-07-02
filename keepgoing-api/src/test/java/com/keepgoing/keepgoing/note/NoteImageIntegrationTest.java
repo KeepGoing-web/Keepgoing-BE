@@ -2,6 +2,7 @@ package com.keepgoing.keepgoing.note;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -32,10 +33,13 @@ import com.keepgoing.keepgoing.user.repository.UserRepository;
 import jakarta.persistence.EntityManager;
 import java.time.Duration;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -430,6 +434,100 @@ class NoteImageIntegrationTest extends PostgreSqlTestContainerSupport {
 			}
 
 			then(objectStorageClient).should(never()).generatePresignedUrl(any(), any(), any());
+		}
+	}
+
+	@Nested
+	@DisplayName("GET /api/notes/{noteId}/images/{publicId}/status")
+	class GetImageStatus {
+
+		@ParameterizedTest
+		@EnumSource(ImageProcessingStatus.class)
+		@DisplayName("작성자가 {0} 상태 이미지의 상태를 조회하면 200과 해당 상태를 반환하고 Cache-Control: no-store를 설정한다")
+		void returnsStatusForEachState(ImageProcessingStatus status) throws Exception {
+			// given
+			User author = saveUser("status-" + status.name() + "@test.com", "작성자");
+			Note note = saveNote(author, "상태 조회");
+			NoteImage image = saveNoteImage(note, author, "notes/" + note.getId() + "/" + status.name());
+			markStatus(image, status);
+			entityManager.flush();
+			entityManager.clear();
+			mockLoginUser(author.getId());
+
+			// when & then
+			mockMvc.perform(get("/api/notes/{noteId}/images/{publicId}/status",
+							note.getId(), image.getPublicId()))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.success").value(true))
+					.andExpect(jsonPath("$.data.publicId").value(image.getPublicId().toString()))
+					.andExpect(jsonPath("$.data.status").value(status.name()))
+					.andExpect(header().string("Cache-Control", containsString("no-store")));
+		}
+
+		@Test
+		@DisplayName("존재하지 않는 publicId로 조회하면 404를 반환한다")
+		void returns404WhenImageNotFound() throws Exception {
+			// given
+			User author = saveUser("notfound@test.com", "작성자");
+			Note note = saveNote(author, "없는 이미지");
+			mockLoginUser(author.getId());
+
+			// when & then
+			mockMvc.perform(get("/api/notes/{noteId}/images/{publicId}/status",
+							note.getId(), UUID.randomUUID()))
+					.andExpect(status().isNotFound())
+					.andExpect(jsonPath("$.error.code").value("NOTE_IMAGE_NOT_FOUND"));
+		}
+
+		@Test
+		@DisplayName("noteId가 일치하지 않으면 404를 반환한다")
+		void returns404WhenNoteIdMismatch() throws Exception {
+			// given
+			User author = saveUser("mismatch@test.com", "작성자");
+			Note note = saveNote(author, "노트1");
+			Note otherNote = saveNote(author, "노트2");
+			NoteImage image = saveNoteImage(note, author, "notes/" + note.getId() + "/key");
+			mockLoginUser(author.getId());
+
+			// when & then
+			mockMvc.perform(get("/api/notes/{noteId}/images/{publicId}/status",
+							otherNote.getId(), image.getPublicId()))
+					.andExpect(status().isNotFound())
+					.andExpect(jsonPath("$.error.code").value("NOTE_IMAGE_NOT_FOUND"));
+		}
+
+		@Test
+		@DisplayName("업로더가 아닌 사용자가 PRIVATE 노트 이미지를 조회하면 403을 반환한다")
+		void returns403WhenNonUploaderOnPrivateNote() throws Exception {
+			// given
+			User author = saveUser("private-author@test.com", "작성자");
+			User requester = saveUser("requester@test.com", "요청자");
+			Note note = saveNote(author, "private 노트", NoteVisibility.PRIVATE);
+			NoteImage image = saveNoteImage(note, author, "notes/" + note.getId() + "/private-key");
+			mockLoginUser(requester.getId());
+
+			// when & then
+			mockMvc.perform(get("/api/notes/{noteId}/images/{publicId}/status",
+							note.getId(), image.getPublicId()))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.error.code").value("NOTE_IMAGE_ACCESS_DENIED"));
+		}
+
+		@Test
+		@DisplayName("업로더가 아닌 사용자가 PUBLIC 노트 이미지를 조회해도 403을 반환한다")
+		void returns403WhenNonUploaderOnPublicNote() throws Exception {
+			// given
+			User author = saveUser("public-author@test.com", "작성자");
+			User requester = saveUser("public-requester@test.com", "요청자");
+			Note note = saveNote(author, "public 노트", NoteVisibility.PUBLIC);
+			NoteImage image = saveNoteImage(note, author, "notes/" + note.getId() + "/public-key");
+			mockLoginUser(requester.getId());
+
+			// when & then
+			mockMvc.perform(get("/api/notes/{noteId}/images/{publicId}/status",
+							note.getId(), image.getPublicId()))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.error.code").value("NOTE_IMAGE_ACCESS_DENIED"));
 		}
 	}
 

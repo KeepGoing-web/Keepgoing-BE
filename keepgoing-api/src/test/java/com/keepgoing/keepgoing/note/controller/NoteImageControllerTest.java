@@ -24,6 +24,8 @@ import com.keepgoing.keepgoing.global.security.jwt.JwtProvider;
 import com.keepgoing.keepgoing.note.service.NoteImageService;
 import com.keepgoing.keepgoing.note.service.dto.NoteImageDeleteCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteImagePresignQuery;
+import com.keepgoing.keepgoing.note.service.dto.NoteImageStatusQuery;
+import com.keepgoing.keepgoing.note.service.dto.NoteImageStatusResult;
 import com.keepgoing.keepgoing.note.service.dto.NoteImageUploadCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteImageUploadResult;
 import java.util.List;
@@ -403,6 +405,92 @@ class NoteImageControllerTest {
 					.andExpect(status().isForbidden())
 					.andExpect(jsonPath("$.success").value(false))
 					.andExpect(jsonPath("$.error.code").value(ErrorCode.NOTE_IMAGE_ACCESS_DENIED.name()));
+		}
+	}
+
+	@Nested
+	@DisplayName("GET /api/notes/{noteId}/images/{publicId}/status")
+	class GetImageStatusTest {
+
+		@Test
+		@DisplayName("인증 사용자가 이미지 상태를 조회하면 200과 publicId/status를 반환하고 Cache-Control: no-store를 설정한다")
+		void returnsImageStatusWithNoStoreCacheControl() throws Exception {
+			// given
+			Long userId = 1L;
+			Long noteId = 10L;
+			UUID publicId = UUID.randomUUID();
+			NoteImageStatusResult result = new NoteImageStatusResult(publicId, ImageProcessingStatus.SCANNING);
+
+			mockLoginUser(userId);
+			given(noteImageService.getStatus(any(NoteImageStatusQuery.class)))
+					.willReturn(result);
+
+			// when & then
+			mockMvc.perform(get("/api/notes/{noteId}/images/{publicId}/status", noteId, publicId))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.success").value(true))
+					.andExpect(jsonPath("$.data.publicId").value(publicId.toString()))
+					.andExpect(jsonPath("$.data.status").value(ImageProcessingStatus.SCANNING.name()))
+					.andExpect(header().string("Cache-Control", org.hamcrest.Matchers.containsString("no-store")));
+
+			ArgumentCaptor<NoteImageStatusQuery> captor = ArgumentCaptor.forClass(NoteImageStatusQuery.class);
+			then(noteImageService).should().getStatus(captor.capture());
+
+			NoteImageStatusQuery query = captor.getValue();
+			assertThat(query.userId()).isEqualTo(userId);
+			assertThat(query.noteId()).isEqualTo(noteId);
+			assertThat(query.publicId()).isEqualTo(publicId);
+		}
+
+		@Test
+		@DisplayName("존재하지 않는 이미지면 404를 반환한다")
+		void returns404WhenImageNotFound() throws Exception {
+			// given
+			Long userId = 1L;
+			Long noteId = 10L;
+			UUID publicId = UUID.randomUUID();
+			mockLoginUser(userId);
+			given(noteImageService.getStatus(any(NoteImageStatusQuery.class)))
+					.willThrow(new BusinessException(ErrorCode.NOTE_IMAGE_NOT_FOUND));
+
+			// when & then
+			mockMvc.perform(get("/api/notes/{noteId}/images/{publicId}/status", noteId, publicId))
+					.andExpect(status().isNotFound())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value(ErrorCode.NOTE_IMAGE_NOT_FOUND.name()));
+		}
+
+		@Test
+		@DisplayName("업로더가 아닌 사용자가 조회하면 403을 반환한다")
+		void returns403WhenRequesterIsNotUploader() throws Exception {
+			// given
+			Long userId = 2L;
+			Long noteId = 10L;
+			UUID publicId = UUID.randomUUID();
+			mockLoginUser(userId);
+			given(noteImageService.getStatus(any(NoteImageStatusQuery.class)))
+					.willThrow(new BusinessException(ErrorCode.NOTE_IMAGE_ACCESS_DENIED));
+
+			// when & then
+			mockMvc.perform(get("/api/notes/{noteId}/images/{publicId}/status", noteId, publicId))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.success").value(false))
+					.andExpect(jsonPath("$.error.code").value(ErrorCode.NOTE_IMAGE_ACCESS_DENIED.name()));
+		}
+
+		@Test
+		@DisplayName("유효하지 않은 publicId 형식이면 400을 반환하고 서비스를 호출하지 않는다")
+		void returns400WhenPublicIdIsInvalid() throws Exception {
+			// given
+			Long userId = 1L;
+			Long noteId = 10L;
+			mockLoginUser(userId);
+
+			// when & then
+			mockMvc.perform(get("/api/notes/{noteId}/images/{publicId}/status", noteId, "invalid-uuid"))
+					.andExpect(status().isBadRequest());
+
+			then(noteImageService).shouldHaveNoInteractions();
 		}
 	}
 
