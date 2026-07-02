@@ -2,10 +2,13 @@ package com.keepgoing.keepgoing.note.controller;
 
 import com.keepgoing.keepgoing.global.api.response.ApiResponse;
 import com.keepgoing.keepgoing.note.controller.dto.request.NoteImageUploadRequest;
+import com.keepgoing.keepgoing.note.controller.dto.response.NoteImageStatusResponse;
 import com.keepgoing.keepgoing.note.controller.dto.response.NoteImageUploadResponse;
 import com.keepgoing.keepgoing.note.service.NoteImageService;
 import com.keepgoing.keepgoing.note.service.dto.NoteImageDeleteCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteImagePresignQuery;
+import com.keepgoing.keepgoing.note.service.dto.NoteImageStatusQuery;
+import com.keepgoing.keepgoing.note.service.dto.NoteImageStatusResult;
 import com.keepgoing.keepgoing.note.service.dto.NoteImageUploadCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteImageUploadResult;
 import jakarta.validation.Valid;
@@ -75,5 +78,20 @@ public class NoteImageController {
 		noteImageService.deleteImage(command);
 
 		return ResponseEntity.noContent().build();
+	}
+
+	@GetMapping("/{noteId}/images/{publicId}/status")
+	public ResponseEntity<ApiResponse<NoteImageStatusResponse>> getImageStatus(
+			@PathVariable Long noteId,
+			@PathVariable UUID publicId,
+			@AuthenticationPrincipal Long userId
+	) {
+		NoteImageStatusQuery query = new NoteImageStatusQuery(userId, noteId, publicId);
+
+		NoteImageStatusResult result = noteImageService.getStatus(query);
+
+		return ResponseEntity.ok()
+				.cacheControl(CacheControl.noStore())
+				.body(ApiResponse.success(NoteImageStatusResponse.from(result)));
 	}
 }

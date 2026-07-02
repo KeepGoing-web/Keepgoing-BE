@@ -16,6 +16,8 @@ import com.keepgoing.keepgoing.note.repository.NoteImageRepository;
 import com.keepgoing.keepgoing.note.repository.NoteRepository;
 import com.keepgoing.keepgoing.note.service.dto.NoteImageDeleteCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteImagePresignQuery;
+import com.keepgoing.keepgoing.note.service.dto.NoteImageStatusQuery;
+import com.keepgoing.keepgoing.note.service.dto.NoteImageStatusResult;
 import com.keepgoing.keepgoing.note.service.dto.NoteImageUploadCommand;
 import com.keepgoing.keepgoing.note.service.dto.NoteImageUploadResult;
 import com.keepgoing.keepgoing.user.domain.User;
@@ -164,6 +166,15 @@ public class NoteImageService {
 					e
 			);
 		}
+	}
+
+	@Transactional(readOnly = true)
+	public NoteImageStatusResult getStatus(NoteImageStatusQuery query) {
+		NoteImage noteImage = noteImageRepository.findByPublicIdAndNote_Id(query.publicId(), query.noteId())
+				.orElseThrow(() -> new BusinessException(ErrorCode.NOTE_IMAGE_NOT_FOUND));
+		noteImage.validateUploader(query.userId());
+
+		return new NoteImageStatusResult(noteImage.getPublicId(), noteImage.getStatus());
 	}
 
 	private NoteImageUploadResult saveNoteImageInfo(
