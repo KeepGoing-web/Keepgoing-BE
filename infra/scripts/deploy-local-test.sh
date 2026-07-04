@@ -25,8 +25,8 @@ scp "$ROOT_DIR/infra/docker-compose.test.local.yml" "$SSH_TARGET:/srv/keepgoing-
 
 echo "=== 5. Deploying on server ==="
 ssh "$SSH_TARGET" "cd /srv/keepgoing-test && \
-  docker compose -f docker-compose.test.yml -f docker-compose.test.local.yml pull test-app test-worker && \
-  docker compose -f docker-compose.test.yml -f docker-compose.test.local.yml up -d"
+  docker compose --env-file .env.test -f docker-compose.test.yml -f docker-compose.test.local.yml pull test-app test-worker && \
+  docker compose --env-file .env.test -f docker-compose.test.yml -f docker-compose.test.local.yml up -d"
 
 echo ""
 echo "=== Done! ==="
