@@ -461,8 +461,85 @@
       ]
     },
     {
+      "id": 12,
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 14 },
+      "type": "timeseries",
+      "title": "Pending Entry List (PEL)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 30,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 20 },
+              { "color": "red", "value": 100 }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": ["max", "mean", "lastNotNull"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "expr": "redis_stream_group_pending{stream=\"note-image-processing-requests\"}",
+          "legendFormat": "request (worker PEL)",
+          "refId": "A"
+        },
+        {
+          "expr": "redis_stream_group_pending{stream=\"note-image-processing-results\"}",
+          "legendFormat": "result (api PEL)",
+          "refId": "B"
+        }
+      ]
+    },
+    {
       "id": 9,
-      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 14 },
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 14 },
       "type": "timeseries",
       "title": "Consumer Idle Time",
       "datasource": { "type": "prometheus", "uid": "prometheus" },

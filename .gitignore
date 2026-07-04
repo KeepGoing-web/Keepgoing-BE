@@ -77,3 +77,5 @@ mcp-server/
 
 # Monitoring
 monitoring/alertmanager/discord-webhook-url
+
+perf/results/

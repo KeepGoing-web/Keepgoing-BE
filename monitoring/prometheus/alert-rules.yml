@@ -100,3 +100,21 @@ groups:
         annotations:
           summary: 'Image processing queue stuck ({{ $value }} pending)'
           description: 'Image processing request queue has {{ $value }} pending requests for 10 minutes. Worker may be down or stuck.'
+
+      - alert: ImageProcessingPELGrowing
+        expr: redis_stream_group_pending{stream="note-image-processing-requests"} > 20
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Image processing PEL growing ({{ $value }} unacked)'
+          description: 'Worker consumer has {{ $value }} unacknowledged messages in PEL for 5 minutes. Messages delivered but not acked.'
+
+      - alert: ImageProcessingPELStuck
+        expr: redis_stream_group_pending{stream="note-image-processing-requests"} > 100
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Image processing PEL stuck ({{ $value }} unacked)'
+          description: 'Worker consumer has {{ $value }} unacknowledged messages in PEL for 10 minutes. Consumer may be crashed or hanging.'

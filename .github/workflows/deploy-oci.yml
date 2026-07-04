@@ -4,6 +4,12 @@ on:
   workflow_dispatch:
   push:
     branches: [ "develop" ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'perf/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/PULL_REQUEST_TEMPLATE.md'
 
 permissions:
   contents: read
