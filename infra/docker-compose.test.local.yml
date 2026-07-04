@@ -1,0 +1,9 @@
+# Docker Compose override for local JAR deployment
+# Usage: docker compose -f docker-compose.test.yml -f docker-compose.test.local.yml up -d
+services:
+  test-app:
+    volumes:
+      - ./build/api.jar:/app/app.jar:ro
+  test-worker:
+    volumes:
+      - ./build/worker.jar:/app/app.jar:ro
