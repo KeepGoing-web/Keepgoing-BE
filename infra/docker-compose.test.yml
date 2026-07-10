@@ -132,11 +132,25 @@ services:
     networks:
       - keepgoing-test-net
 
+  test-postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.16.0
+    container_name: keepgoing-test-postgres-exporter
+    restart: unless-stopped
+    mem_limit: 64m
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${TEST_DB_USER:-keepgoing}:${TEST_DB_PASSWORD:-keepgoing}@test-postgres:5432/${TEST_DB_NAME:-keepgoing}?sslmode=disable"
+    depends_on:
+      test-postgres:
+        condition: service_healthy
+    networks:
+      - keepgoing-test-net
+
 volumes:
   test-postgres-data:
   test-redis-data:
   test-prometheus-data:
   test-grafana-data:
+  test-postgres-exporter-data:
 
 networks:
   keepgoing-test-net:
