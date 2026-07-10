@@ -21,12 +21,12 @@ scp build/test-deploy/api.jar "$SSH_TARGET:/srv/keepgoing-test/build/api.jar"
 scp build/test-deploy/worker.jar "$SSH_TARGET:/srv/keepgoing-test/build/worker.jar"
 
 echo "=== 4. Copying local override compose file ==="
+scp "$ROOT_DIR/infra/docker-compose.test.yml" "$SSH_TARGET:/srv/keepgoing-test/docker-compose.test.yml"
 scp "$ROOT_DIR/infra/docker-compose.test.local.yml" "$SSH_TARGET:/srv/keepgoing-test/docker-compose.test.local.yml"
 
 echo "=== 5. Deploying on server ==="
 ssh "$SSH_TARGET" "cd /srv/keepgoing-test && \
-  docker compose --env-file .env.test -f docker-compose.test.yml -f docker-compose.test.local.yml pull test-app test-worker && \
-  docker compose --env-file .env.test -f docker-compose.test.yml -f docker-compose.test.local.yml up -d"
+  docker compose --env-file .env.test -f docker-compose.test.yml -f docker-compose.test.local.yml up -d --pull never"
 
 echo ""
 echo "=== Done! ==="

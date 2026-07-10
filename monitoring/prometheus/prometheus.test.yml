@@ -1,0 +1,34 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'keepgoing-test-api'
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets:
+          - 'test-app:8080'
+        labels:
+          application: 'keepgoing-test-api'
+
+  - job_name: 'keepgoing-test-worker'
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets:
+          - 'test-worker:8081'
+        labels:
+          application: 'keepgoing-test-worker'
+
+  - job_name: 'redis'
+    static_configs:
+      - targets:
+          - 'test-redis-exporter:9121'
+        labels:
+          application: 'keepgoing-test-redis'
+
+  - job_name: 'postgres'
+    static_configs:
+      - targets:
+          - 'test-postgres:9187'
+        labels:
+          application: 'keepgoing-test-postgres'

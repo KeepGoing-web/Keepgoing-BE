@@ -31,7 +31,7 @@
     {
       "id": 1,
       "type": "row",
-      "title": "Overview",
+      "title": "Executive Summary — Latency Breakdown",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
@@ -40,10 +40,44 @@
     {
       "id": 2,
       "type": "stat",
+      "title": "Storage / Total Ratio",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "S3 PUT이 전체 업로드 시간에서 차지하는 비중 (핵심 병목 지표)",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "editorMode": "code",
+          "expr": "round((sum(rate(note_image_upload_storage_seconds_sum[$__rate_interval])) / sum(rate(note_image_upload_total_seconds_sum[$__rate_interval]))) * 100, 1)",
+          "legendFormat": "Storage Ratio",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "red", "value": 80 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "pluginVersion": "9.5.1"
+    },
+    {
+      "id": 3,
+      "type": "stat",
       "title": "Request Rate",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "description": "초당 요청 수",
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
@@ -59,39 +93,18 @@
       "pluginVersion": "9.5.1"
     },
     {
-      "id": 3,
-      "type": "stat",
-      "title": "Error Rate",
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "description": "에러율 %",
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 },
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "editorMode": "code",
-          "expr": "sum(rate(k6_http_req_failed_total[$__rate_interval])) / sum(rate(k6_http_reqs_total[$__rate_interval])) * 100",
-          "legendFormat": "Error Rate",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": { "defaults": { "unit": "percent", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] } }, "overrides": [] },
-      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
-      "pluginVersion": "9.5.1"
-    },
-    {
       "id": 4,
       "type": "stat",
-      "title": "Active VUs",
+      "title": "Max VUs",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "description": "활성 VU",
-      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 },
+      "description": "최대 동시 접속자",
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
           "editorMode": "code",
-          "expr": "sum(k6_vus)",
-          "legendFormat": "Active VUs",
+          "expr": "max(k6_vus_max)",
+          "legendFormat": "Max VUs",
           "range": true,
           "refId": "A"
         }
@@ -103,137 +116,198 @@
     {
       "id": 5,
       "type": "stat",
-      "title": "Upload Count",
+      "title": "Error Rate",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "description": "업로드 요청 수 (AOP)",
-      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
+      "description": "에러율 (1% 미만이면 정상)",
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
           "editorMode": "code",
-          "expr": "sum(increase(note_image_upload_total_seconds_count[$__rate_interval]))",
-          "legendFormat": "Upload Count",
+          "expr": "avg(k6_http_req_failed_rate) * 100",
+          "legendFormat": "Error Rate",
           "range": true,
           "refId": "A"
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "none", "color": { "mode": "palette-classic" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] } }, "overrides": [] },
+      "fieldConfig": { "defaults": { "unit": "percent", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 1 }, { "color": "red", "value": 5 }] } }, "overrides": [] },
       "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
       "pluginVersion": "9.5.1"
     },
     {
       "id": 6,
+      "type": "stat",
+      "title": "Total Uploads",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "테스트 기간 누적 업로드 수",
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "editorMode": "code",
+          "expr": "increase(note_image_upload_total_seconds_count[$__range])",
+          "legendFormat": "Total",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "palette-classic" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] } }, "overrides": [] },
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "pluginVersion": "9.5.1"
+    },
+    {
+      "id": 7,
       "type": "row",
-      "title": "Latency Breakdown",
+      "title": "Upload Throughput",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
       "panels": []
     },
     {
-      "id": 7,
-      "type": "timeseries",
-      "title": "HTTP Request Duration (k6)",
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "description": "p50, p95, p99",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
-      "targets": [
-        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "histogram_quantile(0.50, sum(rate(k6_http_req_duration_milliseconds_bucket[$__rate_interval])) by (le))", "legendFormat": "p50", "range": true, "refId": "A" },
-        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "histogram_quantile(0.95, sum(rate(k6_http_req_duration_milliseconds_bucket[$__rate_interval])) by (le))", "legendFormat": "p95", "range": true, "refId": "B" },
-        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "histogram_quantile(0.99, sum(rate(k6_http_req_duration_milliseconds_bucket[$__rate_interval])) by (le))", "legendFormat": "p99", "range": true, "refId": "C" }
-      ],
-      "fieldConfig": { "defaults": { "unit": "ms", "custom": { "drawStyle": "line", "lineInterpolation": "linear", "barAlignment": 0, "lineWidth": 1, "fillOpacity": 10, "gradientMode": "none", "spanNulls": false, "showPoints": "never", "pointSize": 5, "stacking": { "mode": "none", "group": "A" }, "axisPlacement": "auto", "axisLabel": "", "axisColorMode": "text", "scaleDistribution": { "type": "linear" }, "hideFrom": { "tooltip": false, "viz": false, "legend": false }, "thresholdsStyle": { "mode": "off" } }, "color": { "mode": "palette-classic" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] } }, "overrides": [] },
-      "options": { "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "none" } },
-      "pluginVersion": "9.5.1"
-    },
-    {
       "id": 8,
       "type": "timeseries",
-      "title": "Upload Pipeline Breakdown (AOP)",
+      "title": "Upload Throughput",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "description": "total, storage, redis publish",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "description": "초당 업로드 건수 추이",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 6 },
       "targets": [
-        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "rate(note_image_upload_total_seconds_sum[$__rate_interval]) / rate(note_image_upload_total_seconds_count[$__rate_interval])", "legendFormat": "total avg", "range": true, "refId": "A" },
-        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "rate(note_image_upload_storage_seconds_sum[$__rate_interval]) / rate(note_image_upload_storage_seconds_count[$__rate_interval])", "legendFormat": "storage avg", "range": true, "refId": "B" },
-        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "rate(note_image_upload_redis_publish_seconds_sum[$__rate_interval]) / rate(note_image_upload_redis_publish_seconds_count[$__rate_interval])", "legendFormat": "redis.publish avg", "range": true, "refId": "C" }
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "sum(rate(note_image_upload_total_seconds_count[$__rate_interval]))", "legendFormat": "upload/s", "range": true, "refId": "A" }
       ],
-      "fieldConfig": { "defaults": { "unit": "s", "custom": { "drawStyle": "line", "lineInterpolation": "linear", "barAlignment": 0, "lineWidth": 1, "fillOpacity": 25, "gradientMode": "opacity", "spanNulls": false, "showPoints": "never", "pointSize": 5, "stacking": { "mode": "none", "group": "A" }, "axisPlacement": "auto", "axisLabel": "", "axisColorMode": "text", "scaleDistribution": { "type": "linear" }, "hideFrom": { "tooltip": false, "viz": false, "legend": false }, "thresholdsStyle": { "mode": "off" } }, "color": { "mode": "palette-classic" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] } }, "overrides": [] },
+      "fieldConfig": { "defaults": { "unit": "cps", "custom": { "drawStyle": "bar", "lineInterpolation": "linear", "barAlignment": 0, "lineWidth": 1, "fillOpacity": 50, "gradientMode": "opacity", "spanNulls": false, "showPoints": "never", "pointSize": 5, "stacking": { "mode": "none", "group": "A" }, "axisPlacement": "auto", "axisLabel": "", "axisColorMode": "text", "scaleDistribution": { "type": "linear" }, "hideFrom": { "tooltip": false, "viz": false, "legend": false }, "thresholdsStyle": { "mode": "off" } }, "color": { "mode": "palette-classic" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] } }, "overrides": [] },
       "options": { "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "none" } },
       "pluginVersion": "9.5.1"
     },
     {
       "id": 9,
+      "type": "stat",
+      "title": "HTTP Duration p99 (peak)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "테스트 기간 중 HTTP 요청 지연시간 p99 최대값",
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "max(k6_http_req_duration_p99)", "legendFormat": "p99 peak", "range": true, "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ms", "color": { "mode": "palette-classic" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] } }, "overrides": [] },
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "pluginVersion": "9.5.1"
+    },
+    {
+      "id": 10,
       "type": "row",
-      "title": "Upload Duration by Image Size",
+      "title": "Bottleneck Proof — Pipeline Breakdown",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 },
       "panels": []
     },
     {
-      "id": 10,
-      "type": "timeseries",
-      "title": "Upload Duration by Size (k6)",
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "description": "p95, image size별",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 15 },
-      "targets": [
-        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "histogram_quantile(0.95, sum(rate(k6_upload_duration_bucket[$__rate_interval])) by (le, size))", "legendFormat": "{{size}}", "range": true, "refId": "A" }
-      ],
-      "fieldConfig": { "defaults": { "unit": "ms", "custom": { "drawStyle": "line", "lineInterpolation": "linear", "barAlignment": 0, "lineWidth": 1, "fillOpacity": 10, "gradientMode": "none", "spanNulls": false, "showPoints": "never", "pointSize": 5, "stacking": { "mode": "none", "group": "A" }, "axisPlacement": "auto", "axisLabel": "", "axisColorMode": "text", "scaleDistribution": { "type": "linear" }, "hideFrom": { "tooltip": false, "viz": false, "legend": false }, "thresholdsStyle": { "mode": "off" } }, "color": { "mode": "palette-classic" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] } }, "overrides": [] },
-      "options": { "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "none" } },
-      "pluginVersion": "9.5.1"
-    },
-    {
       "id": 11,
-      "type": "row",
-      "title": "Pipeline Health",
+      "type": "timeseries",
+      "title": "Upload Pipeline Breakdown",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 },
-      "panels": []
+      "description": "total(전체) vs storage(S3 PUT) 구간별 평균 latency — 차이가 서버 내부 처리 시간",
+      "gridPos": { "h": 8, "w": 16, "x": 0, "y": 15 },
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "sum(rate(note_image_upload_total_seconds_sum[$__rate_interval])) / sum(rate(note_image_upload_total_seconds_count[$__rate_interval]))", "legendFormat": "total avg", "range": true, "refId": "A" },
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "sum(rate(note_image_upload_storage_seconds_sum[$__rate_interval])) / sum(rate(note_image_upload_storage_seconds_count[$__rate_interval]))", "legendFormat": "storage (S3 PUT) avg", "range": true, "refId": "B" },
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "(sum(rate(note_image_upload_total_seconds_sum[$__rate_interval])) - sum(rate(note_image_upload_storage_seconds_sum[$__rate_interval]))) / sum(rate(note_image_upload_total_seconds_count[$__rate_interval]))", "legendFormat": "non-storage (DB+Redis+queuing)", "range": true, "refId": "C" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "drawStyle": "line", "lineInterpolation": "linear", "barAlignment": 0, "lineWidth": 2, "fillOpacity": 20, "gradientMode": "opacity", "spanNulls": false, "showPoints": "never", "pointSize": 5, "stacking": { "mode": "none", "group": "A" }, "axisPlacement": "auto", "axisLabel": "", "axisColorMode": "text", "scaleDistribution": { "type": "linear" }, "hideFrom": { "tooltip": false, "viz": false, "legend": false }, "thresholdsStyle": { "mode": "off" } }, "color": { "mode": "palette-classic" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] } }, "overrides": [] },
+      "options": { "legend": { "calcs": ["max", "mean"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "none" } },
+      "pluginVersion": "9.5.1"
     },
     {
       "id": 12,
       "type": "timeseries",
-      "title": "AOP Error Rate",
+      "title": "Storage / Total Ratio",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "description": "각 단계별 에러율",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "description": "전체 업로드 시간 대비 S3 PUT(storage) 비중 — 높을수록 storage latency가 병목",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 15 },
       "targets": [
-        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "sum(rate(note_image_upload_total_seconds_count{exception!=\"none\"}[$__rate_interval])) / sum(rate(note_image_upload_total_seconds_count[$__rate_interval])) * 100", "legendFormat": "total", "range": true, "refId": "A" },
-        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "sum(rate(note_image_upload_storage_seconds_count{exception!=\"none\"}[$__rate_interval])) / sum(rate(note_image_upload_storage_seconds_count[$__rate_interval])) * 100", "legendFormat": "storage", "range": true, "refId": "B" },
-        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "sum(rate(note_image_upload_redis_publish_seconds_count{exception!=\"none\"}[$__rate_interval])) / sum(rate(note_image_upload_redis_publish_seconds_count[$__rate_interval])) * 100", "legendFormat": "redis.publish", "range": true, "refId": "C" }
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "(sum(rate(note_image_upload_storage_seconds_sum[$__rate_interval])) / sum(rate(note_image_upload_total_seconds_sum[$__rate_interval]))) * 100", "legendFormat": "storage ratio", "range": true, "refId": "A" }
       ],
-      "fieldConfig": { "defaults": { "unit": "percent", "custom": { "drawStyle": "line", "lineInterpolation": "linear", "barAlignment": 0, "lineWidth": 1, "fillOpacity": 10, "gradientMode": "none", "spanNulls": false, "showPoints": "never", "pointSize": 5, "stacking": { "mode": "none", "group": "A" }, "axisPlacement": "auto", "axisLabel": "", "axisColorMode": "text", "scaleDistribution": { "type": "linear" }, "hideFrom": { "tooltip": false, "viz": false, "legend": false }, "thresholdsStyle": { "mode": "off" } }, "color": { "mode": "palette-classic" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] } }, "overrides": [] },
-      "options": { "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "none" } },
+      "fieldConfig": { "defaults": { "unit": "percent", "custom": { "drawStyle": "line", "lineInterpolation": "stepAfter", "barAlignment": 0, "lineWidth": 2, "fillOpacity": 30, "gradientMode": "opacity", "spanNulls": false, "showPoints": "never", "pointSize": 5, "stacking": { "mode": "none", "group": "A" }, "axisPlacement": "auto", "axisLabel": "", "axisColorMode": "text", "scaleDistribution": { "type": "linear" }, "hideFrom": { "tooltip": false, "viz": false, "legend": false }, "thresholdsStyle": { "mode": "line" } }, "color": { "mode": "palette-classic" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "red", "value": 80 }] } }, "overrides": [] },
+      "options": { "legend": { "calcs": ["mean"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "none" } },
+      "pluginVersion": "9.5.1"
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "E2E Process Latency (upload → SAFE)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "POST 업로드부터 SAFE 처리 완료까지 종단간 지연시간 p99",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 24 },
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "k6_process_latency_p99 / 1000", "legendFormat": "process p99 (s)", "range": true, "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "drawStyle": "line", "lineInterpolation": "linear", "barAlignment": 0, "lineWidth": 2, "fillOpacity": 20, "gradientMode": "opacity", "spanNulls": false, "showPoints": "never", "pointSize": 5, "stacking": { "mode": "none", "group": "A" }, "axisPlacement": "auto", "axisLabel": "", "axisColorMode": "text", "scaleDistribution": { "type": "linear" }, "hideFrom": { "tooltip": false, "viz": false, "legend": false }, "thresholdsStyle": { "mode": "off" } }, "color": { "mode": "palette-classic" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] } }, "overrides": [] },
+      "options": { "legend": { "calcs": ["max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "none" } },
       "pluginVersion": "9.5.1"
     },
     {
       "id": 13,
-      "type": "timeseries",
-      "title": "Throughput by Scenario (k6)",
+      "type": "row",
+      "title": "Reliability",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 32 },
+      "panels": []
+    },
+    {
+      "id": 17,
+      "type": "stat",
+      "title": "AOP Error Rate",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "처리 단계별 에러율 최대값 (둘 다 0%면 정상)",
+      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 33 },
       "targets": [
-        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "sum(rate(k6_http_reqs_total[$__rate_interval])) by (scenario)", "legendFormat": "{{scenario}}", "range": true, "refId": "A" }
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "round(max(sum(rate(note_image_upload_total_seconds_count{exception!=\"none\"}[$__range])) / sum(rate(note_image_upload_total_seconds_count[$__range])) * 100), 2)", "legendFormat": "total", "range": true, "refId": "A" },
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "round(max(sum(rate(note_image_upload_storage_seconds_count{exception!=\"none\"}[$__range])) / sum(rate(note_image_upload_storage_seconds_count[$__range])) * 100), 2)", "legendFormat": "storage", "range": true, "refId": "B" }
       ],
-      "fieldConfig": { "defaults": { "unit": "cps", "custom": { "drawStyle": "line", "lineInterpolation": "linear", "barAlignment": 0, "lineWidth": 1, "fillOpacity": 10, "gradientMode": "none", "spanNulls": false, "showPoints": "never", "pointSize": 5, "stacking": { "mode": "none", "group": "A" }, "axisPlacement": "auto", "axisLabel": "", "axisColorMode": "text", "scaleDistribution": { "type": "linear" }, "hideFrom": { "tooltip": false, "viz": false, "legend": false }, "thresholdsStyle": { "mode": "off" } }, "color": { "mode": "palette-classic" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] } }, "overrides": [] },
-      "options": { "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "none" } },
+      "fieldConfig": { "defaults": { "unit": "percent", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 0.01 }] } }, "overrides": [] },
+      "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "horizontal", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "pluginVersion": "9.5.1"
+    },
+    {
+      "id": 18,
+      "type": "stat",
+      "title": "k6 Failed Rate (peak)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "테스트 기간 중 HTTP 실패율 최대값",
+      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 33 },
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "max(k6_http_req_failed_rate) * 100", "legendFormat": "failed % peak", "range": true, "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percent", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 1 }, { "color": "red", "value": 5 }] } }, "overrides": [] },
+      "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "pluginVersion": "9.5.1"
+    },
+    {
+      "id": 15,
+      "type": "stat",
+      "title": "Total Requests",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "k6가 발생시킨 총 HTTP 요청 수",
+      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 33 },
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "max(k6_http_reqs_total)", "legendFormat": "total", "range": true, "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "palette-classic" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] } }, "overrides": [] },
+      "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
       "pluginVersion": "9.5.1"
     }
   ],
   "refresh": "10s",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["k6", "loadtest", "upload", "prometheus"],
+  "tags": ["k6", "loadtest", "upload", "prometheus", "portfolio"],
   "templating": { "list": [] },
   "time": { "from": "now-30m", "to": "now" },
   "timepicker": { "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m", "30m", "1h"], "time_options": ["5m", "15m", "30m", "1h", "6h", "12h", "24h"] },
   "timezone": "browser",
-  "title": "k6 Load Test + Upload Pipeline",
+  "title": "Image Upload Performance (k6 + Pipeline)",
   "uid": "k6-loadtest-upload-pipeline",
-  "version": 1,
+  "version": 2,
   "weekStart": ""
 }
