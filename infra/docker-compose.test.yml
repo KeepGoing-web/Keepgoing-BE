@@ -68,7 +68,7 @@ services:
     image: ${WORKER_IMAGE:-ghcr.io/keepgoing-web/keepgoing-be-worker}:${WORKER_IMAGE_TAG:-latest}
     container_name: keepgoing-test-worker
     restart: unless-stopped
-    mem_limit: 256m
+    mem_limit: 512m
     env_file:
       - ./.env.db.test
       - ./.env.app.test
@@ -89,9 +89,68 @@ services:
     networks:
       - keepgoing-test-net
 
+  # ----- Monitoring Stack -----
+  test-prometheus:
+    image: prom/prometheus:v2.55.0
+    container_name: keepgoing-test-prometheus
+    restart: unless-stopped
+    mem_limit: 256m
+    ports:
+      - "127.0.0.1:9091:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.test.yml:/etc/prometheus/prometheus.yml:ro
+      - test-prometheus-data:/prometheus
+    command:
+        - '--config.file=/etc/prometheus/prometheus.yml'
+        - '--storage.tsdb.path=/prometheus'
+        - '--web.enable-remote-write-receiver'
+    networks:
+      keepgoing-test-net:
+        aliases:
+          - prometheus
+
+  test-grafana:
+    image: grafana/grafana:9.5.1
+    container_name: keepgoing-test-grafana
+    restart: unless-stopped
+    mem_limit: 128m
+    ports:
+      - "127.0.0.1:3001:3000"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - test-grafana-data:/var/lib/grafana
+    networks:
+      - keepgoing-test-net
+
+  test-redis-exporter:
+    image: oliver006/redis_exporter:v1.67.0
+    container_name: keepgoing-test-redis-exporter
+    restart: unless-stopped
+    mem_limit: 64m
+    environment:
+      REDIS_ADDR: redis://test-redis:6379
+    networks:
+      - keepgoing-test-net
+
+  test-postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.16.0
+    container_name: keepgoing-test-postgres-exporter
+    restart: unless-stopped
+    mem_limit: 64m
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${TEST_DB_USER:-keepgoing}:${TEST_DB_PASSWORD:-keepgoing}@test-postgres:5432/${TEST_DB_NAME:-keepgoing}?sslmode=disable"
+    depends_on:
+      test-postgres:
+        condition: service_healthy
+    networks:
+      - keepgoing-test-net
+
 volumes:
   test-postgres-data:
   test-redis-data:
+  test-prometheus-data:
+  test-grafana-data:
+  test-postgres-exporter-data:
 
 networks:
   keepgoing-test-net:
